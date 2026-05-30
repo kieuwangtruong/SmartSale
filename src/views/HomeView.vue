@@ -504,33 +504,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="order-card-actions" @click.stop>
-            <button class="ghost-button" type="button" @click="openEditDialog(order)">Sửa</button>
-            <select
-              class="status-select compact"
-              :value="order.status"
-              :disabled="savingStatusId === order.id"
-              @change="
-                changeOrderStatus(order, ($event.target as HTMLSelectElement).value as OrderStatus)
-              "
-            >
-              <option
-                v-for="status in allowedStatusOptions(order.status)"
-                :key="status"
-                :value="status"
-              >
-                Chuyển sang {{ status }}
-              </option>
-            </select>
-            <button
-              class="danger-button"
-              type="button"
-              :disabled="order.status !== 'Pending' || deletingOrderId === order.id"
-              @click="removeOrder(order)"
-            >
-              {{ deletingOrderId === order.id ? 'Đang xóa...' : 'Xóa' }}
-            </button>
-          </div>
+        
         </article>
       </div>
 
@@ -540,14 +514,6 @@ onMounted(async () => {
             <p class="panel-kicker">Chi tiết đơn hàng</p>
             <h2>Thông tin đang chọn</h2>
           </div>
-          <button
-            v-if="selectedOrder"
-            class="ghost-button"
-            type="button"
-            @click="openEditDialog(selectedOrder)"
-          >
-            Chỉnh sửa
-          </button>
         </div>
 
         <div v-if="selectedOrder" class="detail-card">
@@ -631,7 +597,7 @@ onMounted(async () => {
           <header class="modal-header">
             <div>
               <p class="panel-kicker">
-                {{ editorMode === 'create' ? 'Tạo đơn mới' : 'Chỉnh sửa đơn' }}
+                {{ editorMode === 'create' ? 'Tạo đơn mới' : 'Chỉnh sửa đơn' }} 
               </p>
               <h2>
                 {{
@@ -692,7 +658,13 @@ onMounted(async () => {
 
                 <label class="field small">
                   <span>Đơn giá</span>
-                  <input v-model.number="item.price" min="0" step="1000" type="number" />
+                  <input
+                    v-model.number="item.price"
+                    min="0"
+                    step="1000"
+                    type="number"
+                    disabled
+                  />
                 </label>
 
                 <button

@@ -23,6 +23,7 @@ export interface CreateUserPayload {
   email?: string | null
   passwordHash?: string | null
   dateOfBirth?: string | null
+  role?: number | null
   sex?: number | null
   address?: string | null
 }

@@ -26,6 +26,21 @@ import {
 
 type SearchMode = "all" | "username" | "email";
 type EditorMode = "create" | "edit";
+type UserRoleValue = 0 | 1 | 2 | 3;
+type GenderValue = 0 | 1 | 2;
+
+const userRoleOptions: Array<{ value: UserRoleValue; label: string }> = [
+  { value: 0, label: "Sales Staff" },
+  { value: 1, label: "Admin" },
+  { value: 2, label: "Warehouse Keeper" },
+  { value: 3, label: "User" },
+];
+
+const genderOptions: Array<{ value: GenderValue; label: string }> = [
+  { value: 0, label: "Nam" },
+  { value: 1, label: "Nữ" },
+  { value: 2, label: "Khác" },
+];
 
 interface UserFormState {
   userName: string;
@@ -33,6 +48,7 @@ interface UserFormState {
   email: string;
   passwordHash: string;
   dateOfBirth: string;
+  role: UserRoleValue;
   sex: number;
   address: string;
 }
@@ -81,6 +97,7 @@ function createEmptyUserForm(): UserFormState {
     email: "",
     passwordHash: "",
     dateOfBirth: "",
+    role: 0,
     sex: 0,
     address: "",
   };
@@ -136,7 +153,7 @@ function sexLabel(value?: number | null) {
     return "Chưa chọn";
   }
 
-  return `Mã ${value}`;
+  return genderOptions.find((option) => option.value === value)?.label ?? `Mã ${value}`;
 }
 
 function roleLabel(value?: string | null) {
@@ -145,6 +162,28 @@ function roleLabel(value?: string | null) {
   }
 
   return value;
+}
+
+function roleValueToLabel(value: UserRoleValue) {
+  return userRoleOptions.find((entry) => entry.value === value)?.label ?? "User"
+}
+
+function roleValueFromApi(value?: string | null) {
+  const normalized = (value ?? "").toLowerCase()
+
+  if (normalized === "salesstaff") {
+    return 0
+  }
+
+  if (normalized === "admin") {
+    return 1
+  }
+
+  if (normalized === "warehousekeeper") {
+    return 2
+  }
+
+  return 3
 }
 
 function updateAuthState(
@@ -190,6 +229,7 @@ function openEditDialog(user: UserDto) {
     email: user.email ?? "",
     passwordHash: "",
     dateOfBirth: toDateTimeInputValue(user.dateOfBirth),
+    role: roleValueFromApi(user.role),
     sex: user.sex ?? 0,
     address: user.address ?? "",
   };
@@ -248,6 +288,7 @@ async function submitEditor() {
     dateOfBirth: editor.form.dateOfBirth
       ? new Date(editor.form.dateOfBirth).toISOString()
       : null,
+    role: editor.form.role,
     sex: editor.form.sex ?? 0,
     address: editor.form.address.trim() || null,
   };
@@ -369,7 +410,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="dashboard-shell">
+  <main class="dashboard-shell users-view">
     <section class="hero-card">
       <div class="hero-copy">
         <p class="eyebrow">Sales & Inventory Management</p>
@@ -545,7 +586,7 @@ onMounted(() => {
             </button>
           </header>
 
-          <form class=" " @submit.prevent="submitEditor">
+          <form class="editor-form" @submit.prevent="submitEditor">
             <div class="form-grid">
               <label class="field">
                 <span>Username</span>
@@ -568,6 +609,19 @@ onMounted(() => {
               </label>
 
               <label class="field">
+                <span>Role</span>
+                <select v-model.number="editor.form.role">
+                  <option
+                    v-for="option in userRoleOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
                 <span>Ngày sinh</span>
                 <input
                   v-model="editor.form.dateOfBirth"
@@ -578,9 +632,13 @@ onMounted(() => {
               <label class="field">
                 <span>Giới tính</span>
                 <select v-model.number="editor.form.sex">
-                  <option :value="0">0</option>
-                  <option :value="1">1</option>
-                  <option :value="2">2</option>
+                  <option
+                    v-for="option in genderOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
                 </select>
               </label>
 
