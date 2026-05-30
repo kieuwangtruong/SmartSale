@@ -373,7 +373,7 @@ onMounted(() => {
     <section class="hero-card">
       <div class="hero-copy">
         <p class="eyebrow">Sales & Inventory Management</p>
-        <h1 class="hero-title">Quản Lý Nhân Sự</h1>
+        <h1 class="hero-title">Quản Lý Người Dùng</h1>
     
 
         <div class="hero-actions">
@@ -382,7 +382,7 @@ onMounted(() => {
             type="button"
             @click="openCreateDialog"
           >
-            Tạo Nhân Sự
+            Tạo Người Dùng
           </button>
           <button class="secondary-button" type="button" @click="loadUsers">
             {{ loading ? "Đang làm mới..." : "Làm mới dữ liệu" }}
@@ -399,7 +399,7 @@ onMounted(() => {
 
       <div class="hero-metrics">
         <article class="stat-card">
-          <span>Tổng Nhân Sự</span>
+          <span>Tổng Người Dùng</span>
           <strong>{{ totalUsers }}</strong>
           <small>Đang quản lý</small>
         </article>
@@ -456,9 +456,9 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <p class="panel-kicker">Danh sách user</p>
-            <h2>{{ users.length }} nhân sự phù hợp</h2>
+            <h2>{{ users.length }} người dùng phù hợp</h2>
           </div>
-          <span class="count-pill">{{ users.length }} tổng nhân sự</span>
+          <span class="count-pill">{{ users.length }} tổng người dùng</span>
         </div>
 
         <div v-if="loading" class="state-card">Đang tải dữ liệu...</div>
