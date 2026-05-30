@@ -62,7 +62,7 @@ export interface UpdateOrderStatusPayload {
   status: OrderStatus
 }
 
-const DEFAULT_BASE_URL = 'http://localhost:5000'
+const DEFAULT_BASE_URL = 'https://nhom2-sales-and-inventory-management.onrender.com'
 
 function normalizeBaseUrl(value: string) {
   try {
