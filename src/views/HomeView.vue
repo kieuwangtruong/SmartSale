@@ -425,6 +425,8 @@ onMounted(async () => {
       </div>
     </section>
 
+
+    
     <section v-if="errorMessage || syncMessage" class="message-stack">
       <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
       <div v-if="syncMessage" class="alert alert-success">{{ syncMessage }}</div>
