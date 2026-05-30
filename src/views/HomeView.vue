@@ -393,7 +393,7 @@ onMounted(async () => {
     <section class="hero-card">
       <div class="hero-copy">
         <p class="eyebrow">Sales & Inventory Management</p>
-        <h1>Quản lý đơn hàng</h1>
+        <h2>Quản lý đơn hàng</h2>
         <p class="hero-text">
           Theo dõi trạng thái đơn hàng, xem chi tiết từng sản phẩm, tạo đơn mới và cập nhật tiến
           trình xử lý ngay trên một màn hình.
@@ -426,7 +426,7 @@ onMounted(async () => {
     </section>
 
 
-    
+
     <section v-if="errorMessage || syncMessage" class="message-stack">
       <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
       <div v-if="syncMessage" class="alert alert-success">{{ syncMessage }}</div>

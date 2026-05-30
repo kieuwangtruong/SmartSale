@@ -62,8 +62,8 @@ export interface UpdateOrderStatusPayload {
   status: OrderStatus
 }
 
-const DEFAULT_BASE_URL = 'https://nhom2-sales-and-inventory-management.onrender.com'
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, '')
+const DEFAULT_BASE_URL = 'http://localhost:5000'
+const baseUrl = (import.meta.env.VITE_API_URL ?? DEFAULT_BASE_URL).replace(/\/$/, '')
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
