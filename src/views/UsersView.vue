@@ -30,10 +30,10 @@ type UserRoleValue = 0 | 1 | 2 | 3;
 type GenderValue = 0 | 1 | 2;
 
 const userRoleOptions: Array<{ value: UserRoleValue; label: string }> = [
-  { value: 0, label: "Sales Staff" },
-  { value: 1, label: "Admin" },
-  { value: 2, label: "Warehouse Keeper" },
-  { value: 3, label: "User" },
+  { value: 0, label: "Nhân viên bán hàng" },
+  { value: 1, label: "Quản trị viên" },
+  { value: 2, label: "Thủ kho" },
+  { value: 3, label: "Người dùng" },
 ];
 
 const genderOptions: Array<{ value: GenderValue; label: string }> = [
@@ -103,7 +103,7 @@ function createEmptyUserForm(): UserFormState {
   };
 }
 
-function toDateTimeInputValue(value?: string | null) {
+function toDateInputValue(value?: string | null) {
   if (!value) {
     return "";
   }
@@ -114,7 +114,7 @@ function toDateTimeInputValue(value?: string | null) {
   }
 
   const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
 function formatDateTime(value?: string | null) {
@@ -156,16 +156,43 @@ function sexLabel(value?: number | null) {
   return genderOptions.find((option) => option.value === value)?.label ?? `Mã ${value}`;
 }
 
-function roleLabel(value?: string | null) {
-  if (!value) {
+function roleLabel(value?: string | number | null) {
+  if (value === null || value === undefined || value === "") {
     return "Chưa có";
   }
 
-  return value;
+  if (typeof value === "number") {
+    return roleValueToLabel(value as UserRoleValue);
+  }
+
+  const normalized = value.toString().trim();
+  if (/^\d+$/.test(normalized)) {
+    return roleValueToLabel(Number(normalized) as UserRoleValue);
+  }
+
+  const lowerCased = normalized.toLowerCase();
+
+  if (lowerCased === "salesstaff") {
+    return "Nhân viên bán hàng";
+  }
+
+  if (lowerCased === "warehousekeeper") {
+    return "Thủ kho";
+  }
+
+  if (lowerCased === "admin") {
+    return "Quản trị viên";
+  }
+
+  if (lowerCased === "user") {
+    return "Người dùng";
+  }
+
+  return normalized;
 }
 
 function roleValueToLabel(value: UserRoleValue) {
-  return userRoleOptions.find((entry) => entry.value === value)?.label ?? "User"
+  return userRoleOptions.find((entry) => entry.value === value)?.label ?? "Người dùng"
 }
 
 function roleValueFromApi(value?: string | null) {
@@ -228,7 +255,7 @@ function openEditDialog(user: UserDto) {
     fullName: user.fullName ?? "",
     email: user.email ?? "",
     passwordHash: "",
-    dateOfBirth: toDateTimeInputValue(user.dateOfBirth),
+    dateOfBirth: toDateInputValue(user.dateOfBirth),
     role: roleValueFromApi(user.role),
     sex: user.sex ?? 0,
     address: user.address ?? "",
@@ -286,7 +313,7 @@ async function submitEditor() {
     email: editor.form.email.trim() || null,
     passwordHash: editor.form.passwordHash.trim() || null,
     dateOfBirth: editor.form.dateOfBirth
-      ? new Date(editor.form.dateOfBirth).toISOString()
+      ? new Date(`${editor.form.dateOfBirth}T00:00:00`).toISOString()
       : null,
     role: editor.form.role,
     sex: editor.form.sex ?? 0,
@@ -623,10 +650,7 @@ onMounted(() => {
 
               <label class="field">
                 <span>Ngày sinh</span>
-                <input
-                  v-model="editor.form.dateOfBirth"
-                  type="datetime-local"
-                />
+                <input v-model="editor.form.dateOfBirth" type="date" />
               </label>
 
               <label class="field">
