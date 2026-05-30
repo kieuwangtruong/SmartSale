@@ -375,9 +375,7 @@ onMounted(() => {
         <p class="eyebrow">Sales & Inventory Management</p>
         <h1 class="hero-title">Quản Lý Nhân Sự</h1>
         <p class="hero-text">
-          Quản lý danh sách Nhân Sự, xem chi tiết, tạo mới, cập nhật, xóa và
-          thao tác auth ngay trên một màn hình đồng bộ với giao diện quản lý đơn
-          hàng.
+          Quản lý danh sách Nhân Sự, xem chi tiết, tạo mới, cập nhật, xóa 
         </p>
 
         <div class="hero-actions">
