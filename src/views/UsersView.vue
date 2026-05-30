@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   clearStoredUserAuth,
   createUser,
@@ -22,333 +22,350 @@ import {
   type UpdateUserPayload,
   type UserDto,
   updateUser,
-} from '../services/userApi'
+} from "../services/userApi";
 
-type SearchMode = 'all' | 'username' | 'email'
-type EditorMode = 'create' | 'edit'
+type SearchMode = "all" | "username" | "email";
+type EditorMode = "create" | "edit";
 
 interface UserFormState {
-  userName: string
-  fullName: string
-  email: string
-  passwordHash: string
-  dateOfBirth: string
-  sex: number
-  address: string
+  userName: string;
+  fullName: string;
+  email: string;
+  passwordHash: string;
+  dateOfBirth: string;
+  sex: number;
+  address: string;
 }
 
-const searchMode = ref<SearchMode>('all')
-const searchQuery = ref('')
-const loading = ref(false)
-const errorMessage = ref('')
-const selectedUserId = ref<number | null>(null)
-const users = ref<UserDto[]>([])
-const infoMessage = ref('')
-const responsePreview = ref('')
-const authState = ref(getStoredUserAuth())
+const searchMode = ref<SearchMode>("all");
+const searchQuery = ref("");
+const loading = ref(false);
+const errorMessage = ref("");
+const selectedUserId = ref<number | null>(null);
+const users = ref<UserDto[]>([]);
+const infoMessage = ref("");
+const responsePreview = ref("");
+const authState = ref(getStoredUserAuth());
 
 const editor = reactive({
   open: false,
-  mode: 'create' as EditorMode,
+  mode: "create" as EditorMode,
   busy: false,
   form: createEmptyUserForm(),
-})
+});
 
 const authForms = reactive({
   login: {
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   } satisfies LoginRequestPayload,
   refresh: {
-    refreshToken: '',
+    refreshToken: "",
   } satisfies RefreshRequestPayload,
   logout: {
-    refreshToken: '',
-    deviceId: '',
+    refreshToken: "",
+    deviceId: "",
   } satisfies LogoutRequestPayload,
-})
+});
 
-const selectedUser = computed(() => users.value.find((user) => user.id === selectedUserId.value) ?? null)
-const totalUsers = computed(() => users.value.length)
-const visibleUserCount = computed(() => users.value.length)
+const selectedUser = computed(
+  () => users.value.find((user) => user.id === selectedUserId.value) ?? null,
+);
+const totalUsers = computed(() => users.value.length);
+const visibleUserCount = computed(() => users.value.length);
 
 function createEmptyUserForm(): UserFormState {
   return {
-    userName: '',
-    fullName: '',
-    email: '',
-    passwordHash: '',
-    dateOfBirth: '',
+    userName: "",
+    fullName: "",
+    email: "",
+    passwordHash: "",
+    dateOfBirth: "",
     sex: 0,
-    address: '',
-  }
+    address: "",
+  };
 }
 
 function toDateTimeInputValue(value?: string | null) {
   if (!value) {
-    return ''
+    return "";
   }
 
-  const date = new Date(value)
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return ''
+    return "";
   }
 
-  const offset = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
 function formatDateTime(value?: string | null) {
   if (!value) {
-    return 'Chưa cập nhật'
+    return "Chưa cập nhật";
   }
 
-  const date = new Date(value)
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return value
+    return value;
   }
 
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function formatDateOnly(value?: string | null) {
   if (!value) {
-    return 'Chưa cập nhật'
+    return "Chưa cập nhật";
   }
 
-  const date = new Date(value)
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return value
+    return value;
   }
 
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'medium',
-  }).format(date)
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+  }).format(date);
 }
 
 function sexLabel(value?: number | null) {
   if (value === null || value === undefined) {
-    return 'Chưa chọn'
+    return "Chưa chọn";
   }
 
-  return `Mã ${value}`
+  return `Mã ${value}`;
 }
 
 function roleLabel(value?: string | null) {
   if (!value) {
-    return 'Chưa có'
+    return "Chưa có";
   }
 
-  return value
+  return value;
 }
 
-function updateAuthState(payload: LoginResponsePayload | { accessToken: string; refreshToken: string }) {
+function updateAuthState(
+  payload: LoginResponsePayload | { accessToken: string; refreshToken: string },
+) {
   const nextState = {
     accessToken: payload.accessToken,
     refreshToken: payload.refreshToken,
-  }
+  };
 
-  setStoredUserAuth(nextState)
-  authState.value = nextState
+  setStoredUserAuth(nextState);
+  authState.value = nextState;
 }
 
 function clearAuthState() {
-  clearStoredUserAuth()
-  authState.value = null
+  clearStoredUserAuth();
+  authState.value = null;
 }
 
 function normalizeUserList(payload: UserDto | UserDto[] | null | undefined) {
   if (!payload) {
-    return []
+    return [];
   }
 
-  return Array.isArray(payload) ? payload : [payload]
+  return Array.isArray(payload) ? payload : [payload];
 }
 
 function setSelectedUser(user?: UserDto | null) {
-  selectedUserId.value = user?.id ?? null
+  selectedUserId.value = user?.id ?? null;
 }
 
 function openCreateDialog() {
-  editor.mode = 'create'
-  editor.form = createEmptyUserForm()
-  editor.open = true
+  editor.mode = "create";
+  editor.form = createEmptyUserForm();
+  editor.open = true;
 }
 
 function openEditDialog(user: UserDto) {
-  editor.mode = 'edit'
+  editor.mode = "edit";
   editor.form = {
-    userName: user.userName ?? '',
-    fullName: user.fullName ?? '',
-    email: user.email ?? '',
-    passwordHash: '',
+    userName: user.userName ?? "",
+    fullName: user.fullName ?? "",
+    email: user.email ?? "",
+    passwordHash: "",
     dateOfBirth: toDateTimeInputValue(user.dateOfBirth),
     sex: user.sex ?? 0,
-    address: user.address ?? '',
-  }
-  selectedUserId.value = user.id
-  editor.open = true
+    address: user.address ?? "",
+  };
+  selectedUserId.value = user.id;
+  editor.open = true;
 }
 
 function closeEditor() {
-  editor.open = false
+  editor.open = false;
 }
 
 function updateResponsePreview(value: unknown) {
-  responsePreview.value = JSON.stringify(value, null, 2)
+  responsePreview.value = JSON.stringify(value, null, 2);
 }
 
 async function loadUsers() {
-  loading.value = true
-  errorMessage.value = ''
-  infoMessage.value = ''
+  loading.value = true;
+  errorMessage.value = "";
+  infoMessage.value = "";
 
   try {
-    let payload: UserDto | UserDto[] | null
+    let payload: UserDto | UserDto[] | null;
 
-    if (!searchQuery.value.trim() || searchMode.value === 'all') {
-      payload = await getUsers()
-    } else if (searchMode.value === 'username') {
-      payload = await getUserByUsername(searchQuery.value.trim())
+    if (!searchQuery.value.trim() || searchMode.value === "all") {
+      payload = await getUsers();
+    } else if (searchMode.value === "username") {
+      payload = await getUserByUsername(searchQuery.value.trim());
     } else {
-      payload = await getUserByEmail(searchQuery.value.trim())
+      payload = await getUserByEmail(searchQuery.value.trim());
     }
 
-    users.value = normalizeUserList(payload)
-    setSelectedUser(users.value[0])
+    users.value = normalizeUserList(payload);
+    setSelectedUser(users.value[0]);
 
     infoMessage.value =
-      searchQuery.value.trim() && searchMode.value !== 'all'
-        ? `Đã lọc theo ${searchMode.value === 'username' ? 'username' : 'email'}.`
-        : 'Đã tải danh sách user.'
+      searchQuery.value.trim() && searchMode.value !== "all"
+        ? `Đã lọc theo ${searchMode.value === "username" ? "username" : "email"}.`
+        : "Đã tải danh sách user.";
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể tải danh sách user'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể tải danh sách user";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function submitEditor() {
-  editor.busy = true
-  errorMessage.value = ''
+  editor.busy = true;
+  errorMessage.value = "";
 
   const payload: CreateUserPayload = {
     userName: editor.form.userName.trim() || null,
     fullName: editor.form.fullName.trim() || null,
     email: editor.form.email.trim() || null,
     passwordHash: editor.form.passwordHash.trim() || null,
-    dateOfBirth: editor.form.dateOfBirth ? new Date(editor.form.dateOfBirth).toISOString() : null,
+    dateOfBirth: editor.form.dateOfBirth
+      ? new Date(editor.form.dateOfBirth).toISOString()
+      : null,
     sex: editor.form.sex ?? 0,
     address: editor.form.address.trim() || null,
-  }
+  };
 
   try {
-    if (editor.mode === 'create') {
-      const created = await createUser(payload)
-      updateResponsePreview(created)
-      infoMessage.value = 'Đã tạo user mới.'
+    if (editor.mode === "create") {
+      const created = await createUser(payload);
+      updateResponsePreview(created);
+      infoMessage.value = "Đã tạo user mới.";
     } else if (!selectedUser.value) {
-      throw new Error('Chưa chọn user để chỉnh sửa')
+      throw new Error("Chưa chọn user để chỉnh sửa");
     } else {
       const updatedPayload: UpdateUserPayload = {
         id: selectedUser.value.id,
         ...payload,
-      }
-      const updated = await updateUser(updatedPayload)
-      updateResponsePreview(updated)
-      infoMessage.value = 'Đã cập nhật user.'
+      };
+      const updated = await updateUser(updatedPayload);
+      updateResponsePreview(updated);
+      infoMessage.value = "Đã cập nhật user.";
     }
 
-    closeEditor()
-    await loadUsers()
+    closeEditor();
+    await loadUsers();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể lưu user'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể lưu user";
   } finally {
-    editor.busy = false
+    editor.busy = false;
   }
 }
 
 async function removeUser(user: UserDto) {
-  if (!window.confirm(`Xóa user #${user.id} - ${user.fullName ?? user.userName ?? user.email ?? ''}?`)) {
-    return
+  if (
+    !window.confirm(
+      `Xóa user #${user.id} - ${user.fullName ?? user.userName ?? user.email ?? ""}?`,
+    )
+  ) {
+    return;
   }
 
-  errorMessage.value = ''
+  errorMessage.value = "";
 
   try {
-    const result = await deleteUser(user.id)
-    updateResponsePreview(result)
-    infoMessage.value = 'Đã xóa user.'
-    await loadUsers()
+    const result = await deleteUser(user.id);
+    updateResponsePreview(result);
+    infoMessage.value = "Đã xóa user.";
+    await loadUsers();
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể xóa user'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể xóa user";
   }
 }
 
 async function inspectUser(user: UserDto) {
-  errorMessage.value = ''
+  errorMessage.value = "";
 
   try {
-    const detail = await getUserById(user.id)
-    updateResponsePreview(detail)
-    setSelectedUser(detail)
-    infoMessage.value = `Đã tải chi tiết user #${user.id}.`
+    const detail = await getUserById(user.id);
+    updateResponsePreview(detail);
+    setSelectedUser(detail);
+    infoMessage.value = `Đã tải chi tiết user #${user.id}.`;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể lấy chi tiết user'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể lấy chi tiết user";
   }
 }
 
 async function submitLogin() {
   try {
-    const result = await login(authForms.login)
-    updateAuthState(result)
-    authForms.refresh.refreshToken = result.refreshToken
-    authForms.logout.refreshToken = result.refreshToken
-    updateResponsePreview(result)
-    infoMessage.value = 'Đã gọi login.'
+    const result = await login(authForms.login);
+    updateAuthState(result);
+    authForms.refresh.refreshToken = result.refreshToken;
+    authForms.logout.refreshToken = result.refreshToken;
+    updateResponsePreview(result);
+    infoMessage.value = "Đã gọi login.";
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể login'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể login";
   }
 }
 
 async function submitRefresh() {
   try {
-    const result = await refresh(authForms.refresh)
+    const result = await refresh(authForms.refresh);
     if (authState.value?.refreshToken) {
       updateAuthState({
         accessToken: result.accessToken,
         refreshToken: authState.value.refreshToken,
-      })
+      });
     } else if (authForms.refresh.refreshToken.trim()) {
       updateAuthState({
         accessToken: result.accessToken,
         refreshToken: authForms.refresh.refreshToken.trim(),
-      })
+      });
     }
-    updateResponsePreview(result)
-    infoMessage.value = 'Đã gọi refresh.'
+    updateResponsePreview(result);
+    infoMessage.value = "Đã gọi refresh.";
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể refresh token'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể refresh token";
   }
 }
 
 async function submitLogout() {
   try {
-    const result = await logout(authForms.logout)
-    clearAuthState()
-    updateResponsePreview(result)
-    infoMessage.value = 'Đã gọi logout.'
+    const result = await logout(authForms.logout);
+    clearAuthState();
+    updateResponsePreview(result);
+    infoMessage.value = "Đã gọi logout.";
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Không thể logout'
+    errorMessage.value =
+      error instanceof Error ? error.message : "Không thể logout";
   }
 }
 
 onMounted(() => {
-  loadUsers()
-})
+  loadUsers();
+});
 </script>
 
 <template>
@@ -358,16 +375,21 @@ onMounted(() => {
         <p class="eyebrow">Sales & Inventory Management</p>
         <h1 class="hero-title">Quản Lý Nhân Sự</h1>
         <p class="hero-text">
-          Quản lý danh sách Nhân Sự, xem chi tiết, tạo mới, cập nhật, xóa và thao tác auth ngay trên
-          một màn hình đồng bộ với giao diện quản lý đơn hàng.
+          Quản lý danh sách Nhân Sự, xem chi tiết, tạo mới, cập nhật, xóa và
+          thao tác auth ngay trên một màn hình đồng bộ với giao diện quản lý đơn
+          hàng.
         </p>
 
         <div class="hero-actions">
-          <button class="primary-button" type="button" @click="openCreateDialog">
+          <button
+            class="primary-button"
+            type="button"
+            @click="openCreateDialog"
+          >
             Tạo Nhân Sự
           </button>
           <button class="secondary-button" type="button" @click="loadUsers">
-            {{ loading ? 'Đang làm mới...' : 'Làm mới dữ liệu' }}
+            {{ loading ? "Đang làm mới..." : "Làm mới dữ liệu" }}
           </button>
         </div>
 
@@ -375,7 +397,7 @@ onMounted(() => {
           <span class="mini-label">API backend User</span>
           <strong>{{ getUserApiBaseUrl() }}</strong>
           <span class="mini-label">Auth</span>
-          <strong>{{ authState ? 'Đã đăng nhập' : 'Chưa có token' }}</strong>
+          <strong>{{ authState ? "Đã đăng nhập" : "Chưa có token" }}</strong>
         </div>
       </div>
 
@@ -397,15 +419,19 @@ onMounted(() => {
         </article>
         <article class="stat-card">
           <span>Auth token</span>
-          <strong>{{ authState ? 'Có' : 'Chưa có' }}</strong>
+          <strong>{{ authState ? "Có" : "Chưa có" }}</strong>
           <small>Login / refresh / logout</small>
         </article>
       </div>
     </section>
 
     <section v-if="errorMessage || infoMessage" class="message-stack">
-      <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
-      <div v-if="infoMessage" class="alert alert-success">{{ infoMessage }}</div>
+      <div v-if="errorMessage" class="alert alert-error">
+        {{ errorMessage }}
+      </div>
+      <div v-if="infoMessage" class="alert alert-success">
+        {{ infoMessage }}
+      </div>
     </section>
 
     <section class="toolbar-card">
@@ -427,13 +453,6 @@ onMounted(() => {
           <option value="email">Email</option>
         </select>
       </div>
-
-      <div class="toolbar-actions">
-        <button class="secondary-button" type="button" @click="loadUsers">
-          {{ loading ? 'Đang tải...' : 'Tải lại' }}
-        </button>
-        <button class="primary-button" type="button" @click="openCreateDialog">Thêm user</button>
-      </div>
     </section>
 
     <section class="content-grid">
@@ -441,9 +460,9 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <p class="panel-kicker">Danh sách user</p>
-            <h2>{{ users.length }} user phù hợp</h2>
+            <h2>{{ users.length }} nhân sự phù hợp</h2>
           </div>
-          <span class="count-pill">{{ users.length }} tổng user</span>
+          <span class="count-pill">{{ users.length }} tổng nhân sự</span>
         </div>
 
         <div v-if="loading" class="state-card">Đang tải dữ liệu...</div>
@@ -463,17 +482,19 @@ onMounted(() => {
               <p class="order-id">#{{ user.id }}</p>
               <h3>{{ user.fullName || user.userName }}</h3>
             </div>
-            <span class="status-chip status-processing">{{ roleLabel(user.role) }}</span>
+            <span class="status-chip status-processing">{{
+              roleLabel(user.role)
+            }}</span>
           </div>
 
           <div class="order-meta-grid">
             <div>
               <span>Username: </span>
-              <strong>{{ user.userName || 'Chưa có' }}</strong>
+              <strong>{{ user.userName || "Chưa có" }}</strong>
             </div>
             <div>
               <span>Email: </span>
-              <strong>{{ user.email || 'Chưa có' }}</strong>
+              <strong>{{ user.email || "Chưa có" }}</strong>
             </div>
             <div>
               <span>Ngày sinh: </span>
@@ -486,164 +507,23 @@ onMounted(() => {
           </div>
 
           <div class="order-card-actions" @click.stop>
-            <button class="ghost-button" type="button" @click="inspectUser(user)">Xem</button>
-            <button class="ghost-button" type="button" @click="openEditDialog(user)">Sửa</button>
-            <button class="danger-button" type="button" @click="removeUser(user)">Xóa</button>
+            <button
+              class="ghost-button"
+              type="button"
+              @click="openEditDialog(user)"
+            >
+              Sửa
+            </button>
+            <button
+              class="danger-button"
+              type="button"
+              @click="removeUser(user)"
+            >
+              Xóa
+            </button>
           </div>
         </article>
       </div>
-
-      <aside class="detail-column">
-        <div class="panel-heading">
-          <div>
-            <p class="panel-kicker">Chi tiết user</p>
-            <h2>Thông tin đang chọn</h2>
-          </div>
-          <button
-            v-if="selectedUser"
-            class="ghost-button"
-            type="button"
-            @click="openEditDialog(selectedUser)"
-          >
-            Chỉnh sửa
-          </button>
-        </div>
-
-        <div v-if="selectedUser" class="detail-card">
-          <div class="detail-top">
-            <div>
-              <p class="detail-label">Người dùng</p>
-              <h3>#{{ selectedUser.id }}</h3>
-              <p class="detail-subtext">{{ selectedUser.fullName || selectedUser.userName }}</p>
-            </div>
-            <span class="status-chip status-processing">{{ roleLabel(selectedUser.role) }}</span>
-          </div>
-
-          <dl class="detail-grid">
-            <div>
-              <dt>Username</dt>
-              <dd>{{ selectedUser.userName || 'Chưa có' }}</dd>
-            </div>
-            <div>
-              <dt>Họ tên</dt>
-              <dd>{{ selectedUser.fullName || 'Chưa có' }}</dd>
-            </div>
-            <div>
-              <dt>Email</dt>
-              <dd>{{ selectedUser.email || 'Chưa có' }}</dd>
-            </div>
-            <div>
-              <dt>Vai trò</dt>
-              <dd>{{ roleLabel(selectedUser.role) }}</dd>
-            </div>
-            <div>
-              <dt>Ngày sinh</dt>
-              <dd>{{ formatDateTime(selectedUser.dateOfBirth) }}</dd>
-            </div>
-            <div>
-              <dt>Giới tính</dt>
-              <dd>{{ sexLabel(selectedUser.sex) }}</dd>
-            </div>
-            <div>
-              <dt>Địa chỉ</dt>
-              <dd>{{ selectedUser.address || 'Chưa có' }}</dd>
-            </div>
-            <div>
-              <dt>Tạo lúc</dt>
-              <dd>{{ formatDateTime(selectedUser.createdAt) }}</dd>
-            </div>
-            <div>
-              <dt>Sửa cuối</dt>
-              <dd>{{ formatDateTime(selectedUser.lastModified) }}</dd>
-            </div>
-          </dl>
-
-          <div class="detail-actions">
-            <button class="secondary-button" type="button" @click="openEditDialog(selectedUser)">
-              Sửa user
-            </button>
-            <button class="danger-button" type="button" @click="removeUser(selectedUser)">
-              Xóa user
-            </button>
-          </div>
-        </div>
-
-        <div v-else class="state-card">
-          Chọn một user bên trái để xem chi tiết, sửa hoặc xóa.
-        </div>
-
-        <article class="detail-card">
-          <div class="panel-heading">
-            <div>
-              <p class="panel-kicker">Auth utility</p>
-              <h2>Login / Refresh / Logout</h2>
-            </div>
-            <span class="pill">Swagger</span>
-          </div>
-
-          <div class="auth-grid">
-            <section class="auth-card">
-              <h4>Login</h4>
-              <label>
-                Email
-                <input v-model="authForms.login.email" type="email" placeholder="email@example.com" />
-              </label>
-              <label>
-                Mật khẩu
-                <input v-model="authForms.login.password" type="password" placeholder="••••••••" />
-              </label>
-              <button type="button" @click="submitLogin">Gọi login</button>
-            </section>
-
-            <section class="auth-card">
-              <h4>Refresh</h4>
-              <label>
-                Refresh token
-                <input v-model="authForms.refresh.refreshToken" type="text" placeholder="Paste refresh token" />
-              </label>
-              <button type="button" @click="submitRefresh">Gọi refresh</button>
-            </section>
-
-            <section class="auth-card auth-card-wide">
-              <h4>Logout</h4>
-              <label>
-                Refresh token
-                <input v-model="authForms.logout.refreshToken" type="text" placeholder="Refresh token" />
-              </label>
-              <label>
-                Device ID
-                <input v-model="authForms.logout.deviceId" type="text" placeholder="Device ID" />
-              </label>
-              <button type="button" @click="submitLogout">Gọi logout</button>
-            </section>
-
-            <section class="auth-card auth-card-wide auth-state-card">
-              <h4>Trạng thái token</h4>
-              <div class="token-status">
-                <span>Access</span>
-                <strong>{{ authState?.accessToken ? 'Đã lưu' : 'Chưa có' }}</strong>
-              </div>
-              <div class="token-status">
-                <span>Refresh</span>
-                <strong>{{ authState?.refreshToken ? 'Đã lưu' : 'Chưa có' }}</strong>
-              </div>
-              <button type="button" class="secondary-button" @click="clearAuthState">Xóa token cục bộ</button>
-            </section>
-          </div>
-        </article>
-
-        <article class="detail-card">
-          <div class="panel-heading">
-            <div>
-              <p class="panel-kicker">Kết quả</p>
-              <h2>Response preview</h2>
-            </div>
-            <span class="pill">JSON</span>
-          </div>
-
-          <pre>{{ responsePreview || 'Chưa có phản hồi nào.' }}</pre>
-        </article>
-      </aside>
     </section>
 
     <transition name="modal-fade">
@@ -652,16 +532,24 @@ onMounted(() => {
           <header class="modal-header">
             <div>
               <p class="panel-kicker">
-                {{ editor.mode === 'create' ? 'Tạo user mới' : 'Chỉnh sửa user' }}
+                {{
+                  editor.mode === "create" ? "Tạo user mới" : "Chỉnh sửa user"
+                }}
               </p>
               <h2>
-                {{ editor.mode === 'create' ? 'Nhập thông tin user' : `Chỉnh sửa user #${selectedUser?.id ?? ''}` }}
+                {{
+                  editor.mode === "create"
+                    ? "Nhập thông tin user"
+                    : `Chỉnh sửa user #${selectedUser?.id ?? ""}`
+                }}
               </h2>
             </div>
-            <button class="ghost-button" type="button" @click="closeEditor">Đóng</button>
+            <button class="ghost-button" type="button" @click="closeEditor">
+              Đóng
+            </button>
           </header>
 
-          <form class="editor-form" @submit.prevent="submitEditor">
+          <form class=" " @submit.prevent="submitEditor">
             <div class="form-grid">
               <label class="field">
                 <span>Username</span>
@@ -685,7 +573,10 @@ onMounted(() => {
 
               <label class="field">
                 <span>Ngày sinh</span>
-                <input v-model="editor.form.dateOfBirth" type="datetime-local" />
+                <input
+                  v-model="editor.form.dateOfBirth"
+                  type="datetime-local"
+                />
               </label>
 
               <label class="field">
@@ -703,14 +594,26 @@ onMounted(() => {
               </label>
             </div>
 
-            <p v-if="editor.mode === 'edit' && !selectedUser" class="validation-text">
-              Chưa chọn user để chỉnh sửa.
-            </p>
-
             <footer class="modal-footer">
-              <button class="secondary-button" type="button" @click="closeEditor">Hủy</button>
-              <button class="primary-button" type="submit" :disabled="editor.busy">
-                {{ editor.busy ? 'Đang lưu...' : editor.mode === 'create' ? 'Tạo user' : 'Lưu thay đổi' }}
+              <button
+                class="secondary-button"
+                type="button"
+                @click="closeEditor"
+              >
+                Hủy
+              </button>
+              <button
+                class="primary-button"
+                type="submit"
+                :disabled="editor.busy"
+              >
+                {{
+                  editor.busy
+                    ? "Đang lưu..."
+                    : editor.mode === "create"
+                      ? "Tạo user"
+                      : "Lưu thay đổi"
+                }}
               </button>
             </footer>
           </form>

@@ -350,7 +350,7 @@ strong {
   border-radius: 24px;
   padding: 1rem;
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 0.7fr) auto;
+  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 0.7fr);
   gap: 1rem;
   align-items: end;
 }
@@ -379,6 +379,17 @@ select {
   color: #f8fafc;
   padding: 0.85rem 0.95rem;
   outline: none;
+}
+
+.search-field input:focus,
+.filter-field select:focus,
+.field input:focus,
+.field select:focus,
+.status-select:focus,
+input:focus,
+select:focus {
+  border-color: rgba(96, 165, 250, 0.65);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
 }
 
 .search-field input::placeholder {
@@ -508,6 +519,18 @@ table,
   padding: 1rem;
 }
 
+.modal-card {
+  width: min(980px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 1.35rem;
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.14), transparent 35%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.48);
+}
+
 .panel-header h3 {
   color: #f8fafc;
   font-size: 1.2rem;
@@ -581,6 +604,64 @@ tbody tr.active {
   gap: 0.75rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.modal-header {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.modal-header h2 {
+  color: #f8fafc;
+  font-size: 1.4rem;
+  margin-top: 0.25rem;
+}
+
+.editor-form {
+  display: grid;
+  gap: 3rem;
+}
+
+.editor-form .form-grid {
+  gap: 0.95rem;
+}
+
+.field {
+  background: rgba(15, 23, 42, 0.52);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 0.85rem;
+  border-radius: 18px;
+}
+
+.field span {
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.field input,
+.field select {
+  background: rgba(2, 6, 23, 0.46);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.field input::placeholder {
+  color: #64748b;
+}
+
+.field.full-span {
+  min-width: 0;
+}
+
+.editor-form .validation-text {
+  margin-top: -0.25rem;
+}
+
+.modal-footer {
+  justify-content: flex-end;
+  padding-top: 0.25rem;
 }
 
 .status-chip {
@@ -716,6 +797,33 @@ dd {
   word-break: break-word;
 }
 
+.items-block {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.2rem 0 0;
+}
+
+.items-header {
+  align-items: flex-end;
+  padding-bottom: 0.9rem;
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.items-header h3 {
+  color: #f8fafc;
+}
+
+.items-header p {
+  max-width: 54ch;
+}
+
+.items-header .secondary-button {
+  align-self: center;
+  margin-top: 0.15rem;
+}
+
+.modal-backdrop,
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -746,8 +854,10 @@ dd {
 
 .item-row {
   grid-template-columns: minmax(0, 1fr) 140px 160px auto;
-  padding: 0.9rem;
-  background: rgba(15, 23, 42, 0.62);
+  padding: 1rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.62));
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .full-span {

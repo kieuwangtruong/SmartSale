@@ -456,13 +456,6 @@ onMounted(async () => {
           </option>
         </select>
       </div>
-
-      <div class="toolbar-actions">
-        <button class="secondary-button" type="button" @click="refreshDashboard">
-          {{ isRefreshing ? 'Đang tải...' : 'Tải lại' }}
-        </button>
-        <button class="primary-button" type="button" @click="openCreateDialog">Thêm đơn</button>
-      </div>
     </section>
 
     <section class="content-grid">
