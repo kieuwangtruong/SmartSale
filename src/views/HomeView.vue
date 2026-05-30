@@ -619,21 +619,7 @@ onMounted(async () => {
             </button>
           </div>
 
-          <div class="line-items">
-            <div class="line-items-head">
-              <span>Sản phẩm</span>
-              <span>SL</span>
-              <span>Giá</span>
-              <span>Thành tiền</span>
-            </div>
-
-            <div v-for="item in selectedOrder.orderItems" :key="item.id" class="line-item-row">
-              <strong>{{ getProductLabel(item.productId) }}</strong>
-              <span>{{ item.quantity }}</span>
-              <span>{{ formatCurrency(item.price) }}</span>
-              <span>{{ formatCurrency(item.subTotal) }}</span>
-            </div>
-          </div>
+          
         </div>
 
         <div v-else class="state-card">
