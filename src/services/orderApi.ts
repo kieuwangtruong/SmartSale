@@ -63,7 +63,16 @@ export interface UpdateOrderStatusPayload {
 }
 
 const DEFAULT_BASE_URL = 'http://localhost:5000'
-const baseUrl = (import.meta.env.VITE_API_URL ?? DEFAULT_BASE_URL).replace(/\/$/, '')
+
+function normalizeBaseUrl(value: string) {
+  try {
+    return new URL(value).origin
+  } catch {
+    return value.replace(/\/$/, '')
+  }
+}
+
+const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL ?? DEFAULT_BASE_URL)
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
