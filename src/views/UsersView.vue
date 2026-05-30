@@ -374,9 +374,7 @@ onMounted(() => {
       <div class="hero-copy">
         <p class="eyebrow">Sales & Inventory Management</p>
         <h1 class="hero-title">Quản Lý Nhân Sự</h1>
-        <p class="hero-text">
-          Quản lý danh sách Nhân Sự, xem chi tiết, tạo mới, cập nhật, xóa 
-        </p>
+    
 
         <div class="hero-actions">
           <button

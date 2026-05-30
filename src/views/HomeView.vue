@@ -394,10 +394,7 @@ onMounted(async () => {
       <div class="hero-copy">
         <p class="eyebrow">Sales & Inventory Management</p>
         <h1 class="hero-title">Quản Lý Đơn Hàng</h1>
-        <p class="hero-text">
-          Theo dõi trạng thái đơn hàng, xem chi tiết từng sản phẩm, tạo đơn mới và cập nhật tiến
-          trình xử lý ngay trên một màn hình.
-        </p>
+
 
         <div class="hero-actions">
           <button class="primary-button" type="button" @click="openCreateDialog">
