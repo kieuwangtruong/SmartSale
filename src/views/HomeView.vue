@@ -49,6 +49,62 @@ const editorForm = reactive<{
 
 const apiBaseUrl = getApiBaseUrl()
 
+function normalizeText(value?: string | number | null) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function tokenizeSearch(value: string) {
+  return normalizeText(value)
+    .split(/\s+/)
+    .filter(Boolean)
+}
+
+function scoreOrder(order: OrderResponseDto, tokens: string[]) {
+  const user = usersById.value.get(order.userId)
+  const fieldValues = [
+    order.id,
+    order.userId,
+    order.status,
+    order.total,
+    formatCurrency(order.total),
+    formatDateTime(order.createdAt),
+    formatDateOnly(order.createdAt),
+    user?.fullName,
+    user?.email,
+    user?.role,
+    order.orderItems.map((item) => getProductLabel(item.productId)).join(' '),
+  ]
+
+  const normalizedFields = fieldValues.map((value) => normalizeText(value)).filter(Boolean)
+  const combined = normalizedFields.join(' ')
+
+  if (!tokens.every((token) => combined.includes(token))) {
+    return 0
+  }
+
+  let score = 10
+
+  for (const token of tokens) {
+    if (normalizedFields.some((field) => field === token)) {
+      score += 40
+      continue
+    }
+
+    if (normalizedFields.some((field) => field.startsWith(token))) {
+      score += 25
+      continue
+    }
+
+    score += 10
+  }
+
+  return score
+}
+
 function createEmptyItem(product?: ProductDto): OrderItemInput {
   return {
     productId: product?.id ?? null,
@@ -230,24 +286,18 @@ const selectedOrder = computed(
 )
 
 const visibleOrders = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
+  const tokens = tokenizeSearch(searchQuery.value)
 
-  return orders.value.filter((order) => {
-    const user = usersById.value.get(order.userId)
-    const userText = `${user?.fullName ?? ''} ${user?.email ?? ''}`.toLowerCase()
-    const orderText = [
-      String(order.id),
-      String(order.userId),
-      order.status,
-      formatCurrency(order.total),
-      userText,
-    ].join(' ')
+  return [...orders.value]
+    .map((order) => ({ order, score: tokens.length ? scoreOrder(order, tokens) : 1 }))
+    .filter((entry) => {
+      const statusMatches =
+        statusFilter.value === 'all' || entry.order.status === statusFilter.value
 
-    const statusMatches = statusFilter.value === 'all' || order.status === statusFilter.value
-    const queryMatches = !query || orderText.toLowerCase().includes(query)
-
-    return statusMatches && queryMatches
-  })
+      return statusMatches && entry.score > 0
+    })
+    .sort((left, right) => right.score - left.score || right.order.id - left.order.id)
+    .map((entry) => entry.order)
 })
 
 const dashboardStats = computed(() => {

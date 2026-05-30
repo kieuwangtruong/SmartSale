@@ -6,9 +6,7 @@ import {
   deleteUser,
   getStoredUserAuth,
   getUserApiBaseUrl,
-  getUserByEmail,
   getUserById,
-  getUserByUsername,
   getUsers,
   login,
   logout,
@@ -24,7 +22,7 @@ import {
   updateUser,
 } from "../services/userApi";
 
-type SearchMode = "all" | "username" | "email";
+type SearchMode = "all" | "username" | "fullName" | "email" | "role" | "address";
 type EditorMode = "create" | "edit";
 type UserRoleValue = 0 | 1 | 2 | 3;
 type GenderValue = 0 | 1 | 2;
@@ -88,7 +86,19 @@ const selectedUser = computed(
   () => users.value.find((user) => user.id === selectedUserId.value) ?? null,
 );
 const totalUsers = computed(() => users.value.length);
-const visibleUserCount = computed(() => users.value.length);
+const searchTokens = computed(() => tokenizeSearch(searchQuery.value));
+const visibleUsers = computed(() => {
+  if (!searchTokens.value.length) {
+    return users.value;
+  }
+
+  return [...users.value]
+    .map((user) => ({ user, score: scoreUser(user, searchTokens.value) }))
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => right.score - left.score || left.user.id - right.user.id)
+    .map((entry) => entry.user);
+});
+const visibleUserCount = computed(() => visibleUsers.value.length);
 
 function createEmptyUserForm(): UserFormState {
   return {
@@ -101,6 +111,68 @@ function createEmptyUserForm(): UserFormState {
     sex: 0,
     address: "",
   };
+}
+
+function normalizeText(value?: string | number | null) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function tokenizeSearch(value: string) {
+  return normalizeText(value)
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function scoreUser(user: UserDto, tokens: string[]) {
+  const fieldValues =
+    searchMode.value === "all"
+      ? [
+          user.id,
+          user.userName,
+          user.fullName,
+          user.email,
+          user.address,
+          roleLabel(user.role),
+          sexLabel(user.sex),
+        ]
+      : searchMode.value === "username"
+        ? [user.userName]
+        : searchMode.value === "fullName"
+          ? [user.fullName]
+          : searchMode.value === "email"
+            ? [user.email]
+            : searchMode.value === "role"
+              ? [roleLabel(user.role)]
+              : [user.address];
+
+  const normalizedFields = fieldValues.map((value) => normalizeText(value)).filter(Boolean);
+  const combined = normalizedFields.join(" ");
+
+  if (!tokens.every((token) => combined.includes(token))) {
+    return 0;
+  }
+
+  let score = 10;
+
+  for (const token of tokens) {
+    if (normalizedFields.some((field) => field === token)) {
+      score += 40;
+      continue;
+    }
+
+    if (normalizedFields.some((field) => field.startsWith(token))) {
+      score += 25;
+      continue;
+    }
+
+    score += 10;
+  }
+
+  return score;
 }
 
 function toDateInputValue(value?: string | null) {
@@ -195,8 +267,23 @@ function roleValueToLabel(value: UserRoleValue) {
   return userRoleOptions.find((entry) => entry.value === value)?.label ?? "Người dùng"
 }
 
-function roleValueFromApi(value?: string | null) {
-  const normalized = (value ?? "").toLowerCase()
+function roleValueFromApi(value?: string | number | null) {
+  if (value === null || value === undefined || value === "") {
+    return 3
+  }
+
+  if (typeof value === "number") {
+    return value === 0 || value === 1 || value === 2 || value === 3 ? value : 3
+  }
+
+  const normalized = value.toString().trim().toLowerCase()
+
+  if (/^\d+$/.test(normalized)) {
+    const numericValue = Number(normalized)
+    return numericValue === 0 || numericValue === 1 || numericValue === 2 || numericValue === 3
+      ? numericValue
+      : 3
+  }
 
   if (normalized === "salesstaff") {
     return 0
@@ -278,23 +365,11 @@ async function loadUsers() {
   infoMessage.value = "";
 
   try {
-    let payload: UserDto | UserDto[] | null;
-
-    if (!searchQuery.value.trim() || searchMode.value === "all") {
-      payload = await getUsers();
-    } else if (searchMode.value === "username") {
-      payload = await getUserByUsername(searchQuery.value.trim());
-    } else {
-      payload = await getUserByEmail(searchQuery.value.trim());
-    }
-
+    const payload = await getUsers();
     users.value = normalizeUserList(payload);
     setSelectedUser(users.value[0]);
 
-    infoMessage.value =
-      searchQuery.value.trim() && searchMode.value !== "all"
-        ? `Đã lọc theo ${searchMode.value === "username" ? "username" : "email"}.`
-        : "Đã tải danh sách user.";
+    infoMessage.value = "Đã tải danh sách user. Bạn có thể lọc trực tiếp theo username, email, tên, role hoặc địa chỉ.";
   } catch (error) {
     errorMessage.value =
       error instanceof Error ? error.message : "Không thể tải danh sách user";
@@ -514,7 +589,10 @@ onMounted(() => {
         <select id="mode-filter" v-model="searchMode">
           <option value="all">Tất cả</option>
           <option value="username">Username</option>
+          <option value="fullName">Họ tên</option>
           <option value="email">Email</option>
+          <option value="role">Role</option>
+          <option value="address">Địa chỉ</option>
         </select>
       </div>
     </section>
@@ -524,18 +602,18 @@ onMounted(() => {
         <div class="panel-heading">
           <div>
             <p class="panel-kicker">Danh sách user</p>
-            <h2>{{ users.length }} người dùng phù hợp</h2>
+            <h2>{{ visibleUsers.length }} người dùng phù hợp</h2>
           </div>
           <span class="count-pill">{{ users.length }} tổng người dùng</span>
         </div>
 
         <div v-if="loading" class="state-card">Đang tải dữ liệu...</div>
-        <div v-else-if="!users.length" class="state-card">
+        <div v-else-if="!visibleUsers.length" class="state-card">
           Không có user phù hợp với bộ lọc hiện tại.
         </div>
 
         <article
-          v-for="user in users"
+          v-for="user in visibleUsers"
           :key="user.id"
           class="order-card"
           :class="{ active: selectedUserId === user.id }"
