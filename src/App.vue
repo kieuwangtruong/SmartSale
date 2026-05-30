@@ -12,7 +12,7 @@ import { RouterLink, RouterView } from 'vue-router'
 
       <nav class="app-nav" aria-label="Điều hướng chính">
         <RouterLink to="/">Đơn hàng</RouterLink>
-        <RouterLink to="/users">User</RouterLink>
+        <RouterLink to="/users">Nhân Sự</RouterLink>
         <RouterLink to="/about">Giới thiệu</RouterLink>
       </nav>
     </header>
