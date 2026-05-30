@@ -497,19 +497,19 @@ onMounted(async () => {
 
           <div class="order-meta-grid">
             <div>
-              <span>Ngày tạo</span>
+              <span>Ngày tạo: </span>
               <strong>{{ formatDateOnly(order.createdAt) }}</strong>
             </div>
             <div>
-              <span>Số sản phẩm</span>
+              <span>Số sản phẩm: </span>
               <strong>{{ order.orderItems.length }}</strong>
             </div>
             <div>
-              <span>Số lượng</span>
+              <span>Số lượng: </span>
               <strong>{{ orderItemCount(order) }}</strong>
             </div>
             <div>
-              <span>Tổng tiền</span>
+              <span>Tổng tiền: </span>
               <strong>{{ formatCurrency(order.total) }}</strong>
             </div>
           </div>
