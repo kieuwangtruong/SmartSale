@@ -695,7 +695,7 @@ onMounted(async () => {
                   <p>Chọn sản phẩm, số lượng và giá. Backend sẽ kiểm tra tồn kho.</p>
                 </div>
                 <button class="secondary-button" type="button" @click="addItemRow">
-                  Thêm dòng
+                  Thêm sản phẩm
                 </button>
               </div>
 
