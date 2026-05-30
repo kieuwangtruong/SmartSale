@@ -99,6 +99,40 @@ const visibleUsers = computed(() => {
     .map((entry) => entry.user);
 });
 const visibleUserCount = computed(() => visibleUsers.value.length);
+const userValidationMessage = computed(() => {
+  const missingFields: string[] = [];
+
+  if (!editor.form.userName.trim()) {
+    missingFields.push("Username");
+  }
+
+  if (!editor.form.fullName.trim()) {
+    missingFields.push("Họ tên");
+  }
+
+  if (!editor.form.email.trim()) {
+    missingFields.push("Email");
+  }
+
+  if (editor.mode === "create" && !editor.form.passwordHash.trim()) {
+    missingFields.push("Mật khẩu / hash");
+  }
+
+  if (!editor.form.dateOfBirth) {
+    missingFields.push("Ngày sinh");
+  }
+
+  if (!editor.form.address.trim()) {
+    missingFields.push("Địa chỉ");
+  }
+
+  if (missingFields.length) {
+    return `Vui lòng nhập các trường bắt buộc: ${missingFields.join(", ")}.`;
+  }
+
+  return "";
+});
+const userCanSubmit = computed(() => userValidationMessage.value.length === 0);
 
 function createEmptyUserForm(): UserFormState {
   return {
@@ -379,6 +413,11 @@ async function loadUsers() {
 }
 
 async function submitEditor() {
+  if (!userCanSubmit.value) {
+    errorMessage.value = userValidationMessage.value;
+    return;
+  }
+
   editor.busy = true;
   errorMessage.value = "";
 
@@ -694,27 +733,31 @@ onMounted(() => {
           <form class="editor-form" @submit.prevent="submitEditor">
             <div class="form-grid">
               <label class="field">
-                <span>Username</span>
+                <span>Username (bắt buộc)</span>
                 <input v-model="editor.form.userName" type="text" />
               </label>
 
               <label class="field">
-                <span>Họ tên</span>
+                <span>Họ tên (bắt buộc)</span>
                 <input v-model="editor.form.fullName" type="text" />
               </label>
 
               <label class="field">
-                <span>Email</span>
+                <span>Email (bắt buộc)</span>
                 <input v-model="editor.form.email" type="email" />
               </label>
 
               <label class="field">
-                <span>Mật khẩu / hash</span>
-                <input v-model="editor.form.passwordHash" type="text" />
+                <span>Mật khẩu / hash (bắt buộc khi tạo mới)</span>
+                <input
+                  v-model="editor.form.passwordHash"
+                  :required="editor.mode === 'create'"
+                  type="text"
+                />
               </label>
 
               <label class="field">
-                <span>Role</span>
+                <span>Role (bắt buộc)</span>
                 <select v-model.number="editor.form.role">
                   <option
                     v-for="option in userRoleOptions"
@@ -727,12 +770,12 @@ onMounted(() => {
               </label>
 
               <label class="field">
-                <span>Ngày sinh</span>
+                <span>Ngày sinh (bắt buộc)</span>
                 <input v-model="editor.form.dateOfBirth" type="date" />
               </label>
 
               <label class="field">
-                <span>Giới tính</span>
+                <span>Giới tính (bắt buộc)</span>
                 <select v-model.number="editor.form.sex">
                   <option
                     v-for="option in genderOptions"
@@ -745,10 +788,14 @@ onMounted(() => {
               </label>
 
               <label class="field full-span">
-                <span>Địa chỉ</span>
+                <span>Địa chỉ (bắt buộc)</span>
                 <input v-model="editor.form.address" type="text" />
               </label>
             </div>
+
+            <p v-if="userValidationMessage" class="validation-text">
+              {{ userValidationMessage }}
+            </p>
 
             <footer class="modal-footer">
               <button
@@ -761,7 +808,7 @@ onMounted(() => {
               <button
                 class="primary-button"
                 type="submit"
-                :disabled="editor.busy"
+                :disabled="editor.busy || !userCanSubmit"
               >
                 {{
                   editor.busy

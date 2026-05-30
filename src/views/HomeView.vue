@@ -113,6 +113,10 @@ function createEmptyItem(product?: ProductDto): OrderItemInput {
   }
 }
 
+function getProductStock(productId: number) {
+  return products.value.find((entry) => entry.id === productId)?.stock ?? 0
+}
+
 function createDefaultItems() {
   return [createEmptyItem(products.value[0])]
 }
@@ -334,8 +338,14 @@ const editorValidationMessage = computed(() => {
       return 'Mỗi dòng sản phẩm cần chọn sản phẩm.'
     }
 
+    const availableStock = getProductStock(item.productId)
+
     if (item.quantity <= 0) {
       return 'Số lượng phải lớn hơn 0.'
+    }
+
+    if (item.quantity > availableStock) {
+      return `Số lượng của ${getProductLabel(item.productId)} không được vượt quá tồn kho (${availableStock}).`
     }
 
     if (item.price <= 0) {
