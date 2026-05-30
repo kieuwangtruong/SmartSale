@@ -97,7 +97,7 @@ function createEmptyUserForm(): UserFormState {
     email: "",
     passwordHash: "",
     dateOfBirth: "",
-    role: 0,
+    role: 3,
     sex: 0,
     address: "",
   };
