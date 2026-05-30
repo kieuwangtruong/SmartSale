@@ -393,7 +393,7 @@ onMounted(async () => {
     <section class="hero-card">
       <div class="hero-copy">
         <p class="eyebrow">Sales & Inventory Management</p>
-        <h2>Quản lý đơn hàng</h2>
+        <h1 class="hero-title, eyebrow">Quản Lý Đơn Hàng</h1>
         <p class="hero-text">
           Theo dõi trạng thái đơn hàng, xem chi tiết từng sản phẩm, tạo đơn mới và cập nhật tiến
           trình xử lý ngay trên một màn hình.
@@ -836,13 +836,23 @@ strong {
   margin: 0.5rem 0 0.9rem;
   font-size: clamp(2rem, 4vw, 3.9rem);
   line-height: 1.02;
-  max-width: 13ch;
 }
 
 .hero-text {
   max-width: 64ch;
   color: #cbd5e1;
   font-size: 1.02rem;
+}
+
+.hero-title {
+  margin: 0.35rem 0 0.85rem;
+  color: #f8fafc;
+  font-size: clamp(2.4rem, 5vw, 4.6rem);
+  line-height: 0.98;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  max-width: none;
+  white-space: nowrap;
 }
 
 .hero-actions {
@@ -1339,6 +1349,10 @@ strong {
   .modal-header,
   .items-header {
     flex-direction: column;
+  }
+
+  .hero-title {
+    white-space: normal;
   }
 }
 </style>
