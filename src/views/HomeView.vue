@@ -153,11 +153,9 @@ function openEditDialog(order: OrderResponseDto) {
 }
 
 function closeEditor() {
-  if (editorSubmitting.value) {
-    return
+  if (!editorSubmitting.value) {
+    editorVisible.value = false
   }
-
-  editorVisible.value = false
 }
 
 function syncItemPrice(item: OrderItemInput) {
@@ -182,20 +180,12 @@ function removeItemRow(index: number) {
 
 function getUserLabel(userId: number) {
   const user = users.value.find((entry) => entry.id === userId)
-  if (!user) {
-    return `User #${userId}`
-  }
-
-  return `${user.fullName}`
+  return user ? user.fullName : `User #${userId}`
 }
 
 function getProductLabel(productId: number) {
   const product = products.value.find((entry) => entry.id === productId)
-  if (!product) {
-    return `Product #${productId}`
-  }
-
-  return product.name
+  return product ? product.name : `Product #${productId}`
 }
 
 function getStatusTone(status: OrderStatus) {
@@ -315,7 +305,7 @@ const dashboardStats = computed(() => {
   return [
     { label: 'Tổng đơn hàng', value: totalOrders.toString(), note: 'Đang quản lý' },
     { label: 'Đơn chờ xử lý', value: pendingOrders.toString(), note: 'Có thể xóa hoặc cập nhật' },
-    { label: 'Đơn đang hoạt động', value: activeOrders.toString(), note: 'Pending → Shipped' },
+    { label: 'Đơn đang hoạt động', value: activeOrders.toString(), note: 'Pending đến Shipped' },
     { label: 'Doanh thu gộp', value: formatCurrency(revenue), note: 'Tổng giá trị đơn' },
   ]
 })
@@ -452,9 +442,10 @@ onMounted(async () => {
   <main class="dashboard-shell">
     <section class="hero-card">
       <div class="hero-copy">
-        <p class="eyebrow">Sales & Inventory Management</p>
-        <h1 class="hero-title">Quản Lý Đơn Hàng</h1>
-
+        <div>
+          <p class="eyebrow">Order Analytics</p>
+          <h1 class="hero-title">Quản lý đơn hàng</h1>
+        </div>
 
         <div class="hero-actions">
           <button class="primary-button" type="button" @click="openCreateDialog">
@@ -464,13 +455,13 @@ onMounted(async () => {
             {{ isRefreshing ? 'Đang làm mới...' : 'Làm mới dữ liệu' }}
           </button>
         </div>
+      </div>
 
-        <div class="mini-banner">
-          <span class="mini-label">API backend Order</span>
-          <strong>{{ apiBaseUrl }}</strong>
-          <span class="mini-label">API backend User</span>
-          <strong>https://nhom3-sales-and-inventory-management.onrender.com/</strong>
-        </div>
+      <div class="mini-banner">
+        <span class="mini-label">Order API</span>
+        <strong>{{ apiBaseUrl }}</strong>
+        <span class="mini-label">User API</span>
+        <strong>https://nhom3-sales-and-inventory-management.onrender.com</strong>
       </div>
 
       <div class="hero-metrics">
@@ -481,8 +472,6 @@ onMounted(async () => {
         </article>
       </div>
     </section>
-
-
 
     <section v-if="errorMessage || syncMessage" class="message-stack">
       <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
@@ -496,7 +485,7 @@ onMounted(async () => {
           id="order-search"
           v-model="searchQuery"
           type="text"
-          placeholder="Nhập mã đơn, user, trạng thái hoặc giá trị..."
+          placeholder="Nhập mã đơn, khách hàng, trạng thái hoặc giá trị..."
         />
       </div>
 
@@ -547,24 +536,22 @@ onMounted(async () => {
 
           <div class="order-meta-grid">
             <div>
-              <span>Ngày tạo: </span>
+              <span>Ngày tạo</span>
               <strong>{{ formatDateOnly(order.createdAt) }}</strong>
             </div>
             <div>
-              <span>Số sản phẩm: </span>
+              <span>Sản phẩm</span>
               <strong>{{ order.orderItems.length }}</strong>
             </div>
             <div>
-              <span>Số lượng: </span>
+              <span>Số lượng</span>
               <strong>{{ orderItemCount(order) }}</strong>
             </div>
             <div>
-              <span>Tổng tiền: </span>
+              <span>Tổng tiền</span>
               <strong>{{ formatCurrency(order.total) }}</strong>
             </div>
           </div>
-
-        
         </article>
       </div>
 
@@ -600,10 +587,29 @@ onMounted(async () => {
               <dd>{{ formatCurrency(selectedOrder.total) }}</dd>
             </div>
             <div>
-              <dt>Tổng sản phẩm</dt>
+              <dt>Tổng số lượng</dt>
               <dd>{{ orderItemCount(selectedOrder) }}</dd>
             </div>
           </dl>
+
+          <div class="line-items">
+            <div class="line-items-head">
+              <span>Sản phẩm</span>
+              <span>SL</span>
+              <span>Đơn giá</span>
+              <span>Tạm tính</span>
+            </div>
+            <div
+              v-for="item in selectedOrder.orderItems"
+              :key="item.id"
+              class="line-item-row"
+            >
+              <strong>{{ getProductLabel(item.productId) }}</strong>
+              <span>{{ item.quantity }}</span>
+              <span>{{ formatCurrency(item.price) }}</span>
+              <strong>{{ formatCurrency(item.subTotal) }}</strong>
+            </div>
+          </div>
 
           <div class="detail-actions">
             <label>
@@ -641,8 +647,6 @@ onMounted(async () => {
               Xóa đơn
             </button>
           </div>
-
-          
         </div>
 
         <div v-else class="state-card">
@@ -657,7 +661,7 @@ onMounted(async () => {
           <header class="modal-header">
             <div>
               <p class="panel-kicker">
-                {{ editorMode === 'create' ? 'Tạo đơn mới' : 'Chỉnh sửa đơn' }} 
+                {{ editorMode === 'create' ? 'Tạo đơn mới' : 'Chỉnh sửa đơn' }}
               </p>
               <h2>
                 {{
