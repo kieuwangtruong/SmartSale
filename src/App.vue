@@ -41,7 +41,7 @@ function toggleUserMenu() {
 function handleLogout() {
   localStorage.removeItem('user')
   localStorage.removeItem('isAuthenticated')
-  router.push('/login')
+  router.push('/')
   showUserMenu.value = false
 }
 
