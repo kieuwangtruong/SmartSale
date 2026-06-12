@@ -1,12 +1,28 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cartStore'
-import { formatCurrency } from '../services/productApi'
 
+interface User {
+  email: string
+  role: string
+  fullName: string
+}
+
+const router = useRouter()
 const cartStore = useCartStore()
-const paymentMethod = ref('cash') // 'cash' or 'online'
+const paymentMethod = ref('cash')
 const showCheckout = ref(false)
 const orderPlaced = ref(false)
+const currentUser = ref<User | null>(null)
+const showUserMenu = ref(false)
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(value)
+}
 
 function handleCheckout() {
   if (cartStore.items.length === 0) {
@@ -30,7 +46,6 @@ function handlePlaceOrder() {
     createdAt: new Date().toISOString(),
   }
 
-  // Save to localStorage
   const orders = JSON.parse(localStorage.getItem('orders') || '[]')
   orders.push(order)
   localStorage.setItem('orders', JSON.stringify(orders))
@@ -61,135 +76,306 @@ function increaseQuantity(productId: string) {
     cartStore.updateQuantity(productId, item.quantity + 1)
   }
 }
+
+function handleViewHome() {
+  router.push('/user/home')
+}
+
+function handleViewOrders() {
+  router.push('/user/orders')
+}
+
+function handleLogout() {
+  localStorage.removeItem('isAuthenticated')
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+onMounted(() => {
+  const user = localStorage.getItem('user')
+  if (user) {
+    currentUser.value = JSON.parse(user)
+  }
+})
 </script>
 
 <template>
-  <div class="cart-view">
-    <div v-if="orderPlaced" class="success-message">
-      ✅ Đặt hàng thành công! Đơn hàng sẽ được xác nhận trong vài phút.
-    </div>
+  <div class="cart-wrapper">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div class="logo-section">
+          <h1 class="logo">🛍️ SHOP</h1>
+          <span class="tagline">Cửa hàng online</span>
+        </div>
 
-    <div v-if="cartStore.items.length === 0 && !showCheckout" class="empty-cart">
-      <p class="empty-icon">🛒</p>
-      <p class="empty-text">Giỏ hàng của bạn trống</p>
-      <router-link to="/user/home" class="btn-continue">
-        Tiếp tục mua sắm
-      </router-link>
-    </div>
+        <div class="page-title">
+          🛒 Giỏ hàng
+        </div>
 
-    <div v-else-if="!showCheckout" class="cart-content">
-      <div class="cart-items">
-        <h2>Giỏ hàng của bạn</h2>
-        <div class="items-list">
-          <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
-            <div class="item-info">
-              <h4>{{ item.name }}</h4>
-              <p class="item-category">{{ item.category }}</p>
-              <p class="item-price">{{ formatCurrency(item.price) }}/cái</p>
+        <div class="header-actions">
+          <div class="user-menu-wrapper">
+            <button @click="showUserMenu = !showUserMenu" class="user-btn">
+              👤 {{ currentUser?.fullName || 'Người dùng' }}
+            </button>
+            <div v-if="showUserMenu" class="user-dropdown">
+              <a href="#" @click.prevent="handleViewHome" class="dropdown-item">Trang chủ</a>
+              <a href="#" @click.prevent="handleViewOrders" class="dropdown-item">Đơn hàng của tôi</a>
+              <a href="#" @click.prevent="handleLogout" class="dropdown-item logout">Đăng xuất</a>
             </div>
-
-            <div class="item-quantity">
-              <button @click="decreaseQuantity(item.id)" class="qty-btn">−</button>
-              <input v-model.number="item.quantity" type="number" class="qty-input" min="1" />
-              <button @click="increaseQuantity(item.id)" class="qty-btn">+</button>
-            </div>
-
-            <div class="item-total">
-              {{ formatCurrency(item.price * item.quantity) }}
-            </div>
-
-            <button @click="removeItem(item.id)" class="btn-remove">🗑️</button>
           </div>
         </div>
       </div>
+    </header>
 
-      <div class="cart-summary">
-        <div class="summary-card">
-          <h3>Tổng kết</h3>
-          <div class="summary-row">
-            <span>Tổng sản phẩm:</span>
-            <strong>{{ cartStore.totalItems }}</strong>
-          </div>
-          <div class="summary-row">
-            <span>Tổng tiền:</span>
-            <strong class="total-price">{{ formatCurrency(cartStore.totalPrice) }}</strong>
-          </div>
-
-          <button @click="handleCheckout" class="btn-checkout">
-            Tiến hành thanh toán
-          </button>
-        </div>
+    <!-- Main Content -->
+    <main class="main-content">
+      <div v-if="orderPlaced" class="success-message">
+        ✅ Đặt hàng thành công! Đơn hàng sẽ được xác nhận trong vài phút.
       </div>
-    </div>
 
-    <!-- Checkout Modal -->
-    <div v-if="showCheckout" class="checkout-modal" @click.self="showCheckout = false">
-      <div class="modal-overlay"></div>
-      <div class="modal-content" @click.stop>
-        <button @click="showCheckout = false" class="btn-close">✕</button>
-        
-        <h2>Xác nhận đơn hàng</h2>
+      <div v-if="cartStore.items.length === 0 && !showCheckout" class="empty-cart">
+        <p class="empty-icon">🛒</p>
+        <p class="empty-text">Giỏ hàng của bạn trống</p>
+        <router-link to="/user/home" class="btn-continue">
+          Tiếp tục mua sắm
+        </router-link>
+      </div>
 
-        <div class="checkout-section">
-          <h3>Thông tin sản phẩm</h3>
-          <div class="checkout-items">
-            <div v-for="item in cartStore.items" :key="item.id" class="checkout-item">
-              <div class="item-detail">
-                <strong>{{ item.name }}</strong>
-                <span class="qty">x{{ item.quantity }}</span>
+      <div v-else-if="!showCheckout" class="cart-content">
+        <div class="cart-items">
+          <h2>Giỏ hàng của bạn ({{ cartStore.totalItems }} sản phẩm)</h2>
+          <div class="items-list">
+            <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
+              <div class="item-info">
+                <h4>{{ item.name }}</h4>
+                <p class="item-category">{{ item.category }}</p>
+                <p class="item-price">{{ formatCurrency(item.price) }}/cái</p>
               </div>
-              <div class="item-price">{{ formatCurrency(item.price * item.quantity) }}</div>
+
+              <div class="item-quantity">
+                <button @click="decreaseQuantity(item.id)" class="qty-btn">−</button>
+                <input v-model.number="item.quantity" type="number" class="qty-input" min="1" />
+                <button @click="increaseQuantity(item.id)" class="qty-btn">+</button>
+              </div>
+
+              <div class="item-total">
+                {{ formatCurrency(item.price * item.quantity) }}
+              </div>
+
+              <button @click="removeItem(item.id)" class="btn-remove">🗑️</button>
             </div>
           </div>
         </div>
 
-        <div class="checkout-section">
-          <h3>Phương thức thanh toán</h3>
-          <div class="payment-options">
-            <label class="payment-option">
-              <input
-                v-model="paymentMethod"
-                type="radio"
-                value="cash"
-              />
-              <span>💵 Thanh toán khi giao hàng (COD)</span>
-            </label>
-            <label class="payment-option">
-              <input
-                v-model="paymentMethod"
-                type="radio"
-                value="online"
-              />
-              <span>💳 Thanh toán trực tuyến</span>
-            </label>
-          </div>
-        </div>
+        <div class="cart-summary">
+          <div class="summary-card">
+            <h3>Tổng kết</h3>
+            <div class="summary-row">
+              <span>Tổng sản phẩm:</span>
+              <strong>{{ cartStore.totalItems }}</strong>
+            </div>
+            <div class="summary-row">
+              <span>Tổng tiền:</span>
+              <strong class="total-price">{{ formatCurrency(cartStore.totalPrice) }}</strong>
+            </div>
 
-        <div class="checkout-section">
-          <h3>Tổng tiền</h3>
-          <div class="final-total">
-            {{ formatCurrency(cartStore.totalPrice) }}
+            <button @click="handleCheckout" class="btn-checkout">
+              Tiến hành thanh toán
+            </button>
           </div>
-        </div>
-
-        <div class="checkout-actions">
-          <button @click="showCheckout = false" class="btn-cancel">
-            Hủy
-          </button>
-          <button @click="handlePlaceOrder" class="btn-place-order">
-            Đặt hàng
-          </button>
         </div>
       </div>
-    </div>
+
+      <!-- Checkout Modal -->
+      <div v-if="showCheckout" class="checkout-modal" @click.self="showCheckout = false">
+        <div class="modal-overlay"></div>
+        <div class="modal-content" @click.stop>
+          <button @click="showCheckout = false" class="btn-close">✕</button>
+          
+          <h2>Xác nhận đơn hàng</h2>
+
+          <div class="checkout-section">
+            <h3>Thông tin sản phẩm</h3>
+            <div class="checkout-items">
+              <div v-for="item in cartStore.items" :key="item.id" class="checkout-item">
+                <div class="item-detail">
+                  <strong>{{ item.name }}</strong>
+                  <span class="qty">x{{ item.quantity }}</span>
+                </div>
+                <div class="item-price">{{ formatCurrency(item.price * item.quantity) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="checkout-section">
+            <h3>Phương thức thanh toán</h3>
+            <div class="payment-options">
+              <label class="payment-option">
+                <input
+                  v-model="paymentMethod"
+                  type="radio"
+                  value="cash"
+                />
+                <span>💵 Thanh toán khi giao hàng (COD)</span>
+              </label>
+              <label class="payment-option">
+                <input
+                  v-model="paymentMethod"
+                  type="radio"
+                  value="online"
+                />
+                <span>💳 Thanh toán trực tuyến</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="checkout-section">
+            <h3>Tổng tiền</h3>
+            <div class="final-total">
+              {{ formatCurrency(cartStore.totalPrice) }}
+            </div>
+          </div>
+
+          <div class="checkout-actions">
+            <button @click="showCheckout = false" class="btn-cancel">
+              Hủy
+            </button>
+            <button @click="handlePlaceOrder" class="btn-place-order">
+              Đặt hàng
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
-
 <style scoped>
-.cart-view {
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.cart-wrapper {
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #ffd000 0%, #ffb800 100%);
+  padding: 15px 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.tagline {
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+.page-title {
   flex: 1;
-  padding: 30px;
-  overflow-y: auto;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-menu-wrapper {
+  position: relative;
+}
+
+.user-btn {
+  padding: 10px 16px;
+  background: white;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.user-btn:hover {
+  background: #f0f0f0;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  min-width: 150px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  margin-top: 5px;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 12px 16px;
+  color: #333;
+  text-decoration: none;
+  border-bottom: 1px solid #eee;
+  transition: background 0.3s;
+  font-size: 14px;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.dropdown-item.logout:hover {
+  background: #fee;
+  color: #c00;
+}
+
+/* Main Content */
+.main-content {
+  padding: 30px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .success-message {
@@ -210,6 +396,9 @@ function increaseQuantity(productId: string) {
   justify-content: center;
   min-height: 400px;
   gap: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 40px;
 }
 
 .empty-icon {
@@ -238,7 +427,7 @@ function increaseQuantity(productId: string) {
 
 .cart-content {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr 320px;
   gap: 30px;
 }
 
@@ -294,7 +483,7 @@ function increaseQuantity(productId: string) {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #667eea;
+  color: #d63031;
 }
 
 .item-quantity {
@@ -382,7 +571,7 @@ function increaseQuantity(productId: string) {
 
 .total-price {
   font-size: 18px;
-  color: #667eea;
+  color: #d63031;
 }
 
 .btn-checkout {
@@ -423,10 +612,6 @@ function increaseQuantity(productId: string) {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   pointer-events: none;
-}
-
-.modal-overlay:hover {
-  cursor: pointer;
 }
 
 .modal-content {
@@ -508,11 +693,6 @@ function increaseQuantity(productId: string) {
   color: #666;
 }
 
-.item-price {
-  font-weight: 600;
-  color: #667eea;
-}
-
 .payment-options {
   display: flex;
   flex-direction: column;
@@ -546,7 +726,7 @@ function increaseQuantity(productId: string) {
 .final-total {
   font-size: 24px;
   font-weight: 700;
-  color: #667eea;
+  color: #d63031;
   text-align: center;
   padding: 16px;
   background: #f9f9f9;
@@ -592,6 +772,19 @@ function increaseQuantity(productId: string) {
 }
 
 @media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+  }
+
+  .page-title {
+    order: 2;
+    margin-top: 10px;
+  }
+
+  .main-content {
+    padding: 20px 15px;
+  }
+
   .cart-content {
     grid-template-columns: 1fr;
   }

@@ -222,41 +222,6 @@ function handleViewOrders() {
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Banner Section -->
-      <section class="banner-section">
-        <div class="banner-main">
-          <div class="banner-left">
-            <div class="banner-item red">
-              <h2>🎁 ĐỒNG HỒ</h2>
-              <p>GIÁ XÃ KHO<br/>UU ĐAI CỰC TO</p>
-            </div>
-          </div>
-          <div class="banner-right">
-            <div class="banner-item large">
-              <h2>🎉 GIẢM SỐC ĐẾN 80%</h2>
-              <p>Bảo hành 1 tháng</p>
-            </div>
-            <div class="banner-item">
-              <h2>🔧 PHỤ KIỆN</h2>
-              <p>ĐÃ SỬ DỤNG</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Promo Banner -->
-      <section class="promo-banner">
-        <div class="promo-content">
-          <div class="promo-left">
-            <span class="promo-label">Máy cũ</span>
-            <span class="promo-highlight">Tiết kiếm đến 50%</span>
-            <span class="promo-label">Trả chậm</span>
-            <span class="promo-highlight">0% lãi suất</span>
-          </div>
-          <span class="promo-arrow">⟩⟩⟩</span>
-        </div>
-      </section>
-
       <!-- Category Shortcuts -->
       <section class="category-shortcuts">
         <div class="shortcuts-header">Mua sắm theo danh mục</div>
@@ -554,117 +519,6 @@ function handleViewOrders() {
   margin: 0 auto;
 }
 
-/* Banners */
-.banner-section {
-  margin-bottom: 20px;
-}
-
-.banner-main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.banner-left {
-  grid-column: 1;
-}
-
-.banner-right {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: 15px;
-}
-
-.banner-item {
-  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
-  color: white;
-  padding: 30px;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  min-height: 150px;
-}
-
-.banner-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(255, 107, 107, 0.3);
-}
-
-.banner-item h2 {
-  font-size: 1.8rem;
-  margin-bottom: 8px;
-  line-height: 1.2;
-}
-
-.banner-item p {
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
-.banner-item.red {
-  background: linear-gradient(135deg, #d63031, #c92a2a);
-}
-
-.banner-item.large {
-  grid-row: 1 / 3;
-  background: linear-gradient(135deg, #4ecdc4, #44b39a);
-  min-height: auto;
-  padding: 40px;
-}
-
-/* Promo Banner */
-.promo-banner {
-  background: linear-gradient(90deg, #ffd000, #ffb800);
-  padding: 20px 30px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.promo-content {
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  flex: 1;
-  color: white;
-  font-weight: bold;
-}
-
-.promo-left {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.promo-label {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.promo-highlight {
-  color: #d63031;
-  font-size: 1.4rem;
-  font-weight: bold;
-}
-
-.promo-arrow {
-  font-size: 1.5rem;
-  color: white;
-  animation: bounce 1s infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(5px); }
-}
-
 /* Category Shortcuts */
 .category-shortcuts {
   background: white;
@@ -900,15 +754,6 @@ function handleViewOrders() {
     grid-template-columns: 1fr;
   }
 
-  .banner-right {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .banner-item.large {
-    grid-row: 1;
-    grid-column: 1 / -1;
-  }
-
   .products-grid {
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 12px;
@@ -951,27 +796,6 @@ function handleViewOrders() {
 
   .main-content {
     padding: 10px 15px;
-  }
-
-  .banner-main {
-    grid-template-columns: 1fr;
-  }
-
-  .banner-right {
-    grid-template-columns: 1fr;
-  }
-
-  .banner-item {
-    min-height: 120px;
-    padding: 20px;
-  }
-
-  .banner-item h2 {
-    font-size: 1.3rem;
-  }
-
-  .promo-content {
-    gap: 15px;
   }
 
   .shortcuts-grid {
@@ -1018,15 +842,6 @@ function handleViewOrders() {
   .auth-buttons {
     width: 100%;
     justify-content: center;
-  }
-
-  .banner-item {
-    min-height: 100px;
-    padding: 15px;
-  }
-
-  .banner-item h2 {
-    font-size: 1rem;
   }
 
   .shortcuts-grid {

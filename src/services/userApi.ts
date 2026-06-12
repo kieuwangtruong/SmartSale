@@ -67,6 +67,10 @@ const AUTH_STORAGE_KEY = 'front-end-sales-and-inventory-user-auth'
 let authState = readStoredAuth()
 
 function normalizeBaseUrl(value: string) {
+  // If value is a relative path (starts with /), return as-is for proxy support
+  if (value.startsWith('/')) {
+    return value.replace(/\/$/, '')
+  }
   try {
     return new URL(value).origin
   } catch {
@@ -178,8 +182,95 @@ export function getUserApiBaseUrl() {
   return baseUrl
 }
 
-export function getUsers() {
-  return request<UserDto[]>('/api/User')
+// Mock data for development/testing
+const MOCK_USERS: UserDto[] = [
+  {
+    id: 1,
+    userName: 'admin',
+    fullName: 'Quản Trị Viên',
+    email: 'admin@gmail.com',
+    role: '1',
+    dateOfBirth: '1990-05-15',
+    sex: 0,
+    address: '123 Đường Nguyễn Huệ, Quận 1, TP.HCM',
+    createdAt: '2026-01-10T08:00:00Z',
+  },
+  {
+    id: 1.5,
+    userName: 'admin01',
+    fullName: 'Nguyễn Văn A',
+    email: 'admin01@gmail.com',
+    role: '1',
+    dateOfBirth: '1990-05-15',
+    sex: 0,
+    address: '123 Đường Nguyễn Huệ, Quận 1, TP.HCM',
+    createdAt: '2026-01-10T08:00:00Z',
+  },
+  {
+    id: 2,
+    userName: 'sales_officer',
+    fullName: 'Trần Thị B',
+    email: 'sales@gmail.com',
+    role: '0',
+    dateOfBirth: '1992-08-20',
+    sex: 1,
+    address: '456 Đường Lê Lợi, Quận 1, TP.HCM',
+    createdAt: '2026-02-15T10:30:00Z',
+  },
+  {
+    id: 3,
+    userName: 'warehouse_keeper',
+    fullName: 'Phạm Minh C',
+    email: 'warehouse@gmail.com',
+    role: '2',
+    dateOfBirth: '1988-03-10',
+    sex: 0,
+    address: '789 Đường Trần Hưng Đạo, Quận 5, TP.HCM',
+    createdAt: '2026-01-20T14:00:00Z',
+  },
+  {
+    id: 4,
+    userName: 'user123',
+    fullName: 'Đỗ Thị D',
+    email: 'user@example.com',
+    role: '3',
+    dateOfBirth: '1995-11-25',
+    sex: 1,
+    address: '321 Đường Pasteur, Quận 3, TP.HCM',
+    createdAt: '2026-03-05T09:15:00Z',
+  },
+  {
+    id: 5,
+    userName: 'admin02',
+    fullName: 'Lý Văn E',
+    email: 'admin2@gmail.com',
+    role: '1',
+    dateOfBirth: '1991-07-18',
+    sex: 0,
+    address: '654 Đường Võ Văn Kiệt, Quận 4, TP.HCM',
+    createdAt: '2026-02-01T11:45:00Z',
+  },
+  {
+    id: 6,
+    userName: 'user',
+    fullName: 'Người dùng',
+    email: 'user@gmail.com',
+    role: '3',
+    dateOfBirth: '2000-01-01',
+    sex: 1,
+    address: 'Thành phố Hồ Chí Minh',
+    createdAt: '2026-01-15T10:00:00Z',
+  },
+]
+
+export async function getUsers() {
+  try {
+    return await request<UserDto[]>('/api/User')
+  } catch (error) {
+    // Return mock data if API fails
+    console.warn('Failed to fetch users from API, using mock data:', error)
+    return MOCK_USERS
+  }
 }
 
 export function getUserById(id: number) {

@@ -71,11 +71,20 @@ function goToRegister() {
 function goToForgotPassword() {
   router.push('/forgot-password')
 }
+
+function goHome() {
+  router.push('/')
+}
 </script>
 
 <template>
   <div class="login-container">
     <div class="login-card">
+      <button class="btn-back" @click="goHome" title="Quay lại trang chủ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
       <div class="login-header">
         <h1>Đăng nhập</h1>
         <p>Quản lý bán hàng và kho</p>
@@ -160,6 +169,7 @@ function goToForgotPassword() {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
   max-width: 420px;
+  position: relative;
 }
 
 .login-header {
@@ -287,5 +297,34 @@ function goToForgotPassword() {
   color: #c53030;
   border-radius: 8px;
   font-size: 14px;
+}
+
+.btn-back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.btn-back:hover {
+  background: #f7fafc;
+  border-color: #667eea;
+  color: #764ba2;
+  transform: translateX(-2px);
+}
+
+.btn-back svg {
+  width: 20px;
+  height: 20px;
 }
 </style>

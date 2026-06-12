@@ -30,6 +30,9 @@ const totalStock = computed(() => products.value.reduce((sum, p) => sum + (p.sto
 const pendingOrders = computed(
   () => orders.value.filter((o) => o.status === 'Pending').length,
 )
+const processingOrders = computed(
+  () => orders.value.filter((o) => o.status === 'Processing').length,
+)
 const completedOrders = computed(
   () => orders.value.filter((o) => o.status === 'Completed').length,
 )
@@ -65,9 +68,8 @@ const topProducts = computed(() => {
 
   orders.value.forEach((order) => {
     order.orderItems.forEach((item: any) => {
-      // Use productName if available (from localStorage), otherwise use product name from API
-      const productName = item.productName || products.value.find((p) => p.id === item.productId)?.name || `Product #${item.productId}`
-      const key = item.productName ? `local_${item.productName}` : item.productId
+      const productName = products.value.find((p) => p.id === item.productId)?.name || `Product #${item.productId}`
+      const key = item.productId
       
       const existing = productSales.get(key)
       if (existing) {
@@ -99,43 +101,6 @@ onMounted(async () => {
     ])
 
     orders.value = ordersData
-
-    // Also load orders from localStorage (customer orders)
-    const localOrdersStr = localStorage.getItem('orders')
-    if (localOrdersStr) {
-      try {
-        const localOrders = JSON.parse(localOrdersStr)
-        if (Array.isArray(localOrders)) {
-          localOrders.forEach((order, orderIndex) => {
-            const convertedOrder: OrderResponseDto = {
-              id: parseInt(order.id.replace(/[^\d]/g, '')) || Math.random() * 1000,
-              userId: 9999, // Local user ID
-              status: order.status === 'Đã thanh toán' ? 'Completed' : order.status === 'Chờ xác nhận' ? 'Pending' : 'Processing',
-              total: order.total || 0,
-              createdAt: order.date || new Date().toISOString(),
-              orderItems: (order.items || []).map((item: any, itemIndex: number) => {
-                // Create a product ID based on order and item index to ensure consistency
-                // Store product name as part of the ID string for later lookup
-                const productIdKey = `local_${orderIndex}_${itemIndex}`
-                return {
-                  id: Math.random() * 10000,
-                  productId: parseInt(productIdKey.replace(/\D/g, '')) || (orderIndex * 100 + itemIndex),
-                  quantity: item.quantity || 0,
-                  price: item.price || 0,
-                  subTotal: (item.price || 0) * (item.quantity || 0),
-                  // Store product name in a custom property for reference
-                  productName: item.name,
-                } as any
-              }),
-            }
-            orders.value.push(convertedOrder)
-          })
-        }
-      } catch (e) {
-        console.log('Error loading local orders:', e)
-      }
-    }
-
     products.value = productsData
     users.value = usersData
   } catch (error) {
@@ -224,7 +189,7 @@ const formatDate = (dateString: string): string => {
       <div class="hero-metrics">
         <div class="stat-card">
           <span>Đơn hàng chờ xử lý</span>
-          <strong>{{ pendingOrders }}</strong>
+          <strong>{{ processingOrders }}</strong>
           <small>Cần xác nhận</small>
         </div>
         <div class="stat-card">

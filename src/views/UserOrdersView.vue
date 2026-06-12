@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { formatCurrency } from '../services/productApi'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 interface Order {
   id: string
@@ -11,8 +11,17 @@ interface Order {
   createdAt: string
 }
 
+interface User {
+  email: string
+  role: string
+  fullName: string
+}
+
+const router = useRouter()
 const orders = ref<Order[]>([])
 const selectedOrder = ref<Order | null>(null)
+const currentUser = ref<User | null>(null)
+const showUserMenu = ref(false)
 
 const statusColors: Record<string, string> = {
   'Chờ xác nhận': '#f5a524',
@@ -23,10 +32,17 @@ const statusColors: Record<string, string> = {
   'Đã thanh toán': '#23b987',
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(value)
+}
+
 function loadOrders() {
   const storedOrders = localStorage.getItem('orders')
   if (storedOrders) {
-    orders.value = JSON.parse(storedOrders).reverse() // Show newest first
+    orders.value = JSON.parse(storedOrders).reverse()
   }
 }
 
@@ -49,122 +65,286 @@ function formatDate(dateStr: string): string {
   })
 }
 
+function handleViewHome() {
+  router.push('/user/home')
+}
+
+function handleViewCart() {
+  router.push('/user/cart')
+}
+
+function handleLogout() {
+  localStorage.removeItem('isAuthenticated')
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
 onMounted(() => {
+  const user = localStorage.getItem('user')
+  if (user) {
+    currentUser.value = JSON.parse(user)
+  }
   loadOrders()
 })
 </script>
 
 <template>
-  <div class="orders-view">
-    <div class="orders-header">
-      <h2>Đơn hàng của bạn</h2>
-      <p class="orders-count">Tổng: {{ orders.length }} đơn hàng</p>
-    </div>
-
-    <div v-if="orders.length === 0" class="empty-orders">
-      <p class="empty-icon">📦</p>
-      <p class="empty-text">Bạn chưa có đơn hàng nào</p>
-      <router-link to="/user/home" class="btn-shop">
-        Bắt đầu mua sắm
-      </router-link>
-    </div>
-
-    <div v-else class="orders-list">
-      <div v-for="order in orders" :key="order.id" class="order-card">
-        <div class="order-header" @click="selectOrder(order)">
-          <div class="order-info">
-            <span class="order-id">{{ order.id }}</span>
-            <span class="order-date">{{ formatDate(order.createdAt) }}</span>
-          </div>
-          <div class="order-status" :style="{ color: statusColors[order.status] }">
-            {{ order.status }}
-          </div>
-          <div class="order-total">
-            {{ formatCurrency(order.total) }}
-          </div>
-          <span class="expand-icon">{{ selectedOrder?.id === order.id ? '▼' : '▶' }}</span>
+  <div class="orders-wrapper">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div class="logo-section">
+          <h1 class="logo">🛍️ SHOP</h1>
+          <span class="tagline">Cửa hàng online</span>
         </div>
 
-        <div v-if="selectedOrder?.id === order.id" class="order-details">
-          <div class="details-section">
-            <h4>Thông tin sản phẩm</h4>
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Sản phẩm</th>
-                  <th>Số lượng</th>
-                  <th>Đơn giá</th>
-                  <th>Thành tiền</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in order.items" :key="item.id">
-                  <td>{{ item.name }}</td>
-                  <td>{{ item.quantity }}</td>
-                  <td>{{ formatCurrency(item.price) }}</td>
-                  <td>{{ formatCurrency(item.price * item.quantity) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="page-title">
+          📦 Đơn hàng của tôi
+        </div>
 
-          <div class="details-section">
-            <h4>Thông tin đơn hàng</h4>
-            <div class="info-grid">
-              <div class="info-row">
-                <span class="info-label">Mã đơn hàng:</span>
-                <span class="info-value">{{ order.id }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Trạng thái:</span>
-                <span class="info-value" :style="{ color: statusColors[order.status] }">
-                  {{ order.status }}
-                </span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Phương thức thanh toán:</span>
-                <span class="info-value">{{ getPaymentLabel(order.paymentMethod) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Ngày đặt:</span>
-                <span class="info-value">{{ formatDate(order.createdAt) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="details-footer">
-            <div class="total-summary">
-              <span>Tổng tiền:</span>
-              <strong>{{ formatCurrency(order.total) }}</strong>
+        <div class="header-actions">
+          <button @click="handleViewCart" class="cart-btn">🛒 Giỏ hàng</button>
+          <div class="user-menu-wrapper">
+            <button @click="showUserMenu = !showUserMenu" class="user-btn">
+              👤 {{ currentUser?.fullName || 'Người dùng' }}
+            </button>
+            <div v-if="showUserMenu" class="user-dropdown">
+              <a href="#" @click.prevent="handleViewHome" class="dropdown-item">Trang chủ</a>
+              <a href="#" @click.prevent="handleViewCart" class="dropdown-item">Giỏ hàng</a>
+              <a href="#" @click.prevent="handleLogout" class="dropdown-item logout">Đăng xuất</a>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div v-if="orders.length === 0" class="empty-orders">
+        <p class="empty-icon">📦</p>
+        <p class="empty-text">Bạn chưa có đơn hàng nào</p>
+        <router-link to="/user/home" class="btn-shop">
+          Bắt đầu mua sắm
+        </router-link>
+      </div>
+
+      <div v-else class="orders-list">
+        <div v-for="order in orders" :key="order.id" class="order-card">
+          <div class="order-header" @click="selectOrder(order)">
+            <div class="order-info">
+              <span class="order-id">{{ order.id }}</span>
+              <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+            </div>
+            <div class="order-status" :style="{ color: statusColors[order.status] }">
+              {{ order.status }}
+            </div>
+            <div class="order-total">
+              {{ formatCurrency(order.total) }}
+            </div>
+            <span class="expand-icon">{{ selectedOrder?.id === order.id ? '▼' : '▶' }}</span>
+          </div>
+
+          <div v-if="selectedOrder?.id === order.id" class="order-details">
+            <div class="details-section">
+              <h4>Thông tin sản phẩm</h4>
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Sản phẩm</th>
+                    <th>Số lượng</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in order.items" :key="item.id">
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ formatCurrency(item.price) }}</td>
+                    <td>{{ formatCurrency(item.price * item.quantity) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="details-section">
+              <h4>Thông tin đơn hàng</h4>
+              <div class="info-grid">
+                <div class="info-row">
+                  <span class="info-label">Mã đơn hàng:</span>
+                  <span class="info-value">{{ order.id }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Trạng thái:</span>
+                  <span class="info-value" :style="{ color: statusColors[order.status] }">
+                    {{ order.status }}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Phương thức thanh toán:</span>
+                  <span class="info-value">{{ getPaymentLabel(order.paymentMethod) }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ngày đặt:</span>
+                  <span class="info-value">{{ formatDate(order.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="details-footer">
+              <div class="total-summary">
+                <span>Tổng tiền:</span>
+                <strong>{{ formatCurrency(order.total) }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
-
 <style scoped>
-.orders-view {
-  flex: 1;
-  padding: 30px;
-  overflow-y: auto;
-}
-
-.orders-header {
-  margin-bottom: 24px;
-}
-
-.orders-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  color: #333;
-}
-
-.orders-count {
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.orders-wrapper {
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #ffd000 0%, #ffb800 100%);
+  padding: 15px 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.tagline {
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+.page-title {
+  flex: 1;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.cart-btn {
+  padding: 10px 16px;
+  background: white;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
   font-size: 14px;
-  color: #999;
+}
+
+.cart-btn:hover {
+  background: #f0f0f0;
+}
+
+.user-menu-wrapper {
+  position: relative;
+}
+
+.user-btn {
+  padding: 10px 16px;
+  background: white;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.user-btn:hover {
+  background: #f0f0f0;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  min-width: 150px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  margin-top: 5px;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 12px 16px;
+  color: #333;
+  text-decoration: none;
+  border-bottom: 1px solid #eee;
+  transition: background 0.3s;
+  font-size: 14px;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.dropdown-item.logout:hover {
+  background: #fee;
+  color: #c00;
+}
+
+/* Main Content */
+.main-content {
+  padding: 30px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .empty-orders {
@@ -174,6 +354,9 @@ onMounted(() => {
   justify-content: center;
   min-height: 400px;
   gap: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 40px;
 }
 
 .empty-icon {
@@ -261,7 +444,7 @@ onMounted(() => {
 
 .order-total {
   font-weight: 600;
-  color: #667eea;
+  color: #d63031;
   min-width: 120px;
   text-align: right;
 }
@@ -369,10 +552,23 @@ onMounted(() => {
 
 .total-summary strong {
   font-size: 18px;
-  color: #667eea;
+  color: #d63031;
 }
 
 @media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+  }
+
+  .page-title {
+    order: 2;
+    margin-top: 10px;
+  }
+
+  .main-content {
+    padding: 20px 15px;
+  }
+
   .order-header {
     flex-direction: column;
     gap: 12px;

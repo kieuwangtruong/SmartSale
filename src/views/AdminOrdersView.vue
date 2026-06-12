@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { formatCurrency } from '../services/productApi'
+import { getOrders } from '../services/orderApi'
+import type { OrderResponseDto } from '../services/orderApi'
 
 interface OrderItem {
   id: string
@@ -43,16 +45,55 @@ const statusLabels: Record<string, string> = {
   'Hủy': 'Cancelled',
 }
 
-function loadOrders() {
+// Map API status to display status
+function mapStatus(apiStatus: string): string {
+  const statusMap: Record<string, string> = {
+    'Pending': 'Chờ xác nhận',
+    'Processing': 'Đang xử lý',
+    'Shipped': 'Đã gửi',
+    'Completed': 'Hoàn thành',
+    'Cancelled': 'Hủy',
+  }
+  return statusMap[apiStatus] || apiStatus
+}
+
+// Convert API order to UI order format
+function convertApiOrder(apiOrder: OrderResponseDto): Order {
+  return {
+    id: String(apiOrder.id),
+    items: apiOrder.orderItems.map((item: any) => ({
+      id: String(item.id),
+      name: `Product #${item.productId}`,
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    total: apiOrder.total,
+    paymentMethod: 'COD',
+    status: mapStatus(apiOrder.status),
+    createdAt: apiOrder.createdAt,
+    customerName: '',
+    customerEmail: '',
+  }
+}
+
+async function loadOrders() {
   loading.value = true
   try {
-    const stored = localStorage.getItem('orders')
-    if (stored) {
-      const allOrders = JSON.parse(stored) as Order[]
-      orders.value = allOrders.reverse() // Show newest first
-    }
+    // Try to load from API first
+    const apiOrders = await getOrders()
+    orders.value = apiOrders.map(convertApiOrder).reverse() // Show newest first
   } catch (error) {
-    console.error('Error loading orders:', error)
+    console.warn('Error loading orders from API, trying localStorage:', error)
+    // Fallback to localStorage
+    try {
+      const stored = localStorage.getItem('orders')
+      if (stored) {
+        const allOrders = JSON.parse(stored) as Order[]
+        orders.value = allOrders.reverse() // Show newest first
+      }
+    } catch (storageError) {
+      console.error('Error loading from localStorage:', storageError)
+    }
   } finally {
     loading.value = false
   }
@@ -153,7 +194,7 @@ onMounted(() => {
     </div>
 
     <!-- Orders Table -->
-    <div v-else-if="filteredOrders.length > 0" class="orders-table">
+    <div v-else class="orders-table">
       <table>
         <thead>
           <tr>
@@ -167,6 +208,11 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody>
+          <tr v-if="filteredOrders.length === 0">
+            <td colspan="7" style="text-align: center; padding: 40px;">
+              📭 Không có đơn hàng
+            </td>
+          </tr>
           <tr v-for="order in filteredOrders" :key="order.id">
             <td>
               <strong>{{ order.id }}</strong>
@@ -257,11 +303,6 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else class="empty-state">
-      <p>📭 Không có đơn hàng</p>
     </div>
   </div>
 </template>

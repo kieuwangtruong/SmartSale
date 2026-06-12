@@ -31,7 +31,21 @@ export interface UpdateProductPayload extends CreateProductPayload {
   id: number
 }
 
-const PRODUCT_API_BASE_URL = 'https://nhom1-sales-and-inventory-management.onrender.com/api'
+const DEFAULT_PRODUCT_API_BASE_URL = 'https://nhom1-sales-and-inventory-management.onrender.com'
+
+function normalizeBaseUrl(value: string) {
+  // If value is a relative path (starts with /), return as-is for proxy support
+  if (value.startsWith('/')) {
+    return value.replace(/\/$/, '')
+  }
+  try {
+    return new URL(value).origin
+  } catch {
+    return value.replace(/\/$/, '')
+  }
+}
+
+const PRODUCT_API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL ?? DEFAULT_PRODUCT_API_BASE_URL)
 
 export function getProductApiBaseUrl(): string {
   return PRODUCT_API_BASE_URL
