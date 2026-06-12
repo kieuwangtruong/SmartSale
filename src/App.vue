@@ -12,7 +12,7 @@ watch(() => route.path, () => {
 })
 
 // Routes yang không perlu hiển thị admin layout
-const publicRoutes = ['login', 'register', 'forgot-password']
+const publicRoutes = ['login', 'register', 'forgot-password', 'home']
 const isPublicRoute = computed(() => publicRoutes.includes(route.name as string))
 
 // Get user info from localStorage - force reactivity via forceUpdate
