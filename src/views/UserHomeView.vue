@@ -137,19 +137,7 @@ function addToCart(product: Product) {
         </div>
       </div>
 
-      <!-- Navigation Categories -->
-      <nav class="nav-categories">
-        <a
-          v-for="cat in mainCategories"
-          :key="cat.name"
-          href="#"
-          class="nav-link"
-          @click.prevent="selectedCategory = cat.name"
-        >
-          <span class="nav-icon">{{ cat.icon }}</span>
-          <span class="nav-text">{{ cat.name }}</span>
-        </a>
-      </nav>
+
     </header>
 
     <!-- Main Content -->
@@ -370,44 +358,7 @@ function addToCart(product: Product) {
   color: #c00;
 }
 
-/* Navigation */
-.nav-categories {
-  display: flex;
-  gap: 0;
-  overflow-x: auto;
-  padding: 0 40px;
-  background: white;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
-}
 
-.nav-link {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 20px;
-  text-decoration: none;
-  color: #333;
-  border-bottom: 3px solid transparent;
-  white-space: nowrap;
-  transition: all 0.3s;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.nav-icon {
-  font-size: 1.5rem;
-}
-
-.nav-text {
-  font-size: 12px;
-}
-
-.nav-link:hover {
-  border-bottom-color: #ffd000;
-  background: #fafafa;
-}
 
 /* Main Content */
 .main-content {
