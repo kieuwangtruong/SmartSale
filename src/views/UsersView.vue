@@ -609,13 +609,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="mini-banner">
-        <span class="mini-label">User API</span>
-        <strong>{{ getUserApiBaseUrl() }}</strong>
-        <span class="mini-label">Auth</span>
-        <strong>{{ authState ? 'Đã đăng nhập' : 'Chưa có token' }}</strong>
-      </div>
-
       <div class="hero-metrics">
         <article v-for="stat in userStats" :key="stat.label" class="stat-card">
           <span>{{ stat.label }}</span>
