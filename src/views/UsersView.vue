@@ -104,7 +104,6 @@ const userStats = computed(() => [
   { label: 'Tổng người dùng', value: totalUsers.value.toString(), note: 'Đang quản lý' },
   { label: 'Đang hiển thị', value: visibleUserCount.value.toString(), note: 'Theo bộ lọc' },
   { label: 'Quản trị viên', value: adminUsers.value.toString(), note: 'Quyền admin' },
-  { label: 'Auth token', value: authState.value ? 'Có' : 'Chưa có', note: 'Login / refresh / logout' },
 ])
 const userValidationMessage = computed(() => {
   const missingFields: string[] = []
@@ -408,15 +407,44 @@ async function loadUsers() {
   try {
     const payload = await getUsers()
     users.value = normalizeUserList(payload)
-    setSelectedUser(users.value[0])
-
-    infoMessage.value = 'Đã tải danh sách user. Bạn có thể lọc theo username, email, tên, role hoặc địa chỉ.'
   } catch (error) {
     errorMessage.value =
       error instanceof Error ? error.message : 'Không thể tải danh sách user'
-  } finally {
-    loading.value = false
+    users.value = []
   }
+
+  // Add customer user from orders data in localStorage
+  const ordersStr = localStorage.getItem('orders')
+  if (ordersStr) {
+    try {
+      const orders = JSON.parse(ordersStr)
+      if (Array.isArray(orders) && orders.length > 0) {
+        // Check if customer user is not already in the API list
+        const customerUserExists = users.value.some((u) => u.email === 'user@gmail.com')
+        if (!customerUserExists) {
+          const customerUser: UserDto = {
+            id: 9999,
+            userName: 'user',
+            fullName: 'user',
+            email: 'user@gmail.com',
+            role: '3',
+            dateOfBirth: '',
+            sex: 0,
+            address: '',
+            createdAt: new Date().toISOString(),
+          }
+          users.value.push(customerUser)
+        }
+      }
+    } catch (e) {
+      // Silently ignore errors
+    }
+  }
+
+  setSelectedUser(users.value[0])
+
+  infoMessage.value = 'Đã tải danh sách user. Bạn có thể lọc theo username, email, tên, role hoặc địa chỉ.'
+  loading.value = false
 }
 
 async function submitEditor() {
@@ -751,62 +779,7 @@ onMounted(() => {
           Chọn một user trong danh sách để xem hồ sơ chi tiết và thao tác nhanh.
         </div>
 
-        <section class="auth-grid">
-          <article class="auth-card">
-            <div class="panel-heading">
-              <div>
-                <p class="panel-kicker">Authentication</p>
-                <h3>Login</h3>
-              </div>
-            </div>
-            <label>
-              Email
-              <input v-model="authForms.login.email" type="email" />
-            </label>
-            <label>
-              Mật khẩu
-              <input v-model="authForms.login.password" type="password" />
-            </label>
-            <button class="primary-button" type="button" @click="submitLogin">Login</button>
-          </article>
 
-          <article class="auth-card">
-            <div class="panel-heading">
-              <div>
-                <p class="panel-kicker">Token</p>
-                <h3>Refresh / Logout</h3>
-              </div>
-            </div>
-            <label>
-              Refresh token
-              <input v-model="authForms.refresh.refreshToken" type="text" />
-            </label>
-            <div class="inline-fields">
-              <button class="secondary-button" type="button" @click="submitRefresh">
-                Refresh
-              </button>
-              <button class="danger-button" type="button" @click="submitLogout">
-                Logout
-              </button>
-            </div>
-            <label>
-              Device ID
-              <input v-model="authForms.logout.deviceId" type="text" />
-            </label>
-          </article>
-
-          <article class="auth-card response-panel">
-            <div class="token-status">
-              <span>Access token</span>
-              <strong>{{ authState?.accessToken ? 'Đã lưu' : 'Chưa có' }}</strong>
-            </div>
-            <div class="token-status">
-              <span>Refresh token</span>
-              <strong>{{ authState?.refreshToken ? 'Đã lưu' : 'Chưa có' }}</strong>
-            </div>
-            <pre>{{ responsePreview || 'Chưa có phản hồi API.' }}</pre>
-          </article>
-        </section>
       </aside>
     </section>
 

@@ -46,7 +46,7 @@ const recentOrders = computed(() => {
     const dateA = new Date(a.createdAt).getTime()
     const dateB = new Date(b.createdAt).getTime()
     return dateB - dateA
-  }).slice(0, 5)
+  }).slice(0, 10)
 })
 
 // Chart data for visualization
@@ -61,18 +61,21 @@ const orderStatusDistribution = computed(() => {
 })
 
 const topProducts = computed(() => {
-  const productSales = new Map<number, { name: string; quantity: number; revenue: number }>()
+  const productSales = new Map<number | string, { name: string; quantity: number; revenue: number }>()
 
   orders.value.forEach((order) => {
-    order.orderItems.forEach((item) => {
-      const existing = productSales.get(item.productId)
+    order.orderItems.forEach((item: any) => {
+      // Use productName if available (from localStorage), otherwise use product name from API
+      const productName = item.productName || products.value.find((p) => p.id === item.productId)?.name || `Product #${item.productId}`
+      const key = item.productName ? `local_${item.productName}` : item.productId
+      
+      const existing = productSales.get(key)
       if (existing) {
         existing.quantity += item.quantity
         existing.revenue += item.subTotal
       } else {
-        const product = products.value.find((p) => p.id === item.productId)
-        productSales.set(item.productId, {
-          name: product?.name || `Product #${item.productId}`,
+        productSales.set(key, {
+          name: productName,
           quantity: item.quantity,
           revenue: item.subTotal,
         })
@@ -82,7 +85,7 @@ const topProducts = computed(() => {
 
   return Array.from(productSales.values())
     .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5)
+    .slice(0, 10)
 })
 
 // Lifecycle
@@ -96,6 +99,43 @@ onMounted(async () => {
     ])
 
     orders.value = ordersData
+
+    // Also load orders from localStorage (customer orders)
+    const localOrdersStr = localStorage.getItem('orders')
+    if (localOrdersStr) {
+      try {
+        const localOrders = JSON.parse(localOrdersStr)
+        if (Array.isArray(localOrders)) {
+          localOrders.forEach((order, orderIndex) => {
+            const convertedOrder: OrderResponseDto = {
+              id: parseInt(order.id.replace(/[^\d]/g, '')) || Math.random() * 1000,
+              userId: 9999, // Local user ID
+              status: order.status === 'Đã thanh toán' ? 'Completed' : order.status === 'Chờ xác nhận' ? 'Pending' : 'Processing',
+              total: order.total || 0,
+              createdAt: order.date || new Date().toISOString(),
+              orderItems: (order.items || []).map((item: any, itemIndex: number) => {
+                // Create a product ID based on order and item index to ensure consistency
+                // Store product name as part of the ID string for later lookup
+                const productIdKey = `local_${orderIndex}_${itemIndex}`
+                return {
+                  id: Math.random() * 10000,
+                  productId: parseInt(productIdKey.replace(/\D/g, '')) || (orderIndex * 100 + itemIndex),
+                  quantity: item.quantity || 0,
+                  price: item.price || 0,
+                  subTotal: (item.price || 0) * (item.quantity || 0),
+                  // Store product name in a custom property for reference
+                  productName: item.name,
+                } as any
+              }),
+            }
+            orders.value.push(convertedOrder)
+          })
+        }
+      } catch (e) {
+        console.log('Error loading local orders:', e)
+      }
+    }
+
     products.value = productsData
     users.value = usersData
   } catch (error) {
@@ -264,18 +304,8 @@ const formatDate = (dateString: string): string => {
             <p class="stock-stat-value">{{ totalStock }} sản phẩm</p>
           </div>
           <div class="stock-stat-item">
-            <p class="stock-stat-label">Số SKU</p>
-            <p class="stock-stat-value">{{ totalProducts }} SKU</p>
-          </div>
-          <div class="stock-stat-item">
             <p class="stock-stat-label">Sắp hết hàng</p>
             <p class="stock-stat-value" style="color: #f5a524">{{ lowStockProducts }} cảnh báo</p>
-          </div>
-          <div class="stock-stat-item">
-            <p class="stock-stat-label">Trung bình tồn</p>
-            <p class="stock-stat-value">
-              {{ (totalStock / (totalProducts || 1)).toFixed(1) }} sp/SKU
-            </p>
           </div>
         </div>
       </div>
