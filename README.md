@@ -1,48 +1,43 @@
-# front-end_sales-and-inventory-management
+# Sales and Inventory Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 3 frontend tích hợp ba microservice:
 
-## Recommended IDE Setup
+- User & Report: `https://nhom3-sales-and-inventory-management.onrender.com`
+- Order & Sales: `https://nhom2-sales-and-inventory-management.onrender.com`
+- Product & Inventory: `https://nhom1-sales-and-inventory-management.onrender.com`
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Vai trò
 
-## Recommended Browser Setup
+- `Admin`: báo cáo, tài khoản, đơn hàng, khách hàng, nhà cung cấp, sản phẩm và kho.
+- `SalesStaff`: đơn hàng, khách hàng và nhà cung cấp.
+- `WarehouseKeeper`: sản phẩm, tồn kho và phiếu nhập.
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+Khách hàng là dữ liệu bán hàng trong Order service, không phải tài khoản đăng nhập.
 
-## Type Support for `.vue` Imports in TS
+## Chạy local
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+Mặc định frontend gọi các URL Render. Có thể ghi đè bằng:
 
-```sh
+```bash
+VITE_USER_API_URL=http://localhost:5056
+VITE_ORDER_API_URL=http://localhost:5000
+VITE_PRODUCT_API_URL=http://localhost:8080
+```
+
+Xem mẫu tại `.env.example`.
+
+## Kiểm tra
+
+```bash
+npm run lint
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+Frontend dùng history routing để trang bán hàng ở `/` và trang đăng nhập nhân viên ở `/admin`.
 
-```sh
-npm run lint
-```
+Trên Render Static Site, cần thêm rewrite rule từ `/*` đến `/index.html` để truy cập trực tiếp hoặc refresh các route Vue không bị lỗi 404.

@@ -1,85 +1,107 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { getSession, type UserRole } from '../services/apiClient'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    public?: boolean
+    adminLogin?: boolean
+    roles?: UserRole[]
+  }
+}
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'storefront',
+    component: () => import('../views/StorefrontView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/admin',
+    name: 'admin-login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { public: true, adminLogin: true },
+  },
+  {
+    path: '/login',
+    redirect: '/admin',
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../views/AdminDashboard.vue'),
+    meta: { roles: ['Admin'] },
+  },
+  {
+    path: '/users',
+    name: 'users',
+    component: () => import('../views/UsersView.vue'),
+    meta: { roles: ['Admin'] },
+  },
+  {
+    path: '/orders',
+    name: 'orders',
+    component: () => import('../views/AdminOrdersView.vue'),
+    meta: { roles: ['Admin', 'SalesStaff'] },
+  },
+  {
+    path: '/customers',
+    name: 'customers',
+    component: () => import('../views/CustomersView.vue'),
+    meta: { roles: ['Admin', 'SalesStaff'] },
+  },
+  {
+    path: '/suppliers',
+    name: 'suppliers',
+    component: () => import('../views/SuppliersView.vue'),
+    meta: { roles: ['Admin', 'SalesStaff'] },
+  },
+  {
+    path: '/products',
+    name: 'products',
+    component: () => import('../views/ProductsView.vue'),
+    meta: { roles: ['Admin', 'WarehouseKeeper'] },
+  },
+  {
+    path: '/inventory',
+    name: 'inventory',
+    component: () => import('../views/WarehouseManagerView.vue'),
+    meta: { roles: ['Admin', 'WarehouseKeeper'] },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/',
+  },
+]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('../views/LoginView.vue'),
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: () => import('../views/RegisterView.vue'),
-    },
-    {
-      path: '/forgot-password',
-      name: 'forgot-password',
-      component: () => import('../views/ForgotPasswordView.vue'),
-    },
-    {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: () => import('../views/AdminDashboard.vue'),
-    },
-    {
-      path: '/sales-ui',
-      name: 'sales-ui',
-      component: () => import('../views/SalesUIView.vue'),
-    },
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: () => import('../views/AboutView.vue'),
-    },
-    {
-      path: '/users',
-      name: 'users',
-      component: () => import('../views/UsersView.vue'),
-    },
-    {
-      path: '/products',
-      name: 'products',
-      component: () => import('../views/ProductsView.vue'),
-    },
-    {
-      path: '/orders-admin',
-      name: 'orders-admin',
-      component: () => import('../views/AdminOrdersView.vue'),
-    },
-    {
-      path: '/user/home',
-      name: 'user-home',
-      component: () => import('../views/UserHomeView.vue'),
-    },
-    {
-      path: '/user/cart',
-      name: 'user-cart',
-      component: () => import('../views/UserCartView.vue'),
-    },
-    {
-      path: '/user/orders',
-      name: 'user-orders',
-      component: () => import('../views/UserOrdersView.vue'),
-    },
-    {
-      path: '/warehouse-manager',
-      name: 'warehouse-manager',
-      component: () => import('../views/WarehouseManagerView.vue'),
-    },
-    {
-      path: '/sales-officer',
-      name: 'sales-officer',
-      component: () => import('../views/SalesOfficerView.vue'),
-    },
-  ],
+  routes,
 })
 
+function homeForRole(role: UserRole) {
+  if (role === 'Admin') return '/dashboard'
+  if (role === 'WarehouseKeeper') return '/inventory'
+  return '/orders'
+}
+
+router.beforeEach((to) => {
+  const session = getSession()
+
+  if (to.meta.public) {
+    return to.meta.adminLogin && session ? homeForRole(session.user.role) : true
+  }
+
+  if (!session) {
+    return { name: 'admin-login', query: { redirect: to.fullPath } }
+  }
+
+  if (to.meta.roles && !to.meta.roles.includes(session.user.role)) {
+    return homeForRole(session.user.role)
+  }
+
+  return true
+})
+
+export { homeForRole }
 export default router

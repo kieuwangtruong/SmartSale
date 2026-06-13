@@ -1,164 +1,64 @@
+import { apiRequest } from './apiClient'
+import { API_URLS } from './config'
+
 export type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Completed' | 'Cancelled'
 
-export interface ApiResponse<T> {
-  success?: boolean
-  data?: T
-  message?: string
-}
-
-export interface UserDto {
-  id: number
-  fullName: string
-  email: string
-  role: 'User' | 'Admin'
-}
-
-export interface ProductDto {
-  id: number
-  name: string
-  price: number
-  stock: number
-}
-
-export interface OrderItemResponseDto {
+export interface OrderItem {
   id: number
   productId: number
+  productName: string
   quantity: number
   price: number
   subTotal: number
 }
 
-export interface OrderResponseDto {
+export interface Order {
   id: number
   userId: number
+  customerId?: number | null
+  customerName?: string | null
   status: OrderStatus
+  subtotal: number
+  discountAmount: number
   total: number
+  amountPaid: number
+  debtAmount: number
   createdAt: string
   lastModifiedAt?: string | null
-  orderItems: OrderItemResponseDto[]
+  orderItems: OrderItem[]
 }
 
-export interface OrderItemInput {
-  productId: number | null
-  quantity: number
-  price: number
+export interface Customer {
+  id: number
+  fullName: string
+  phone: string
+  email?: string | null
+  address?: string | null
+  totalSpent: number
+  currentDebt: number
+  orderCount: number
+  createdAt: string
+  lastModifiedAt?: string | null
+}
+
+export interface Supplier {
+  id: number
+  name: string
+  contactName: string
+  phone: string
+  email?: string | null
+  address?: string | null
+  notes?: string | null
+  createdAt: string
+  lastModifiedAt?: string | null
 }
 
 export interface CreateOrderPayload {
   userId: number
-  orderItems: Array<{
-    productId: number
-    quantity: number
-    price: number
-  }>
-}
-
-export interface UpdateOrderPayload extends CreateOrderPayload {
-  id: number
-}
-
-export interface UpdateOrderStatusPayload {
-  id: number
-  status: OrderStatus
-}
-
-const DEFAULT_BASE_URL = 'https://nhom2-sales-and-inventory-management.onrender.com'
-
-function normalizeBaseUrl(value: string) {
-  try {
-    return new URL(value).origin
-  } catch {
-    return value.replace(/\/$/, '')
-  }
-}
-
-const baseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL ?? DEFAULT_BASE_URL)
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-    ...init,
-  })
-
-  const text = await response.text()
-  let payload: ApiResponse<T> | T | string | null = null
-
-  if (text) {
-    try {
-      payload = JSON.parse(text) as ApiResponse<T> | T
-    } catch {
-      payload = text
-    }
-  }
-
-  if (!response.ok) {
-    const message =
-      payload && typeof payload === 'object' && 'message' in payload
-        ? String((payload as ApiResponse<T>).message ?? response.statusText)
-        : response.statusText
-
-    throw new Error(message || 'Không thể kết nối tới backend')
-  }
-
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return (payload as ApiResponse<T>).data as T
-  }
-
-  return payload as T
-}
-
-export function getApiBaseUrl() {
-  return baseUrl
-}
-
-export function getOrders() {
-  return request<OrderResponseDto[]>('/api/Order')
-}
-
-export function getOrderById(id: number) {
-  return request<OrderResponseDto>(`/api/Order/${id}`)
-}
-
-export function getOrdersByUserId(userId: number) {
-  return request<OrderResponseDto[]>(`/api/Order/user/${userId}`)
-}
-
-export function getUsers() {
-  return request<UserDto[]>('/api/users')
-}
-
-export function getProducts() {
-  return request<ProductDto[]>('/api/products')
-}
-
-export function createOrder(payload: CreateOrderPayload) {
-  return request<OrderResponseDto>('/api/Order', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
-export function updateOrder(payload: UpdateOrderPayload) {
-  return request<OrderResponseDto>(`/api/Order/${payload.id}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  })
-}
-
-export function updateOrderStatus(payload: UpdateOrderStatusPayload) {
-  return request<OrderResponseDto>(`/api/Order/${payload.id}/status`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  })
-}
-
-export function deleteOrder(id: number) {
-  return request<{ success?: boolean; message?: string }>(`/api/Order/${id}`, {
-    method: 'DELETE',
-  })
+  customerId?: number | null
+  discountAmount: number
+  amountPaid: number
+  orderItems: Array<{ productId: number; quantity: number }>
 }
 
 export const ORDER_STATUSES: OrderStatus[] = [
@@ -169,21 +69,85 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'Cancelled',
 ]
 
-export function allowedStatusOptions(status: OrderStatus) {
-  switch (status) {
-    case 'Pending':
-      return ['Pending', 'Processing', 'Cancelled'] as OrderStatus[]
-    case 'Processing':
-      return ['Processing', 'Shipped', 'Cancelled'] as OrderStatus[]
-    case 'Shipped':
-      return ['Shipped', 'Completed'] as OrderStatus[]
-    case 'Completed':
-      return ['Completed'] as OrderStatus[]
-    case 'Cancelled':
-      return ['Cancelled'] as OrderStatus[]
-    default:
-      return ORDER_STATUSES
-  }
+export function getOrders() {
+  return apiRequest<Order[]>(API_URLS.order, '/api/Order', { auth: true })
+}
+
+export function createOrder(payload: CreateOrderPayload) {
+  return apiRequest<Order>(API_URLS.order, '/api/Order', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateOrderStatus(id: number, status: OrderStatus) {
+  return apiRequest<Order>(API_URLS.order, `/api/Order/${id}/status`, {
+    method: 'PUT',
+    auth: true,
+    body: JSON.stringify({ id, status }),
+  })
+}
+
+export function deleteOrder(id: number) {
+  return apiRequest<unknown>(API_URLS.order, `/api/Order/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  })
+}
+
+export function getCustomers() {
+  return apiRequest<Customer[]>(API_URLS.order, '/api/customers', { auth: true })
+}
+
+export function createCustomer(payload: Omit<Customer, 'id' | 'totalSpent' | 'currentDebt' | 'orderCount' | 'createdAt'>) {
+  return apiRequest<Customer>(API_URLS.order, '/api/customers', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateCustomer(payload: Customer) {
+  return apiRequest<Customer>(API_URLS.order, `/api/customers/${payload.id}`, {
+    method: 'PUT',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteCustomer(id: number) {
+  return apiRequest<unknown>(API_URLS.order, `/api/customers/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  })
+}
+
+export function getSuppliers() {
+  return apiRequest<Supplier[]>(API_URLS.order, '/api/suppliers', { auth: true })
+}
+
+export function createSupplier(payload: Omit<Supplier, 'id' | 'createdAt'>) {
+  return apiRequest<Supplier>(API_URLS.order, '/api/suppliers', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateSupplier(payload: Supplier) {
+  return apiRequest<Supplier>(API_URLS.order, `/api/suppliers/${payload.id}`, {
+    method: 'PUT',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteSupplier(id: number) {
+  return apiRequest<unknown>(API_URLS.order, `/api/suppliers/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  })
 }
 
 export function formatCurrency(value: number) {
@@ -191,5 +155,5 @@ export function formatCurrency(value: number) {
     style: 'currency',
     currency: 'VND',
     maximumFractionDigits: 0,
-  }).format(value)
+  }).format(value || 0)
 }
