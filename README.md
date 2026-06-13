@@ -4,7 +4,7 @@ Vue 3 frontend tích hợp ba microservice:
 
 - User & Report: `https://nhom3-sales-and-inventory-management.onrender.com`
 - Order & Sales: `https://nhom2-sales-and-inventory-management.onrender.com`
-- Product & Inventory: `https://nhom1-sales-and-inventory-management.onrender.com`
+- Product & Inventory: `https://nhom1-sales-and-inventory-management-1.onrender.com`
 
 ## Vai trò
 

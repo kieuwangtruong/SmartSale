@@ -13,6 +13,6 @@ export const API_URLS = {
   ),
   product: normalizeUrl(
     import.meta.env.VITE_PRODUCT_API_URL ??
-      'https://nhom1-sales-and-inventory-management.onrender.com',
+      'https://nhom1-sales-and-inventory-management-1.onrender.com',
   ),
 }

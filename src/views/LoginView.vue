@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { homeForRole } from '../router'
@@ -43,16 +46,21 @@ async function submit() {
       <form @submit.prevent="submit">
         <label>
           Email
-          <input v-model="email" type="email" autocomplete="email" placeholder="name@company.com" />
+          <InputText v-model="email" type="email" autocomplete="email" placeholder="name@company.com" fluid />
         </label>
         <label>
           Mật khẩu
-          <input v-model="password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+          <Password
+            v-model="password"
+            autocomplete="current-password"
+            placeholder="Nhập mật khẩu"
+            :feedback="false"
+            toggle-mask
+            fluid
+          />
         </label>
         <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" :disabled="loading">
-          {{ loading ? 'Đang đăng nhập...' : 'Đăng nhập' }}
-        </button>
+        <Button type="submit" label="Đăng nhập" icon="pi pi-sign-in" :loading="loading" fluid />
       </form>
 
       <small>Vai trò được xác định từ backend: Admin, SalesStaff hoặc WarehouseKeeper.</small>
@@ -62,18 +70,14 @@ async function submit() {
 </template>
 
 <style scoped>
-.login-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: linear-gradient(135deg, #0f172a, #1d4ed8); }
-.login-card { width: min(420px, 100%); padding: 36px; border-radius: 18px; background: white; box-shadow: 0 24px 70px #02061755; }
-.logo { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #2563eb; color: white; font-size: 24px; font-weight: 800; }
-.eyebrow { margin: 22px 0 4px; color: #2563eb; font-weight: 700; }
+.login-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 18% 12%, #4f46e5 0, transparent 31%), radial-gradient(circle at 85% 85%, #0f766e 0, transparent 28%), #111827; }
+.login-card { width: min(430px, 100%); padding: 38px; border: 1px solid #ffffff24; border-radius: 22px; background: #fffffffa; box-shadow: 0 30px 90px #02061770; }
+.logo { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 15px; background: linear-gradient(135deg, #818cf8, #4f46e5); color: white; font-size: 24px; font-weight: 800; box-shadow: 0 10px 24px #4f46e54d; }
+.eyebrow { margin: 22px 0 4px; color: #4f46e5; font-weight: 750; }
 h1 { margin: 0; color: #0f172a; }
 .subtitle { color: #64748b; }
 form { display: grid; gap: 16px; margin: 26px 0 18px; }
 label { display: grid; gap: 7px; color: #334155; font-weight: 600; }
-input { padding: 12px 13px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; }
-input:focus { outline: 3px solid #bfdbfe; border-color: #2563eb; }
-button { padding: 12px; border: 0; border-radius: 9px; background: #2563eb; color: white; font-weight: 700; cursor: pointer; }
-button:disabled { opacity: .65; cursor: wait; }
 .error { margin: 0; padding: 10px; border-radius: 8px; background: #fee2e2; color: #b91c1c; }
 small { color: #64748b; }
 .store-link { display: inline-block; margin-top: 18px; color: #2563eb; text-decoration: none; font-weight: 650; }
