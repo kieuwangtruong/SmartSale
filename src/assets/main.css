@@ -60,7 +60,28 @@ button { cursor: pointer; }
 .admin-brand strong { font-size: 18px; letter-spacing: -.02em; }
 .admin-brand small { color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
 .nav-caption { margin: 10px 12px; color: #64748b; font-size: 10px; font-weight: 800; letter-spacing: .15em; }
-.admin-navigation { display: grid; gap: 5px; }
+.admin-navigation {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.admin-navigation::-webkit-scrollbar {
+  display: none;
+}
+.admin-navigation a.logout-nav-item {
+  color: #fca5a5;
+  margin-top: 12px;
+  border-top: 1px dashed rgb(255 255 255 / 15%);
+  padding-top: 12px;
+}
+.admin-navigation a.logout-nav-item:hover {
+  color: #fff;
+  background: rgb(239 68 68 / 15%);
+}
 .admin-navigation a {
   min-height: 45px;
   padding: 0 13px;
@@ -135,6 +156,15 @@ button { cursor: pointer; }
 }
 .store-shortcut { border: 1px solid var(--surface-border); color: #475569; background: #fff; text-decoration: none; }
 .role-chip { color: #4338ca; background: #eef2ff; }
+.topbar-logout-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+}
+.logout-text {
+  font-size: 12px;
+  font-weight: 700;
+}
 .admin-main { min-width: 0; }
 .sidebar-backdrop { display: none; }
 
@@ -245,6 +275,14 @@ td small { display: block; margin-top: 4px; color: #9199aa; }
   .topbar-title small, .role-chip { display: none; }
   .store-shortcut { width: 38px; padding: 0; justify-content: center; font-size: 0; }
   .store-shortcut i { font-size: 14px; }
+  .logout-text { display: none; }
+  .topbar-logout-btn {
+    padding: 0 !important;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    border-radius: 50% !important;
+  }
   .page { padding: 20px 14px 32px; }
   .page-head { align-items: stretch; flex-direction: column; }
   .page-head input, .page-head select { min-width: 0; }
@@ -252,3 +290,288 @@ td small { display: block; margin-top: 4px; color: #9199aa; }
   .panel { padding: 16px; }
   .item-row, .receipt-item { grid-template-columns: 1fr !important; }
 }
+
+/* Dark Mode Overrides */
+.app-dark {
+  --color-background: #0b0f19;
+  --color-sidebar: #070a13;
+  --color-surface: #151d30;
+  --color-surface-soft: #1d263b;
+  --color-border: #23304c;
+  --color-border-strong: #384f7a;
+  --color-heading: #f1f5f9;
+  --color-text: #cbd5e1;
+  --color-muted: #94a3b8;
+
+  --surface-ground: #0b0f19;
+  --surface-card: #151d30;
+  --surface-border: #23304c;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --primary: #818cf8;
+  --primary-dark: #6366f1;
+  --sidebar: #070a13;
+}
+
+.app-dark input:not(.p-inputtext),
+.app-dark select:not(.p-select),
+.app-dark textarea {
+  background: #151d30;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark input:not(.p-inputtext):hover,
+.app-dark select:not(.p-select):hover,
+.app-dark textarea:hover {
+  border-color: #384f7a;
+}
+.app-dark th {
+  background: #121824;
+  color: #94a3b8;
+}
+.app-dark td,
+.app-dark th {
+  border-bottom-color: #23304c;
+}
+.app-dark tbody tr:hover {
+  background: #1d263b;
+}
+.app-dark button:not(.p-button):not(.sidebar-backdrop) {
+  background: #151d30;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark button:not(.p-button):not(.sidebar-backdrop):hover {
+  background: #1d263b;
+  border-color: #384f7a;
+}
+.app-dark .store-shortcut {
+  background: #151d30;
+  border-color: #23304c;
+  color: #cbd5e1;
+}
+.app-dark .store-shortcut:hover {
+  background: #1d263b;
+}
+.app-dark .role-chip {
+  color: #a5b4fc;
+  background: rgb(99 102 241 / 15%);
+}
+.app-dark .chart-summary {
+  border-top-color: #23304c;
+}
+.app-dark .chart-summary strong {
+  color: #f1f5f9;
+}
+.app-dark .revenue-legend article:hover {
+  background: #1d263b;
+}
+.app-dark .stats article {
+  background: #151d30;
+}
+.app-dark .stats article span {
+  color: #94a3b8;
+}
+.app-dark .stats article strong {
+  color: #f1f5f9;
+}
+.app-dark .stats article::after {
+  background: rgb(99 102 241 / 12%);
+}
+.app-dark .warning {
+  color: #fca5a5;
+  background: rgb(239 68 68 / 15%);
+}
+.app-dark .admin-sidebar {
+  background:
+    radial-gradient(circle at 20% 0%, rgb(99 102 241 / 16%), transparent 34%),
+    var(--sidebar);
+}
+.app-dark .admin-topbar {
+  background: rgb(11 15 25 / 88%);
+  border-bottom-color: #23304c;
+}
+.app-dark .profile-avatar {
+  background: #23304c;
+  color: #a5b4fc;
+}
+.app-dark .topbar-title h1 {
+  color: #f1f5f9;
+}
+.app-dark .page-head h2 {
+  color: #f1f5f9;
+}
+.app-dark .panel h3 {
+  color: #f1f5f9;
+}
+.app-dark .donut-center strong {
+  color: #f1f5f9;
+}
+.app-dark .chart-empty {
+  color: #64748b;
+}
+
+/* Page Head Actions Layout */
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.page-head-actions input,
+.page-head-actions select {
+  min-width: 240px;
+  min-height: 38px;
+  height: 38px;
+  box-sizing: border-box;
+}
+.page-head-actions button.primary {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+  white-space: nowrap;
+  min-height: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  padding: 0 16px;
+}
+.page-head-actions button.primary:hover {
+  background: #059669;
+  border-color: #059669;
+}
+.app-dark .page-head-actions button.primary {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+.app-dark .page-head-actions button.primary:hover {
+  background: #34d399;
+  border-color: #34d399;
+}
+
+/* Custom Add Dropdown Container */
+.add-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+.add-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  width: 180px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  z-index: 80;
+}
+.app-dark .add-dropdown-menu {
+  background: #151d30;
+  border-color: #23304c;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+.add-dropdown-menu a {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-main);
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.add-dropdown-menu a:hover {
+  background: var(--surface-ground);
+  color: var(--primary);
+}
+.app-dark .add-dropdown-menu a:hover {
+  background: #23304c;
+}
+
+/* Overlay & Custom Modal for Admin */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+}
+.admin-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(500px, 95vw);
+  max-height: 85vh;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  z-index: 1000;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  animation: modalFadeIn 0.2s ease;
+}
+.app-dark .admin-modal {
+  background: #151d30;
+  border-color: #23304c;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+.admin-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 12px;
+}
+.modal-head h2 {
+  font-size: 19px;
+  margin: 0;
+  color: var(--text-main);
+  font-weight: 700;
+}
+.modal-head button:not(.p-button) {
+  min-height: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+  transition: background 0.15s, color 0.15s !important;
+  cursor: pointer !important;
+}
+.modal-head button:not(.p-button):hover {
+  background: var(--surface-ground) !important;
+  color: var(--text-main) !important;
+}
+.app-dark .modal-head button:not(.p-button):hover {
+  background: #23304c !important;
+  color: #f1f5f9 !important;
+}
+

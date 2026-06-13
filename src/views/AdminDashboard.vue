@@ -244,4 +244,20 @@ onMounted(load)
   .revenue-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart-summary { grid-template-columns: 1fr; }
 }
+:global(.app-dark) .donut-center strong {
+  color: #f1f5f9 !important;
+}
+:global(.app-dark) .revenue-legend article:hover {
+  background: #1d263b !important;
+}
+:global(.app-dark) .revenue-legend article > span {
+  color: #cbd5e1 !important;
+}
+:global(.app-dark) .chart-summary {
+  border-top-color: #23304c !important;
+}
+:global(.app-dark) .panel-heading > small {
+  color: #94a3b8 !important;
+  background: #1e293b !important;
+}
 </style>

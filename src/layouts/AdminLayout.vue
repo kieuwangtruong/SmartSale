@@ -16,7 +16,7 @@ const allNavigation = [
   { to: '/dashboard', label: 'Tổng quan', icon: 'pi pi-chart-bar', roles: ['Admin'] },
   { to: '/orders', label: 'Đơn hàng', icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
   { to: '/customers', label: 'Khách hàng', icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
-  { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['Admin', 'SalesStaff'] },
+  { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
   { to: '/products', label: 'Sản phẩm', icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper'] },
   { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
   { to: '/users', label: 'Tài khoản', icon: 'pi pi-user-edit', roles: ['Admin'] },
@@ -39,7 +39,28 @@ function syncAuth() {
   auth.sync()
 }
 
-onMounted(() => window.addEventListener('auth-changed', syncAuth))
+const isDark = ref(false)
+
+function toggleDarkMode() {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('app-dark')
+    localStorage.setItem('theme-dark', 'true')
+  } else {
+    document.documentElement.classList.remove('app-dark')
+    localStorage.setItem('theme-dark', 'false')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('auth-changed', syncAuth)
+  isDark.value = localStorage.getItem('theme-dark') === 'true'
+  if (isDark.value) {
+    document.documentElement.classList.add('app-dark')
+  } else {
+    document.documentElement.classList.remove('app-dark')
+  }
+})
 onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
 </script>
 
@@ -70,6 +91,10 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
           <i :class="item.icon" />
           <span>{{ item.label }}</span>
         </RouterLink>
+        <a href="#" class="logout-nav-item" @click.prevent="handleLogout">
+          <i class="pi pi-sign-out" />
+          <span>Đăng xuất</span>
+        </a>
       </nav>
 
       <div class="admin-profile">
@@ -77,7 +102,7 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
         <div><strong>{{ auth.user?.fullName }}</strong><small>{{ roleLabel }}</small></div>
         <Button
           icon="pi pi-sign-out"
-          severity="secondary"
+          severity="danger"
           text
           rounded
           aria-label="Đăng xuất"
@@ -101,8 +126,26 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
           <div><small>HỆ THỐNG QUẢN LÝ</small><h1>{{ currentPage }}</h1></div>
         </div>
         <div class="topbar-actions">
+          <Button
+            :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
+            severity="secondary"
+            text
+            rounded
+            aria-label="Đổi giao diện"
+            @click="toggleDarkMode"
+          />
           <RouterLink class="store-shortcut" to="/"><i class="pi pi-external-link" /> Cửa hàng</RouterLink>
           <span class="role-chip"><i class="pi pi-shield" /> {{ roleLabel }}</span>
+          <Button
+            severity="danger"
+            outlined
+            aria-label="Đăng xuất"
+            @click="handleLogout"
+            class="topbar-logout-btn"
+          >
+            <i class="pi pi-sign-out" />
+            <span class="logout-text">Đăng xuất</span>
+          </Button>
         </div>
       </header>
 

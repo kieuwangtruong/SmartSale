@@ -165,5 +165,6 @@ export async function apiRequest<T>(
     }
   }
 
-  return parseResponse<T>(response)
+  return await parseResponse<T>(response)
 }
+

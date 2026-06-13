@@ -54,7 +54,7 @@ const routes: RouteRecordRaw[] = [
     path: '/suppliers',
     name: 'suppliers',
     component: () => import('../views/SuppliersView.vue'),
-    meta: { roles: ['Admin', 'SalesStaff'] },
+    meta: { roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
   },
   {
     path: '/products',

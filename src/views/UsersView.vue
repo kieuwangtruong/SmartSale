@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   createUser,
   deleteUser,
@@ -25,8 +25,19 @@ const form = reactive<CreateUserPayload>({
   address: '',
 })
 
+const search = ref('')
+const showForm = ref(false)
+
+const visible = computed(() => {
+  const q = search.value.toLowerCase().trim()
+  return !q ? users.value : users.value.filter((u) =>
+    [u.userName, u.fullName, u.email].some((val) => val && val.toLowerCase().includes(q))
+  )
+})
+
 function reset() {
   editingId.value = null
+  showForm.value = false
   Object.assign(form, {
     userName: '', fullName: '', email: '', passwordHash: '',
     dateOfBirth: '2000-01-01', role: 'SalesStaff', sex: 0, address: '',
@@ -48,6 +59,7 @@ function edit(user: UserDto) {
     passwordHash: '', dateOfBirth: user.dateOfBirth.slice(0, 10),
     role: user.role, sex: user.sex, address: user.address,
   })
+  showForm.value = true
 }
 
 async function save() {
@@ -81,11 +93,29 @@ onMounted(load)
 
 <template>
   <section class="page">
-    <div class="page-head"><div><h2>Quản lý tài khoản</h2><p>Admin tạo và phân quyền nhân viên.</p></div></div>
+    <div class="page-head">
+      <div>
+        <h2>Quản lý tài khoản</h2>
+        <p>Admin tạo và phân quyền nhân viên.</p>
+      </div>
+      <div class="page-head-actions">
+        <input v-model="search" placeholder="Tìm tài khoản..." class="search-input" />
+        <button type="button" class="primary" @click="showForm = true">
+          <i class="pi pi-plus" /> Tạo tài khoản
+        </button>
+      </div>
+    </div>
+
     <p v-if="error" class="alert error">{{ error }}</p>
-    <div class="grid-form">
-      <form class="panel form" @submit.prevent="save">
-        <h3>{{ editingId ? 'Cập nhật tài khoản' : 'Tạo tài khoản' }}</h3>
+
+    <!-- User modal form dialog -->
+    <div v-if="showForm" class="modal-backdrop" @click="reset" />
+    <aside v-if="showForm" class="admin-modal" aria-label="Biểu mẫu tài khoản">
+      <div class="modal-head">
+        <h2>{{ editingId ? 'Cập nhật tài khoản' : 'Tạo tài khoản' }}</h2>
+        <button type="button" @click="reset"><i class="pi pi-times" /></button>
+      </div>
+      <form class="form admin-modal-body" @submit.prevent="save">
         <label>Tên đăng nhập<input v-model="form.userName" required /></label>
         <label>Họ tên<input v-model="form.fullName" required /></label>
         <label>Email<input v-model="form.email" type="email" required /></label>
@@ -94,22 +124,42 @@ onMounted(load)
         <label>Vai trò<select v-model="form.role"><option v-for="role in USER_ROLES" :key="role.value" :value="role.value">{{ role.label }}</option></select></label>
         <label>Giới tính<select v-model.number="form.sex"><option :value="0">Nam</option><option :value="1">Nữ</option><option :value="2">Khác</option></select></label>
         <label>Địa chỉ<input v-model="form.address" /></label>
-        <div class="actions"><button class="primary">Lưu</button><button v-if="editingId" type="button" @click="reset">Hủy</button></div>
+        <div class="actions">
+          <button class="primary">Lưu</button>
+          <button type="button" @click="reset">Hủy</button>
+        </div>
       </form>
-      <article class="panel table-wrap">
-        <p v-if="loading">Đang tải...</p>
-        <table v-else>
-          <thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th></th></tr></thead>
-          <tbody><tr v-for="user in users" :key="user.id">
-            <td>{{ user.fullName }}<small>@{{ user.userName }}</small></td><td>{{ user.email }}</td><td><span class="role-label">{{ getRoleLabel(user.role) }}</span></td>
-            <td class="actions"><button @click="edit(user)">Sửa</button><button class="danger" @click="remove(user)">Xóa</button></td>
-          </tr></tbody>
-        </table>
-      </article>
-    </div>
+    </aside>
+
+    <!-- Full width table -->
+    <article class="panel table-wrap">
+      <p v-if="loading">Đang tải...</p>
+      <table v-else>
+        <thead>
+          <tr>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Vai trò</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="user in visible" :key="user.id">
+            <td>{{ user.fullName }}<small>@{{ user.userName }}</small></td>
+            <td>{{ user.email }}</td>
+            <td><span class="role-label">{{ getRoleLabel(user.role) }}</span></td>
+            <td class="actions">
+              <button @click="edit(user)">Sửa</button>
+              <button class="danger" @click="remove(user)">Xóa</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
   </section>
 </template>
 
 <style scoped>
 .role-label { display: inline-flex; padding: 6px 9px; border-radius: 99px; color: #4338ca; background: #eef2ff; font-size: 11px; font-weight: 750; }
+.app-dark .role-label { color: #a5b4fc; background: rgb(99 102 241 / 15%); }
 </style>

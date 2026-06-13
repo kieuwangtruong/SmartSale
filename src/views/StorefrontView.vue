@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { formatCurrency } from "../services/orderApi";
+import { formatCurrency, createOrder, createCustomer, getCustomers } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
 
 interface CartLine {
@@ -101,7 +101,100 @@ function clearFilters() {
   sort.value = "featured";
 }
 
-onMounted(loadProducts);
+const showCheckout = ref(false);
+const checkoutLoading = ref(false);
+const checkoutError = ref("");
+const checkoutSuccess = ref(false);
+
+const customerForm = ref({
+  fullName: "",
+  phone: "",
+  email: "",
+  address: ""
+});
+
+function openCheckoutModal() {
+  checkoutError.value = "";
+  checkoutSuccess.value = false;
+  showCheckout.value = true;
+}
+
+async function submitOrder() {
+  if (checkoutLoading.value) return;
+  checkoutLoading.value = true;
+  checkoutError.value = "";
+  try {
+    let customerId: number | null = null;
+    try {
+      const customersList = await getCustomers();
+      const existing = customersList.find((c) => c.phone === customerForm.value.phone);
+      if (existing) {
+        customerId = existing.id;
+      } else {
+        const newCust = await createCustomer({
+          fullName: customerForm.value.fullName,
+          phone: customerForm.value.phone,
+          email: customerForm.value.email || null,
+          address: customerForm.value.address || null
+        });
+        customerId = newCust.id;
+      }
+    } catch (e) {
+      console.warn("Failed to retrieve/create customer, using default guest id", e);
+      customerId = 1; 
+    }
+
+    const orderItems = cart.value.map((item) => ({
+      productId: item.product.id,
+      quantity: item.quantity
+    }));
+
+    await createOrder({
+      userId: 1, // Default sales staff / admin ID
+      customerId,
+      discountAmount: 0,
+      amountPaid: 0,
+      orderItems
+    });
+
+    checkoutSuccess.value = true;
+    cart.value = []; // Empty cart
+    setTimeout(() => {
+      showCheckout.value = false;
+      showCart.value = false;
+      checkoutSuccess.value = false;
+      customerForm.value = { fullName: "", phone: "", email: "", address: "" };
+    }, 2500);
+
+  } catch (e) {
+    checkoutError.value = e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo đơn hàng.";
+  } finally {
+    checkoutLoading.value = false;
+  }
+}
+
+const isDark = ref(false);
+
+function toggleDarkMode() {
+  isDark.value = !isDark.value;
+  if (isDark.value) {
+    document.documentElement.classList.add("app-dark");
+    localStorage.setItem("theme-dark", "true");
+  } else {
+    document.documentElement.classList.remove("app-dark");
+    localStorage.setItem("theme-dark", "false");
+  }
+}
+
+onMounted(() => {
+  isDark.value = localStorage.getItem("theme-dark") === "true";
+  if (isDark.value) {
+    document.documentElement.classList.add("app-dark");
+  } else {
+    document.documentElement.classList.remove("app-dark");
+  }
+  loadProducts();
+});
 </script>
 
 <template>
@@ -130,11 +223,16 @@ onMounted(loadProducts);
         <a href="#footer">Liên hệ</a>
       </nav>
 
-      <button class="cart-button" type="button" @click="showCart = true">
-        <i class="pi pi-shopping-bag" />
-        <span>Giỏ hàng</span>
-        <b>{{ cartCount }}</b>
-      </button>
+      <div class="header-right">
+        <button class="theme-toggle" type="button" @click="toggleDarkMode" aria-label="Đổi giao diện">
+          <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
+        </button>
+        <button class="cart-button" type="button" @click="showCart = true">
+          <i class="pi pi-shopping-bag" />
+          <span>Giỏ hàng</span>
+          <b>{{ cartCount }}</b>
+        </button>
+      </div>
     </header>
 
     <main>
@@ -311,15 +409,6 @@ onMounted(loadProducts);
                 <i class="pi pi-box" />
                 <small>ID #{{ product.id }}</small>
               </div>
-              <button
-                class="quick-add"
-                type="button"
-                :disabled="product.quantity <= 0"
-                :aria-label="`Thêm ${product.name} vào giỏ`"
-                @click="addToCart(product)"
-              >
-                <i class="pi pi-plus" />
-              </button>
             </div>
             <div class="product-content">
               <div class="product-labels">
@@ -330,9 +419,9 @@ onMounted(loadProducts);
               <div class="product-footer">
                 <div>
                   <strong>{{ formatCurrency(product.sellingPrice) }}</strong>
-                  <small v-if="product.quantity > 0">
-                    <i class="pi pi-check-circle" /> Còn
-                    {{ product.quantity }} sản phẩm
+                  <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
+                    <i class="pi pi-check-circle" />
+                    {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
                   </small>
                   <small v-else class="unavailable">Tạm hết hàng</small>
                 </div>
@@ -450,40 +539,102 @@ onMounted(loadProducts);
           <i class="pi pi-info-circle" /> Nhân viên bán hàng sẽ xác nhận thông
           tin và tạo đơn.
         </p>
-        <button type="button">
+        <button type="button" @click="openCheckoutModal">
           Liên hệ đặt hàng <i class="pi pi-arrow-right" />
         </button>
       </div>
     </aside>
 
+    <!-- Checkout Modal -->
+    <div v-if="showCheckout" class="modal-backdrop" @click="showCheckout = false" />
+    <aside v-if="showCheckout" class="checkout-modal" aria-label="Thông tin đặt hàng">
+      <div class="modal-head">
+        <h2>Thông tin đặt hàng</h2>
+        <button type="button" aria-label="Đóng" @click="showCheckout = false">
+          <i class="pi pi-times" />
+        </button>
+      </div>
+      
+      <form class="modal-body" @submit.prevent="submitOrder">
+        <p class="modal-summary">Bạn đang đặt mua <strong>{{ cartCount }}</strong> sản phẩm với tổng trị giá <strong>{{ formatCurrency(cartTotal) }}</strong>.</p>
+        
+        <label class="form-field">
+          <span>Họ và tên <b class="required">*</b></span>
+          <input v-model="customerForm.fullName" required placeholder="Nhập họ và tên" />
+        </label>
+        
+        <label class="form-field">
+          <span>Số điện thoại <b class="required">*</b></span>
+          <input v-model="customerForm.phone" type="tel" required placeholder="Nhập số điện thoại" />
+        </label>
+        
+        <label class="form-field">
+          <span>Email</span>
+          <input v-model="customerForm.email" type="email" placeholder="Nhập địa chỉ email" />
+        </label>
+        
+        <label class="form-field">
+          <span>Địa chỉ giao hàng <b class="required">*</b></span>
+          <textarea v-model="customerForm.address" required placeholder="Số nhà, tên đường, quận/huyện..." />
+        </label>
+
+        <div v-if="checkoutError" class="checkout-error">
+          <i class="pi pi-exclamation-circle"></i> {{ checkoutError }}
+        </div>
+        
+        <div v-if="checkoutSuccess" class="checkout-success">
+          <i class="pi pi-check-circle"></i> Đặt hàng thành công! Đơn hàng sẽ được nhân viên xử lý sớm.
+        </div>
+
+        <button type="submit" class="submit-btn" :disabled="checkoutLoading">
+          <i v-if="checkoutLoading" class="pi pi-spin pi-spinner"></i>
+          <span v-else>Xác nhận đặt hàng</span>
+        </button>
+      </form>
+    </aside>
+
     <footer id="footer">
       <div class="footer-content">
-        <div>
+        <div class="footer-brand-section">
           <RouterLink class="store-brand footer-brand" to="/">
             <span class="brand-mark"><i class="pi pi-shopping-bag" /></span>
-            <span class="brand-copy"
-              ><strong>SalesFlow</strong><small>Smart store</small></span
-            >
+            <span class="brand-copy">
+              <strong>Smart Sale Store</strong>
+              <small>Hệ thống bán hàng thông minh</small>
+            </span>
           </RouterLink>
-          <p>
-            Trải nghiệm mua sắm được kết nối trực tiếp với hệ thống bán hàng và
-            kho.
-          </p>
+          <div class="social-links">
+            <a href="#" aria-label="Facebook"><i class="pi pi-facebook" /></a>
+            <a href="#" aria-label="Youtube"><i class="pi pi-youtube" /></a>
+            <a href="#" aria-label="Twitter"><i class="pi pi-twitter" /></a>
+          </div>
         </div>
+        
         <div class="footer-links">
-          <strong>Khám phá</strong>
-          <a href="#products">Sản phẩm</a>
-          <a href="#service">Dịch vụ</a>
+          <strong>Danh mục mua sắm</strong>
+          <a href="#products">Tất cả sản phẩm</a>
+          <a href="#service">Dịch vụ khách hàng</a>
+          <a href="#footer">Liên hệ hỗ trợ</a>
         </div>
+        
         <div class="footer-links">
-          <strong>Hệ thống</strong>
-          <RouterLink to="/admin">Đăng nhập nhân viên</RouterLink>
-          <span>Dữ liệu Product service</span>
+          <strong>Thông tin liên hệ</strong>
+          <span><i class="pi pi-phone" /> Hotline: 1900 6789</span>
+          <span><i class="pi pi-envelope" /> support@smartsales.com</span>
+          <span><i class="pi pi-map-marker" /> Hà Nội, Việt Nam</span>
+        </div>
+
+        <div class="footer-links">
+          <strong>Hệ thống nội bộ</strong>
+          <RouterLink class="staff-login-btn" to="/admin">
+            <i class="pi pi-lock" /> Đăng nhập nhân viên
+          </RouterLink>
+          <span class="status-indicator"><i class="pi pi-server" /> Kết nối API Service</span>
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2026 SalesFlow. Sales & Inventory Management.</span>
-        <span><i class="pi pi-circle-fill" /> Hệ thống đang hoạt động</span>
+        <span>© 2026 Smart Sale Store. Bảo lưu mọi quyền.</span>
+        <span class="system-status"><i class="pi pi-circle-fill" /> Hệ thống trực tuyến</span>
       </div>
     </footer>
   </div>
@@ -509,11 +660,11 @@ onMounted(loadProducts);
 .store .hero-copy h1 {
   margin: 20px 0 24px;
   color: var(--ink);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(48px, 6vw, 78px);
-  font-weight: 500;
-  line-height: 0.98;
-  letter-spacing: -0.055em;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(40px, 5.5vw, 68px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   white-space: normal;
 }
 .store .hero-actions {
@@ -976,11 +1127,21 @@ main {
 }
 .product-card {
   min-width: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e8e7e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
 }
 .product-image {
   position: relative;
   aspect-ratio: 1 / 1.08;
-  border-radius: 4px;
+  border-radius: 14px;
   background: #ecebe5;
   overflow: hidden;
 }
@@ -1026,7 +1187,7 @@ main {
   left: 13px;
   z-index: 2;
   padding: 6px 9px;
-  border-radius: 2px;
+  border-radius: 6px;
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -1069,7 +1230,7 @@ main {
   display: none;
 }
 .product-content {
-  padding: 14px 2px 0;
+  padding: 14px 12px 12px;
 }
 .product-labels {
   display: flex;
@@ -1094,10 +1255,11 @@ main {
 .product-content h3 {
   min-height: 42px;
   margin: 7px 0 15px;
-  font-family: Georgia, serif;
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.25;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
 }
 .product-footer {
   display: flex;
@@ -1464,70 +1626,122 @@ main {
   font-weight: 750;
 }
 footer {
-  color: #d9e3e1;
-  background: #0c2024;
+  color: #cbd5e1;
+  background: #0f172a;
+  border-top: 1px solid rgb(255 255 255 / 8%);
 }
 .footer-content {
   max-width: 1240px;
   margin: auto;
-  padding: 58px 24px;
+  padding: 70px 24px;
   display: grid;
-  grid-template-columns: 1.5fr 0.5fr 0.7fr;
-  gap: 80px;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 40px;
+}
+.footer-brand-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .footer-brand {
   color: white;
 }
 .footer-brand .brand-mark {
-  background: #d9eee9;
-  color: #0f625c;
+  background: var(--teal);
+  color: white;
 }
-.footer-brand .brand-copy small {
-  color: #8fa6a2;
+.brand-desc {
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
 }
-.footer-content > div:first-child > p {
-  max-width: 370px;
-  margin: 20px 0 0;
-  color: #8fa6a2;
-  font-size: 12px;
-  line-height: 1.7;
+.social-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+.social-links a {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: #cbd5e1;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.social-links a:hover {
+  background: var(--teal);
+  color: white;
+  transform: translateY(-2px);
 }
 .footer-links {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
 .footer-links strong {
-  margin-bottom: 5px;
   color: white;
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
 }
 .footer-links a,
 .footer-links span {
-  color: #8fa6a2;
+  color: #94a3b8;
   text-decoration: none;
-  font-size: 11px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+}
+.footer-links a:hover {
+  color: var(--teal);
+}
+.staff-login-btn {
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 5%);
+  color: white !important;
+  text-align: center;
+  justify-content: center;
+  font-weight: 600;
+}
+.staff-login-btn:hover {
+  background: var(--teal);
+  border-color: var(--teal);
 }
 .footer-bottom {
   max-width: 1240px;
   margin: auto;
-  padding: 18px 24px;
+  padding: 24px;
   border-top: 1px solid rgb(255 255 255 / 8%);
-  color: #718986;
+  color: #64748b;
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
-  letter-spacing: 0.04em;
+  align-items: center;
+  font-size: 12px;
 }
-.footer-bottom span:last-child {
-  color: #8fbdb5;
+.system-status {
+  color: #22c55e !important;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.footer-bottom i {
-  margin-right: 5px;
-  font-size: 5px;
+.system-status i {
+  font-size: 8px;
+  animation: blink 2s infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 @media (max-width: 1000px) {
   .hero {
@@ -1748,5 +1962,318 @@ footer {
     flex-direction: column;
     gap: 8px;
   }
+}
+
+.checkout-modal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 100%);
+  background: white;
+  z-index: 30;
+  box-shadow: -10px 0 40px rgb(0 0 0 / 15%);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  animation: slideIn 0.25s ease-out;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  background: rgb(20 33 61 / 45%);
+  backdrop-filter: blur(4px);
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-head h2 {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  margin: 0;
+  color: var(--ink);
+}
+.modal-head button {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.modal-summary {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 0 0 6px;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+.form-field span {
+  color: var(--ink);
+}
+.form-field input, .form-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d2;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  font-weight: 400;
+}
+.form-field textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+.required {
+  color: #ef4444;
+}
+.checkout-error {
+  padding: 10px;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.checkout-success {
+  padding: 10px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.submit-btn {
+  margin-top: 8px;
+  min-height: 44px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.submit-btn:hover {
+  background: var(--teal-dark);
+}
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Storefront Dark Mode Overrides */
+.app-dark .store {
+  --ink: #f1f5f9;
+  --muted: #94a3b8;
+  --cream: #0b0f19;
+  --line: #23304c;
+  --teal: #38bdf8;
+  --teal-dark: #0284c7;
+  background: var(--cream);
+}
+.app-dark .store-header {
+  background: rgb(11 15 25 / 92%);
+  border-bottom-color: #23304c;
+}
+.app-dark .product-card,
+.app-dark .cart-panel,
+.app-dark .checkout-modal,
+.app-dark .state-card,
+.app-dark .demo-login-box {
+  background: #151d30;
+  border-color: #23304c;
+}
+.app-dark .store-brand, 
+.app-dark .main-nav a {
+  color: #f1f5f9;
+}
+.app-dark .cart-button {
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .quantity-control input {
+  background: #151d30;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .quantity-control button {
+  background: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .announcement {
+  background: #070a13;
+}
+.app-dark .hero-visual {
+  background: linear-gradient(145deg, #151d30, #0b0f19);
+}
+.app-dark .visual-grid {
+  opacity: 0.1;
+}
+.app-dark .hero-product {
+  background: rgb(2 132 199 / 86%);
+  box-shadow: 0 34px 70px rgb(0 0 0 / 40%);
+}
+.app-dark .floating-card {
+  background: #151d30;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .service-strip {
+  border-color: #23304c;
+}
+.app-dark .service-strip article span {
+  background: #151d30;
+  color: #38bdf8;
+}
+.app-dark .catalog-toolbar {
+  border-bottom-color: #23304c;
+}
+.app-dark .category-list button {
+  color: #94a3b8;
+}
+.app-dark .category-list button.active {
+  color: #f1f5f9;
+  background: #23304c;
+}
+.app-dark .sort-control select {
+  background: #151d30;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .product-footer button {
+  background: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .product-footer button:hover {
+  background: #384f7a;
+}
+.app-dark .cart-line {
+  border-bottom-color: #23304c;
+}
+.app-dark .cart-footer {
+  border-top-color: #23304c;
+}
+.app-dark footer {
+  border-top-color: #23304c;
+}
+.app-dark .footer-bottom {
+  border-top-color: #23304c;
+}
+.app-dark .modal-summary {
+  background: #151d30;
+  color: #94a3b8;
+}
+.app-dark .form-field input, 
+.app-dark .form-field textarea {
+  background: #151d30;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+
+.header-right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #d9d9d2;
+  background: transparent;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.app-dark .theme-toggle {
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Stock status sizes and colors */
+.in-stock-text {
+  color: #16a34a !important;
+  font-weight: 700;
+  font-size: 13px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.in-stock-text i {
+  color: #16a34a !important;
+}
+.low-stock-text {
+  color: #d97706 !important;
+  font-weight: 700;
+  font-size: 13px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.low-stock-text i {
+  color: #d97706 !important;
+}
+
+/* Dark mode panel overrides for text visibility */
+.app-dark .cart-panel,
+.app-dark .checkout-modal,
+.app-dark .checkout-modal h2,
+.app-dark .form-field span {
+  color: #f1f5f9 !important;
+}
+.app-dark .modal-summary {
+  background: #23304c;
+  color: #cbd5e1;
+}
+.app-dark .product-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+.app-dark .product-labels small {
+  color: var(--muted);
+}
+.app-dark .product-footer strong {
+  color: var(--ink);
 }
 </style>
