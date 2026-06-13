@@ -4,6 +4,7 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
+import { getRoleLabel } from '../services/apiClient'
 import { useAuthStore } from '../stores/authStore'
 
 const auth = useAuthStore()
@@ -27,11 +28,7 @@ const navigation = computed(() =>
 const currentPage = computed(
   () => navigation.value.find((item) => item.to === route.path)?.label ?? 'Quản lý',
 )
-const roleLabel = computed(() => {
-  if (auth.role === 'Admin') return 'Quản trị viên'
-  if (auth.role === 'WarehouseKeeper') return 'Thủ kho'
-  return 'Nhân viên bán hàng'
-})
+const roleLabel = computed(() => getRoleLabel(auth.role))
 
 async function handleLogout() {
   await auth.logout()

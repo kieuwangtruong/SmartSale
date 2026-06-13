@@ -8,7 +8,7 @@ import {
   type CreateUserPayload,
   type UserDto,
 } from '../services/userApi'
-import type { UserRole } from '../services/apiClient'
+import { getRoleLabel, USER_ROLES } from '../services/apiClient'
 
 const users = ref<UserDto[]>([])
 const loading = ref(false)
@@ -24,8 +24,6 @@ const form = reactive<CreateUserPayload>({
   sex: 0,
   address: '',
 })
-
-const roles: UserRole[] = ['SalesStaff', 'Admin', 'WarehouseKeeper']
 
 function reset() {
   editingId.value = null
@@ -93,7 +91,7 @@ onMounted(load)
         <label>Email<input v-model="form.email" type="email" required /></label>
         <label>Mật khẩu<input v-model="form.passwordHash" type="password" :required="!editingId" /></label>
         <label>Ngày sinh<input v-model="form.dateOfBirth" type="date" required /></label>
-        <label>Vai trò<select v-model="form.role"><option v-for="role in roles" :key="role">{{ role }}</option></select></label>
+        <label>Vai trò<select v-model="form.role"><option v-for="role in USER_ROLES" :key="role.value" :value="role.value">{{ role.label }}</option></select></label>
         <label>Giới tính<select v-model.number="form.sex"><option :value="0">Nam</option><option :value="1">Nữ</option><option :value="2">Khác</option></select></label>
         <label>Địa chỉ<input v-model="form.address" /></label>
         <div class="actions"><button class="primary">Lưu</button><button v-if="editingId" type="button" @click="reset">Hủy</button></div>
@@ -103,7 +101,7 @@ onMounted(load)
         <table v-else>
           <thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th></th></tr></thead>
           <tbody><tr v-for="user in users" :key="user.id">
-            <td>{{ user.fullName }}<small>@{{ user.userName }}</small></td><td>{{ user.email }}</td><td>{{ user.role }}</td>
+            <td>{{ user.fullName }}<small>@{{ user.userName }}</small></td><td>{{ user.email }}</td><td><span class="role-label">{{ getRoleLabel(user.role) }}</span></td>
             <td class="actions"><button @click="edit(user)">Sửa</button><button class="danger" @click="remove(user)">Xóa</button></td>
           </tr></tbody>
         </table>
@@ -111,3 +109,7 @@ onMounted(load)
     </div>
   </section>
 </template>
+
+<style scoped>
+.role-label { display: inline-flex; padding: 6px 9px; border-radius: 99px; color: #4338ca; background: #eef2ff; font-size: 11px; font-weight: 750; }
+</style>

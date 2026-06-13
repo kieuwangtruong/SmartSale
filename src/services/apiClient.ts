@@ -2,6 +2,12 @@ import { API_URLS } from './config'
 
 export type UserRole = 'SalesStaff' | 'Admin' | 'WarehouseKeeper'
 
+export const USER_ROLES: Array<{ value: UserRole; label: string; apiValue: number }> = [
+  { value: 'SalesStaff', label: 'Nhân viên bán hàng', apiValue: 0 },
+  { value: 'Admin', label: 'Quản trị viên', apiValue: 1 },
+  { value: 'WarehouseKeeper', label: 'Thủ kho', apiValue: 2 },
+]
+
 export interface AuthUser {
   id: number
   userName: string
@@ -36,10 +42,19 @@ const AUTH_KEY = 'sales-inventory-auth'
 let session = loadSession()
 let refreshPromise: Promise<string | null> | null = null
 
-function normalizeRole(role: unknown): UserRole {
+export function normalizeRole(role: unknown): UserRole {
   if (role === 1 || role === '1' || role === 'Admin') return 'Admin'
   if (role === 2 || role === '2' || role === 'WarehouseKeeper') return 'WarehouseKeeper'
   return 'SalesStaff'
+}
+
+export function getRoleLabel(role: unknown) {
+  const normalizedRole = normalizeRole(role)
+  return USER_ROLES.find((item) => item.value === normalizedRole)?.label ?? normalizedRole
+}
+
+export function getRoleApiValue(role: UserRole) {
+  return USER_ROLES.find((item) => item.value === role)?.apiValue ?? 0
 }
 
 function loadSession(): AuthSession | null {

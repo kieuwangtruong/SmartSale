@@ -63,7 +63,7 @@ async function submit() {
         <Button type="submit" label="Đăng nhập" icon="pi pi-sign-in" :loading="loading" fluid />
       </form>
 
-      <small>Vai trò được xác định từ backend: Admin, SalesStaff hoặc WarehouseKeeper.</small>
+      <small>Hệ thống tự xác định quyền: Quản trị viên, Nhân viên bán hàng hoặc Thủ kho.</small>
       <RouterLink class="store-link" to="/">← Quay lại trang bán hàng</RouterLink>
     </section>
   </main>

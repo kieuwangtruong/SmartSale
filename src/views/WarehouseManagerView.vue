@@ -84,7 +84,7 @@ onMounted(load)
         <h3>Tồn kho</h3>
         <table><thead><tr><th>Sản phẩm</th><th>Tồn</th><th>Ngưỡng</th><th></th></tr></thead>
           <tbody><tr v-for="p in products" :key="p.id">
-            <td>{{ p.name }}<small>{{ p.productCode }}</small></td>
+            <td>{{ p.name }}<small>ID: #{{ p.id }}</small></td>
             <td><input v-if="inventoryDraft[p.id]" v-model.number="inventoryDraft[p.id]!.quantity" type="number" min="0" /></td>
             <td><input v-if="inventoryDraft[p.id]" v-model.number="inventoryDraft[p.id]!.reserveStock" type="number" min="0" /></td>
             <td><button @click="saveInventory(p)">Lưu</button></td>

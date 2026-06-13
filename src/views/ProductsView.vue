@@ -22,20 +22,20 @@ const error = ref('')
 const editingId = ref<number | null>(null)
 const categoryName = ref('')
 const form = reactive<ProductPayload>({
-  productCode: '', name: '', importPrice: 0, sellingPrice: 0,
+  name: '', importPrice: 0, sellingPrice: 0,
   imageUrl: '', categoryId: 0, quantity: 0, reserveStock: 0,
 })
 
 const visible = computed(() => {
   const q = search.value.toLowerCase().trim()
   return !q ? products.value : products.value.filter((p) =>
-    [p.name, p.productCode, p.categoryName].some((v) => v.toLowerCase().includes(q)),
+    [p.name, p.categoryName, String(p.id)].some((value) => value.toLowerCase().includes(q)),
   )
 })
 
 function reset() {
   editingId.value = null
-  Object.assign(form, { productCode: '', name: '', importPrice: 0, sellingPrice: 0, imageUrl: '', categoryId: 0, quantity: 0, reserveStock: 0 })
+  Object.assign(form, { name: '', importPrice: 0, sellingPrice: 0, imageUrl: '', categoryId: 0, quantity: 0, reserveStock: 0 })
 }
 async function load() {
   try { ;[products.value, categories.value] = await Promise.all([getProducts(), getCategories()]) }
@@ -44,7 +44,7 @@ async function load() {
 function edit(p: Product) {
   editingId.value = p.id
   Object.assign(form, {
-    productCode: p.productCode, name: p.name, importPrice: p.importPrice,
+    name: p.name, importPrice: p.importPrice,
     sellingPrice: p.sellingPrice, imageUrl: p.imageUrl || '',
     categoryId: p.categoryId, quantity: p.quantity, reserveStock: p.reserveStock,
   })
@@ -76,7 +76,7 @@ onMounted(load)
       <div>
         <form class="panel form" @submit.prevent="save">
           <h3>{{ editingId ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm' }}</h3>
-          <label>Mã sản phẩm<input v-model="form.productCode" required /></label>
+          <label v-if="editingId">ID sản phẩm<input :value="editingId" disabled /></label>
           <label>Tên sản phẩm<input v-model="form.name" required /></label>
           <label>Danh mục<select v-model.number="form.categoryId" required><option :value="0">Chọn danh mục</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
           <label>Giá nhập<input v-model.number="form.importPrice" type="number" min="0" /></label>
@@ -91,7 +91,7 @@ onMounted(load)
       <article class="panel table-wrap">
         <table><thead><tr><th>Sản phẩm</th><th>Danh mục</th><th>Giá bán</th><th>Tồn kho</th><th></th></tr></thead>
           <tbody><tr v-for="p in visible" :key="p.id">
-            <td>{{ p.name }}<small>{{ p.productCode }}</small></td><td>{{ p.categoryName }}</td><td>{{ formatCurrency(p.sellingPrice) }}</td>
+            <td>{{ p.name }}<small>ID: #{{ p.id }}</small></td><td>{{ p.categoryName }}</td><td>{{ formatCurrency(p.sellingPrice) }}</td>
             <td><span :class="{ warning: p.quantity <= p.reserveStock }">{{ p.quantity }} / {{ p.reserveStock }}</span></td>
             <td class="actions"><button @click="edit(p)">Sửa</button><button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">Xóa</button></td>
           </tr></tbody>

@@ -3,7 +3,6 @@ import { API_URLS } from './config'
 
 export interface Product {
   id: number
-  productCode: string
   name: string
   importPrice: number
   sellingPrice: number
@@ -21,7 +20,6 @@ export interface Category {
 }
 
 export interface ProductPayload {
-  productCode: string
   name: string
   importPrice: number
   sellingPrice: number

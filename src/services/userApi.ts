@@ -1,4 +1,11 @@
-import { apiRequest, type AuthSession, type AuthUser, type UserRole } from './apiClient'
+import {
+  apiRequest,
+  getRoleApiValue,
+  normalizeRole,
+  type AuthSession,
+  type AuthUser,
+  type UserRole,
+} from './apiClient'
 import { API_URLS } from './config'
 
 export type UserDto = AuthUser
@@ -9,7 +16,7 @@ export interface CreateUserPayload {
   email: string
   passwordHash: string
   dateOfBirth: string
-  role: UserRole | number
+  role: UserRole
   sex: number
   address: string
 }
@@ -47,6 +54,17 @@ export interface RevenueChart {
   orderCount: number[]
 }
 
+function normalizeUser(user: UserDto): UserDto {
+  return { ...user, role: normalizeRole(user.role) }
+}
+
+function toApiPayload<T extends Partial<CreateUserPayload>>(payload: T) {
+  return {
+    ...payload,
+    ...(payload.role ? { role: getRoleApiValue(payload.role) } : {}),
+  }
+}
+
 export function loginUser(payload: { email: string; password: string }) {
   return apiRequest<AuthSession>(API_URLS.user, '/api/User/login', {
     method: 'POST',
@@ -62,24 +80,27 @@ export function logoutUser(payload: { refreshToken: string }) {
   })
 }
 
-export function getUsers() {
-  return apiRequest<UserDto[]>(API_URLS.user, '/api/User', { auth: true })
+export async function getUsers() {
+  const users = await apiRequest<UserDto[]>(API_URLS.user, '/api/User', { auth: true })
+  return users.map(normalizeUser)
 }
 
-export function createUser(payload: CreateUserPayload) {
-  return apiRequest<UserDto>(API_URLS.user, '/api/User', {
+export async function createUser(payload: CreateUserPayload) {
+  const user = await apiRequest<UserDto>(API_URLS.user, '/api/User', {
     method: 'POST',
     auth: true,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(toApiPayload(payload)),
   })
+  return normalizeUser(user)
 }
 
-export function updateUser(payload: UpdateUserPayload) {
-  return apiRequest<UserDto>(API_URLS.user, `/api/User/${payload.id}`, {
+export async function updateUser(payload: UpdateUserPayload) {
+  const user = await apiRequest<UserDto>(API_URLS.user, `/api/User/${payload.id}`, {
     method: 'PUT',
     auth: true,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(toApiPayload(payload)),
   })
+  return normalizeUser(user)
 }
 
 export function deleteUser(id: number) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import type { TooltipItem } from 'chart.js'
 import Chart from 'primevue/chart'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
@@ -22,49 +23,83 @@ const groupOptions = [
   { label: 'Theo ngày', value: 'day' },
   { label: 'Theo tháng', value: 'month' },
 ]
+const chartColors = ['#4f46e5', '#0f766e', '#0284c7', '#d97706', '#db2777', '#64748b']
+const revenueSegments = computed(() => {
+  const labels = chart.value?.labels ?? []
+  const revenue = chart.value?.revenue ?? []
+  const orderCount = chart.value?.orderCount ?? []
+  const items = labels
+    .map((label, index) => ({
+      label,
+      revenue: revenue[index] ?? 0,
+      orders: orderCount[index] ?? 0,
+    }))
+    .filter((item) => item.revenue > 0)
+    .sort((first, second) => second.revenue - first.revenue)
+
+  if (items.length <= 6) return items
+
+  const leading = items.slice(0, 5)
+  const remaining = items.slice(5)
+  return [
+    ...leading,
+    {
+      label: 'Khác',
+      revenue: remaining.reduce((sum, item) => sum + item.revenue, 0),
+      orders: remaining.reduce((sum, item) => sum + item.orders, 0),
+    },
+  ]
+})
+const totalChartRevenue = computed(() =>
+  revenueSegments.value.reduce((sum, item) => sum + item.revenue, 0),
+)
+const totalChartOrders = computed(() =>
+  revenueSegments.value.reduce((sum, item) => sum + item.orders, 0),
+)
+const averageOrderValue = computed(() =>
+  totalChartOrders.value ? totalChartRevenue.value / totalChartOrders.value : 0,
+)
+const revenueLegend = computed(() =>
+  revenueSegments.value.map((item, index) => ({
+    ...item,
+    color: chartColors[index % chartColors.length],
+    percentage: totalChartRevenue.value
+      ? Math.round((item.revenue / totalChartRevenue.value) * 100)
+      : 0,
+  })),
+)
 const chartData = computed(() => ({
-  labels: chart.value?.labels ?? [],
+  labels: revenueSegments.value.map((item) => item.label),
   datasets: [
     {
       label: 'Doanh thu',
-      data: chart.value?.revenue ?? [],
-      borderColor: '#6366f1',
-      backgroundColor: 'rgba(99, 102, 241, .12)',
-      fill: true,
-      tension: 0.38,
-      pointBackgroundColor: '#6366f1',
-      pointRadius: 3,
-      yAxisID: 'y',
-    },
-    {
-      label: 'Số đơn',
-      data: chart.value?.orderCount ?? [],
-      borderColor: '#14b8a6',
-      backgroundColor: '#14b8a6',
-      tension: 0.3,
-      pointRadius: 3,
-      yAxisID: 'orders',
+      data: revenueSegments.value.map((item) => item.revenue),
+      backgroundColor: revenueSegments.value.map(
+        (_, index) => chartColors[index % chartColors.length],
+      ),
+      borderColor: '#ffffff',
+      borderWidth: 4,
+      hoverBorderColor: '#ffffff',
+      hoverBorderWidth: 4,
+      hoverOffset: 8,
     },
   ],
 }))
 const chartOptions = {
   maintainAspectRatio: false,
-  interaction: { mode: 'index' as const, intersect: false },
+  cutout: '72%',
+  layout: { padding: 12 },
   plugins: {
-    legend: { labels: { usePointStyle: true, boxWidth: 8, color: '#667085' } },
-  },
-  scales: {
-    x: { grid: { display: false }, ticks: { color: '#8a94a6' } },
-    y: {
-      beginAtZero: true,
-      grid: { color: '#eef0f4' },
-      ticks: { color: '#8a94a6', callback: (value: string | number) => `${Number(value) / 1_000_000}tr` },
-    },
-    orders: {
-      position: 'right' as const,
-      beginAtZero: true,
-      grid: { display: false },
-      ticks: { color: '#8a94a6', precision: 0 },
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#111827',
+      padding: 12,
+      cornerRadius: 8,
+      displayColors: true,
+      callbacks: {
+        label: (context: TooltipItem<'doughnut'>) =>
+          ` ${formatCurrency(Number(context.raw ?? 0))}`,
+      },
     },
   },
 }
@@ -116,8 +151,39 @@ onMounted(load)
 
       <div class="grid-2">
         <article class="panel">
-          <h3>Biểu đồ doanh thu</h3>
-          <div class="chart-box"><Chart type="line" :data="chartData" :options="chartOptions" /></div>
+          <div class="panel-heading">
+            <div><span>PHÂN BỔ DOANH THU</span><h3>Biểu đồ doanh thu</h3></div>
+            <small>{{ groupBy === 'day' ? 'Theo ngày' : 'Theo tháng' }}</small>
+          </div>
+
+          <div v-if="revenueSegments.length" class="revenue-chart-layout">
+            <div class="donut-wrap">
+              <Chart type="doughnut" :data="chartData" :options="chartOptions" />
+              <div class="donut-center">
+                <small>TỔNG DOANH THU</small>
+                <strong>{{ formatCurrency(totalChartRevenue) }}</strong>
+                <span>{{ totalChartOrders }} đơn hàng</span>
+              </div>
+            </div>
+
+            <div class="revenue-legend">
+              <article v-for="item in revenueLegend" :key="item.label">
+                <i :style="{ backgroundColor: item.color }"></i>
+                <div><strong>{{ item.label }}</strong><small>{{ item.orders }} đơn</small></div>
+                <span>{{ item.percentage }}%</span>
+              </article>
+            </div>
+          </div>
+
+          <div v-else class="chart-empty">
+            <i class="pi pi-chart-pie"></i>
+            <span>Chưa có doanh thu trong khoảng thời gian này.</span>
+          </div>
+
+          <div class="chart-summary">
+            <div><span>Tổng số đơn</span><strong>{{ totalChartOrders }}</strong></div>
+            <div><span>Giá trị trung bình/đơn</span><strong>{{ formatCurrency(averageOrderValue) }}</strong></div>
+          </div>
         </article>
 
         <article class="panel">
@@ -144,10 +210,38 @@ onMounted(load)
 </template>
 
 <style scoped>
-.chart-box { height: 330px; }
+.panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.panel-heading span { color: #6366f1; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+.panel-heading h3 { margin: 5px 0 0; font-size: 18px; }
+.panel-heading > small { padding: 6px 9px; border-radius: 99px; color: #475569; background: #f1f5f9; font-size: 10px; font-weight: 700; }
+.revenue-chart-layout { min-height: 290px; display: grid; grid-template-columns: minmax(210px, 1fr) minmax(170px, .8fr); align-items: center; gap: 20px; }
+.donut-wrap { position: relative; width: min(270px, 100%); height: 270px; margin: auto; }
+.donut-center { position: absolute; inset: 50% auto auto 50%; width: 140px; transform: translate(-50%, -50%); display: grid; gap: 5px; text-align: center; pointer-events: none; }
+.donut-center small { color: #94a3b8; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.donut-center strong { color: #111827; font-size: 16px; letter-spacing: -.03em; }
+.donut-center span { color: #64748b; font-size: 10px; }
+.revenue-legend { display: grid; gap: 4px; }
+.revenue-legend article { padding: 9px 8px; border-radius: 8px; display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 9px; }
+.revenue-legend article:hover { background: #f8fafc; }
+.revenue-legend article > i { width: 8px; height: 8px; border-radius: 50%; }
+.revenue-legend article div { min-width: 0; display: grid; gap: 2px; }
+.revenue-legend article strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.revenue-legend article small { color: #94a3b8; font-size: 9px; }
+.revenue-legend article > span { color: #475569; font-size: 11px; font-weight: 800; }
+.chart-summary { padding-top: 16px; border-top: 1px solid #edf0f4; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.chart-summary div { display: grid; gap: 4px; }
+.chart-summary span { color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
+.chart-summary strong { font-size: 14px; }
+.chart-empty { min-height: 290px; color: #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 12px; }
+.chart-empty i { font-size: 32px; }
 .stat-icon { position: absolute; right: 18px; top: 18px; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; }
 .stat-icon.purple { color: #4f46e5; background: #eef2ff; }
 .stat-icon.blue { color: #0284c7; background: #e0f2fe; }
 .stat-icon.green { color: #059669; background: #d1fae5; }
 .stat-icon.orange { color: #ea580c; background: #ffedd5; }
+@media (max-width: 620px) {
+  .revenue-chart-layout { grid-template-columns: 1fr; }
+  .revenue-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-summary { grid-template-columns: 1fr; }
+}
 </style>
