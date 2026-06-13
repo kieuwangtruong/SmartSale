@@ -91,8 +91,9 @@ function toggleExpand(orderId: string) {
 
 function updateOrderStatus(orderId: string, newStatus: string) {
   const orderIndex = orders.value.findIndex((o) => o.id === orderId)
-  if (orderIndex !== -1) {
-    orders.value[orderIndex].status = newStatus as Order['status']
+  const order = orders.value[orderIndex]
+  if (order) {
+    order.status = newStatus as Order['status']
     saveOrdersToLocalStorage()
   }
 }

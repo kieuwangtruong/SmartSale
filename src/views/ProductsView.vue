@@ -190,8 +190,9 @@ async function loadProducts() {
   try {
     const payload = await getProducts()
     products.value = Array.isArray(payload) ? payload : [payload]
-    if (products.value.length > 0) {
-      selectedProductId.value = products.value[0].id
+    const firstProduct = products.value[0]
+    if (firstProduct) {
+      selectedProductId.value = firstProduct.id
     }
 
     infoMessage.value =
