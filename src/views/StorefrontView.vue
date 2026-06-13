@@ -439,17 +439,6 @@ onMounted(() => {
         </div>
       </section>
 
-      <section class="closing-banner">
-        <div>
-          <span class="eyebrow">SALESFLOW STORE</span>
-          <h2>Mọi thông tin bạn cần,<br />trước khi lựa chọn.</h2>
-        </div>
-        <p>
-          Sản phẩm, giá bán và tồn kho được quản lý trên cùng một hệ thống, giúp
-          trải nghiệm mua sắm rõ ràng và đáng tin cậy hơn.
-        </p>
-        <a href="#products">Tiếp tục mua sắm <i class="pi pi-arrow-up" /></a>
-      </section>
     </main>
 
     <button
