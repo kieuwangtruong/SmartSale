@@ -5,7 +5,7 @@ import Chart from 'primevue/chart'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Select from 'primevue/select'
-import { formatCurrency } from '../services/orderApi'
+import { formatCurrency, getOrders, type Order } from '../services/orderApi'
 import {
   getDashboardReport,
   getRevenueChart,
@@ -104,16 +104,167 @@ const chartOptions = {
   },
 }
 
+function calculateReport(allOrders: Order[]): DashboardReport {
+  const now = new Date()
+  
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  
+  const day = startOfToday.getDay()
+  const diffToMonday = startOfToday.getDate() - (day === 0 ? 6 : day - 1)
+  const startOfWeek = new Date(startOfToday)
+  startOfWeek.setDate(diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+  
+  const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1)
+  
+  let revenueToday = 0
+  let revenueThisWeek = 0
+  let revenueThisMonth = 0
+  
+  const productMap: Record<number, { productId: number; productName: string; quantitySold: number; revenue: number }> = {}
+  const customerMap: Record<string, { customerId?: number | null; customerName: string; orderCount: number; revenue: number; debt: number }> = {}
+  
+  const activeOrders = allOrders.filter(o => o.status !== 'Cancelled')
+  
+  for (const order of activeOrders) {
+    const orderDate = new Date(order.createdAt)
+    
+    if (orderDate >= startOfToday) {
+      revenueToday += order.total
+    }
+    if (orderDate >= startOfWeek) {
+      revenueThisWeek += order.total
+    }
+    if (orderDate >= startOfMonth) {
+      revenueThisMonth += order.total
+    }
+    
+    for (const item of order.orderItems) {
+      if (!productMap[item.productId]) {
+        productMap[item.productId] = {
+          productId: item.productId,
+          productName: item.productName || `Sản phẩm #${item.productId}`,
+          quantitySold: 0,
+          revenue: 0
+        }
+      }
+      const pm = productMap[item.productId]!
+      pm.quantitySold += item.quantity
+      pm.revenue += item.subTotal
+    }
+    
+    const custName = order.customerName || 'Khách lẻ'
+    const key = order.customerId ? String(order.customerId) : custName
+    if (!customerMap[key]) {
+      customerMap[key] = {
+        customerId: order.customerId,
+        customerName: custName,
+        orderCount: 0,
+        revenue: 0,
+        debt: 0
+      }
+    }
+    customerMap[key].orderCount += 1
+    customerMap[key].revenue += order.total
+    customerMap[key].debt += order.debtAmount
+  }
+  
+  const topProducts = Object.values(productMap)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5)
+    
+  const topCustomers = Object.values(customerMap)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10)
+    
+  return {
+    revenueToday,
+    revenueThisWeek,
+    revenueThisMonth,
+    orderCount: activeOrders.length,
+    topProducts,
+    topCustomers
+  }
+}
+
+function calculateChart(allOrders: Order[], groupByMode: 'day' | 'month'): RevenueChart {
+  const activeOrders = allOrders.filter(o => o.status !== 'Cancelled')
+  
+  activeOrders.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  
+  const groups: Record<string, { revenue: number; orderCount: number }> = {}
+  
+  for (const order of activeOrders) {
+    const date = new Date(order.createdAt)
+    let key = ''
+    if (groupByMode === 'day') {
+      const dayStr = String(date.getDate()).padStart(2, '0')
+      const monthStr = String(date.getMonth() + 1).padStart(2, '0')
+      key = `${dayStr}/${monthStr}`
+    } else {
+      const monthStr = String(date.getMonth() + 1).padStart(2, '0')
+      const yearStr = date.getFullYear()
+      key = `${monthStr}/${yearStr}`
+    }
+    
+    if (!groups[key]) {
+      groups[key] = { revenue: 0, orderCount: 0 }
+    }
+    groups[key]!.revenue += order.total
+    groups[key]!.orderCount += 1
+  }
+  
+  const keys = Object.keys(groups)
+  const limit = groupByMode === 'day' ? 7 : 6
+  const slicedKeys = keys.slice(-limit)
+  
+  const labels: string[] = []
+  const revenue: number[] = []
+  const orderCount: number[] = []
+  
+  for (const k of slicedKeys) {
+    labels.push(k)
+    revenue.push(groups[k]?.revenue ?? 0)
+    orderCount.push(groups[k]?.orderCount ?? 0)
+  }
+  
+  return {
+    groupBy: groupByMode,
+    from: '',
+    to: '',
+    labels,
+    revenue,
+    orderCount
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    ;[report.value, chart.value] = await Promise.all([
+    const [apiReport, apiChart] = await Promise.all([
       getDashboardReport(),
       getRevenueChart(groupBy.value),
     ])
+    
+    if (apiReport && (apiReport.orderCount > 0 || apiReport.revenueToday > 0 || apiReport.revenueThisMonth > 0)) {
+      report.value = apiReport
+      chart.value = apiChart
+    } else {
+      const allOrders = await getOrders()
+      report.value = calculateReport(allOrders)
+      chart.value = calculateChart(allOrders, groupBy.value)
+    }
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Không thể tải báo cáo.'
+    console.warn("Reports API error, falling back to local orders calculation:", exception)
+    try {
+      const allOrders = await getOrders()
+      report.value = calculateReport(allOrders)
+      chart.value = calculateChart(allOrders, groupBy.value)
+    } catch (fallbackException) {
+      error.value = fallbackException instanceof Error ? fallbackException.message : 'Không thể tải báo cáo.'
+    }
   } finally {
     loading.value = false
   }
@@ -157,9 +308,11 @@ onMounted(load)
           </div>
 
           <div v-if="revenueSegments.length" class="revenue-chart-layout">
-            <div class="donut-wrap">
-              <Chart type="doughnut" :data="chartData" :options="chartOptions" />
-              <div class="donut-center">
+            <div class="chart-left-block">
+              <div class="donut-wrap">
+                <Chart type="doughnut" :data="chartData" :options="chartOptions" />
+              </div>
+              <div class="donut-below-summary">
                 <small>TỔNG DOANH THU</small>
                 <strong>{{ formatCurrency(totalChartRevenue) }}</strong>
                 <span>{{ totalChartOrders }} đơn hàng</span>
@@ -170,7 +323,7 @@ onMounted(load)
               <article v-for="item in revenueLegend" :key="item.label">
                 <i :style="{ backgroundColor: item.color }"></i>
                 <div><strong>{{ item.label }}</strong><small>{{ item.orders }} đơn</small></div>
-                <span>{{ item.percentage }}%</span>
+                <span class="legend-percentage">{{ item.percentage }}%</span>
               </article>
             </div>
           </div>
@@ -214,21 +367,29 @@ onMounted(load)
 .panel-heading span { color: #6366f1; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
 .panel-heading h3 { margin: 5px 0 0; font-size: 18px; }
 .panel-heading > small { padding: 6px 9px; border-radius: 99px; color: #475569; background: #f1f5f9; font-size: 10px; font-weight: 700; }
-.revenue-chart-layout { min-height: 290px; display: grid; grid-template-columns: minmax(210px, 1fr) minmax(170px, .8fr); align-items: center; gap: 20px; }
-.donut-wrap { position: relative; width: min(270px, 100%); height: 270px; margin: auto; }
-.donut-center { position: absolute; inset: 50% auto auto 50%; width: 140px; transform: translate(-50%, -50%); display: grid; gap: 5px; text-align: center; pointer-events: none; }
-.donut-center small { color: #94a3b8; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
-.donut-center strong { color: #111827; font-size: 16px; letter-spacing: -.03em; }
-.donut-center span { color: #64748b; font-size: 10px; }
-.revenue-legend { display: grid; gap: 4px; }
-.revenue-legend article { padding: 9px 8px; border-radius: 8px; display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 9px; }
+.revenue-chart-layout { min-height: 290px; display: grid; grid-template-columns: minmax(210px, 1.1fr) minmax(150px, 0.9fr); align-items: flex-start; gap: 12px; }
+
+.chart-left-block { display: flex; flex-direction: column; gap: 0px; align-items: center; justify-content: center; padding-top: 0px; }
+.donut-wrap { position: relative; width: min(270px, 100%); height: 215px; margin: 0 auto; }
+
+/* Khối text tổng doanh thu nằm ngay dưới biểu đồ */
+.donut-below-summary { display: grid; gap: 2px; text-align: center; margin-top: -26px; position: relative; z-index: 10; }
+.donut-below-summary small { color: #6366f1; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+
+/* LIGHT MODE: Số tiền mặc định hiển thị màu đen xám của hệ thống */
+.donut-below-summary strong { color: #111827; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.donut-below-summary span { color: #64748b; font-size: 12px; }
+
+.revenue-legend { display: grid; gap: 4px; width: 100%; }
+.revenue-legend article { padding: 9px 6px; border-radius: 8px; display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 8px; }
 .revenue-legend article:hover { background: #f8fafc; }
 .revenue-legend article > i { width: 8px; height: 8px; border-radius: 50%; }
 .revenue-legend article div { min-width: 0; display: grid; gap: 2px; }
 .revenue-legend article strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .revenue-legend article small { color: #94a3b8; font-size: 9px; }
-.revenue-legend article > span { color: #475569; font-size: 11px; font-weight: 800; }
-.chart-summary { padding-top: 16px; border-top: 1px solid #edf0f4; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.legend-percentage { color: #475569; font-size: 10px; font-weight: 800; min-width: 32px; text-align: right; }
+
+.chart-summary { padding-top: 16px; border-top: 1px solid #edf0f4; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 12px; }
 .chart-summary div { display: grid; gap: 4px; }
 .chart-summary span { color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
 .chart-summary strong { font-size: 14px; }
@@ -239,19 +400,25 @@ onMounted(load)
 .stat-icon.blue { color: #0284c7; background: #e0f2fe; }
 .stat-icon.green { color: #059669; background: #d1fae5; }
 .stat-icon.orange { color: #ea580c; background: #ffedd5; }
+
 @media (max-width: 620px) {
   .revenue-chart-layout { grid-template-columns: 1fr; }
   .revenue-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart-summary { grid-template-columns: 1fr; }
 }
-:global(.app-dark) .donut-center strong {
-  color: #f1f5f9 !important;
+
+/* --- DARK MODE: Tách biệt cấu trúc màu chữ sáng rực rỡ --- */
+:global(.app-dark) .donut-below-summary strong {
+  color: #ffffff !important; /* Bắt buộc đổi sang màu trắng tinh khi bật darkmode */
+}
+:global(.app-dark) .donut-below-summary span {
+  color: #cbd5e1 !important; /* Đổi màu số đơn hàng sang màu xám sáng */
+}
+:global(.app-dark) .legend-percentage {
+  color: #cbd5e1 !important;
 }
 :global(.app-dark) .revenue-legend article:hover {
   background: #1d263b !important;
-}
-:global(.app-dark) .revenue-legend article > span {
-  color: #cbd5e1 !important;
 }
 :global(.app-dark) .chart-summary {
   border-top-color: #23304c !important;

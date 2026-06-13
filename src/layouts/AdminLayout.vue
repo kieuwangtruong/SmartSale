@@ -91,10 +91,6 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
           <i :class="item.icon" />
           <span>{{ item.label }}</span>
         </RouterLink>
-        <a href="#" class="logout-nav-item" @click.prevent="handleLogout">
-          <i class="pi pi-sign-out" />
-          <span>Đăng xuất</span>
-        </a>
       </nav>
 
       <div class="admin-profile">
@@ -136,16 +132,6 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
           />
           <RouterLink class="store-shortcut" to="/"><i class="pi pi-external-link" /> Cửa hàng</RouterLink>
           <span class="role-chip"><i class="pi pi-shield" /> {{ roleLabel }}</span>
-          <Button
-            severity="danger"
-            outlined
-            aria-label="Đăng xuất"
-            @click="handleLogout"
-            class="topbar-logout-btn"
-          >
-            <i class="pi pi-sign-out" />
-            <span class="logout-text">Đăng xuất</span>
-          </Button>
         </div>
       </header>
 

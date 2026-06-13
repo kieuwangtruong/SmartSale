@@ -1971,7 +1971,7 @@ footer {
   bottom: 0;
   width: min(460px, 100%);
   background: white;
-  z-index: 30;
+  z-index: 60;
   box-shadow: -10px 0 40px rgb(0 0 0 / 15%);
   display: flex;
   flex-direction: column;
@@ -1981,7 +1981,7 @@ footer {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 28;
+  z-index: 59;
   background: rgb(20 33 61 / 45%);
   backdrop-filter: blur(4px);
 }
@@ -2183,8 +2183,19 @@ footer {
 .app-dark .cart-line {
   border-bottom-color: #23304c;
 }
+.app-dark .primary-cta {
+  color: #0b0f19;
+}
 .app-dark .cart-footer {
+  background: #151d30;
   border-top-color: #23304c;
+}
+.app-dark .cart-footer > div strong {
+  color: #ffffff;
+}
+.app-dark .cart-footer p {
+  color: #cbd5e1;
+  background: #23304c;
 }
 .app-dark footer {
   border-top-color: #23304c;
