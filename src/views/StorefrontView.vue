@@ -1269,14 +1269,16 @@ main {
 .card-inner h3 {
   font-family: sans-serif;
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 700;
   margin: 0 0 6px;
+  color: #ffffff;
 }
 .card-inner p {
   font-size: 11px;
-  color: rgba(255,255,255,0.85);
+  color: #ffffff;
   margin: 0;
   line-height: 1.4;
+  font-weight: 500;
 }
 .category-hero-banner {
   min-height: 250px;
@@ -1297,15 +1299,16 @@ main {
 .category-banner-content h1 {
   font-family: sans-serif;
   font-size: clamp(28px, 3.5vw, 42px);
-  font-weight: 500;
+  font-weight: 700;
   margin: 0 0 10px;
-  color: white;
+  color: #ffffff;
 }
 .category-banner-content p {
   font-size: clamp(12px, 1.5vw, 15px);
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
   margin: 0;
   line-height: 1.6;
+  font-weight: 500;
 }
 .pagination-container {
   display: flex;
