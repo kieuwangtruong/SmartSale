@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { formatCurrency, createOrder, createCustomer, getCustomers } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
 
@@ -18,6 +18,7 @@ const sort = ref<SortOption>("featured");
 const loading = ref(true);
 const error = ref("");
 const showCart = ref(false);
+const animateCart = ref(false);
 
 const categories = computed(() =>
   [
@@ -84,7 +85,12 @@ function addToCart(product: Product) {
   } else {
     cart.value.push({ product, quantity: 1 });
   }
-  showCart.value = true;
+  
+  // Animate cart button
+  animateCart.value = true;
+  setTimeout(() => {
+    animateCart.value = false;
+  }, 600);
 }
 
 function changeQuantity(line: CartLine, quantity: number) {
@@ -186,6 +192,100 @@ function toggleDarkMode() {
   }
 }
 
+// Carousel, Category banners, and pagination logic
+const showAllProducts = ref(false);
+const currentPage = ref(1);
+const itemsPerPage = ref(8);
+
+const totalPages = computed(() => {
+  return Math.ceil(visibleProducts.value.length / itemsPerPage.value) || 1;
+});
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  return visibleProducts.value.slice(start, start + itemsPerPage.value);
+});
+
+const featuredProducts = computed(() => {
+  return visibleProducts.value.slice(0, 12);
+});
+
+const activeSlide = ref(0);
+const slides = [
+  {
+    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
+    title: "Văn phòng phẩm cao cấp",
+    subtitle: "Nâng tầm hiệu suất làm việc với bộ sưu tập sổ tay và bút ký tinh tế.",
+    category: "Văn phòng"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1200",
+    title: "Phụ kiện thông minh",
+    subtitle: "Thiết bị công nghệ chính xác, đồng bộ hóa phong cách sống hiện đại.",
+    category: "Phụ kiện"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=1200",
+    title: "Gia dụng tinh tế",
+    subtitle: "Không gian sống ấm cúng với các thiết bị gia dụng tối giản, hiện đại.",
+    category: "Gia dụng"
+  }
+];
+
+let slideInterval: any = null;
+function startSlideTimer() {
+  slideInterval = setInterval(() => {
+    activeSlide.value = (activeSlide.value + 1) % slides.length;
+  }, 4000);
+}
+function stopSlideTimer() {
+  if (slideInterval) {
+    clearInterval(slideInterval);
+    slideInterval = null;
+  }
+}
+
+watch([search, category, sort, showAllProducts], () => {
+  currentPage.value = 1;
+});
+
+const categoryBanner = computed(() => {
+  if (showAllProducts.value) {
+    return {
+      title: "Tất cả sản phẩm",
+      desc: "Khám phá toàn bộ danh mục sản phẩm chất lượng cao của chúng tôi.",
+      image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200"
+    };
+  }
+  const cat = category.value;
+  if (cat === "Gia dụng" || cat.toLowerCase().includes("gia dụng")) {
+    return {
+      title: "Thiết bị Gia dụng",
+      desc: "Thiết bị tiện nghi, hiện đại kiến tạo không gian sống lý tưởng.",
+      image: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&q=80&w=1200"
+    };
+  }
+  if (cat === "Phụ kiện" || cat.toLowerCase().includes("phụ kiện")) {
+    return {
+      title: "Phụ kiện công nghệ",
+      desc: "Đồng hành cùng phong cách sống hiện đại và năng động.",
+      image: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80&w=1200"
+    };
+  }
+  if (cat === "Văn phòng" || cat.toLowerCase().includes("văn phòng")) {
+    return {
+      title: "Văn phòng phẩm",
+      desc: "Khơi nguồn cảm hứng làm việc chuyên nghiệp mỗi ngày.",
+      image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200"
+    };
+  }
+  return {
+    title: cat || "Cửa hàng bán lẻ",
+    desc: `Bộ sưu tập sản phẩm ${cat || 'chất lượng cao'}.`,
+    image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1200"
+  };
+});
+
 onMounted(() => {
   isDark.value = localStorage.getItem("theme-dark") === "true";
   if (isDark.value) {
@@ -194,6 +294,11 @@ onMounted(() => {
     document.documentElement.classList.remove("app-dark");
   }
   loadProducts();
+  startSlideTimer();
+});
+
+onUnmounted(() => {
+  stopSlideTimer();
 });
 </script>
 
@@ -218,16 +323,24 @@ onMounted(() => {
       </RouterLink>
 
       <nav class="main-nav">
-        <a href="#products">Sản phẩm</a>
-        <a href="#service">Dịch vụ</a>
-        <a href="#footer">Liên hệ</a>
+        <a href="#" :class="{ active: !category && !showAllProducts }" @click.prevent="category = ''; showAllProducts = false;">Trang chủ</a>
+        <a href="#" :class="{ active: !category && showAllProducts }" @click.prevent="category = ''; showAllProducts = true;">Tất cả sản phẩm</a>
+        <a 
+          v-for="cat in categories" 
+          :key="cat" 
+          href="#" 
+          :class="{ active: category === cat }" 
+          @click.prevent="category = cat; showAllProducts = false;"
+        >
+          {{ cat }}
+        </a>
       </nav>
 
       <div class="header-right">
         <button class="theme-toggle" type="button" @click="toggleDarkMode" aria-label="Đổi giao diện">
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
-        <button class="cart-button" type="button" @click="showCart = true">
+        <button class="cart-button" :class="{ 'cart-pop': animateCart }" type="button" @click="showCart = true">
           <i class="pi pi-shopping-bag" />
           <span>Giỏ hàng</span>
           <b>{{ cartCount }}</b>
@@ -236,7 +349,8 @@ onMounted(() => {
     </header>
 
     <main>
-      <section class="hero">
+      <!-- 1. General Hero banner (only shown on the homepage) -->
+      <section v-if="!category && !showAllProducts" class="hero">
         <div class="hero-copy">
           <span class="eyebrow">BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN</span>
           <h1>Mua sắm tinh gọn.<br /><em>Chọn lựa thông minh.</em></h1>
@@ -245,7 +359,7 @@ onMounted(() => {
             lý kho, với mức giá rõ ràng và số lượng tồn thực tế.
           </p>
           <div class="hero-actions">
-            <a class="primary-cta" href="#products">
+            <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
               Xem sản phẩm <i class="pi pi-arrow-right" />
             </a>
             <span
@@ -280,165 +394,254 @@ onMounted(() => {
         </div>
       </section>
 
-      <section id="service" class="service-strip">
-        <article>
-          <span><i class="pi pi-database" /></span>
-          <div>
-            <strong>Dữ liệu chính xác</strong
-            ><small>Cập nhật trực tiếp từ Product service</small>
+      <!-- 2. Auto-sliding Banner (only shown on the homepage) -->
+      <section v-if="!category && !showAllProducts" class="home-carousel">
+        <div class="carousel-track">
+          <div 
+            v-for="(slide, index) in slides" 
+            :key="index"
+            class="carousel-slide" 
+            :class="{ active: activeSlide === index }"
+            :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.45)), url(${slide.image})` }"
+          >
+            <div class="slide-content">
+              <span class="slide-badge">{{ slide.category }}</span>
+              <h2>{{ slide.title }}</h2>
+              <p>{{ slide.subtitle }}</p>
+              <button class="slide-btn" type="button" @click="category = slide.category; showAllProducts = false;">
+                Khám phá ngay <i class="pi pi-arrow-right" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-dots">
+          <span 
+            v-for="(slide, index) in slides" 
+            :key="index"
+            class="dot" 
+            :class="{ active: activeSlide === index }"
+            @click="activeSlide = index"
+          />
+        </div>
+      </section>
+
+      <!-- 3. Category horizontal banners (replacing .service-strip, only shown on homepage) -->
+      <section v-if="!category && !showAllProducts" class="category-strip">
+        <article 
+          class="category-banner-card"
+          @click="category = 'Gia dụng'; showAllProducts = false;"
+          :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.5)), url(https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&q=80&w=600)` }"
+        >
+          <div class="card-inner">
+            <h3>Thiết bị Gia dụng</h3>
+            <p>Kiến tạo không gian sống tiện nghi, tối giản.</p>
           </div>
         </article>
-        <article>
-          <span><i class="pi pi-chart-line" /></span>
-          <div>
-            <strong>Tồn kho minh bạch</strong
-            ><small>Biết chính xác sản phẩm còn hàng</small>
+        <article 
+          class="category-banner-card"
+          @click="category = 'Phụ kiện'; showAllProducts = false;"
+          :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.5)), url(https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80&w=600)` }"
+        >
+          <div class="card-inner">
+            <h3>Phụ kiện thông minh</h3>
+            <p>Đồng hồ, túi xách, kính mắt và trang sức đẳng cấp.</p>
           </div>
         </article>
-        <article>
-          <span><i class="pi pi-comments" /></span>
-          <div>
-            <strong>Hỗ trợ tận tâm</strong
-            ><small>Nhân viên xác nhận đơn nhanh chóng</small>
+        <article 
+          class="category-banner-card"
+          @click="category = 'Văn phòng'; showAllProducts = false;"
+          :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.5)), url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600)` }"
+        >
+          <div class="card-inner">
+            <h3>Văn phòng phẩm</h3>
+            <p>Nguồn cảm hứng cho ngày làm việc chuyên nghiệp.</p>
           </div>
         </article>
       </section>
 
+      <!-- 4. Category illustration banner (shown on category or all products pages) -->
+      <section v-if="category || showAllProducts" class="category-hero-banner" :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.6)), url(${categoryBanner.image})` }">
+        <div class="category-banner-content">
+          <h1>{{ categoryBanner.title }}</h1>
+          <p>{{ categoryBanner.desc }}</p>
+        </div>
+      </section>
+
+      <!-- 5. Products Catalog (rendered differently based on page mode) -->
       <section id="products" class="catalog">
-        <div class="section-heading">
-          <div>
-            <span class="eyebrow">SHOP THE COLLECTION</span>
-            <h2>Sản phẩm nổi bật</h2>
-            <p>
-              {{ visibleProducts.length }} sản phẩm phù hợp với lựa chọn của bạn
-            </p>
-          </div>
-          <div class="search-box">
-            <i class="pi pi-search" />
-            <input
-              v-model="search"
-              type="search"
-              placeholder="Tìm tên, mã hoặc danh mục..."
-            />
-          </div>
-        </div>
-
-        <div class="catalog-toolbar">
-          <div class="category-list">
-            <button
-              :class="{ active: !category }"
-              type="button"
-              @click="category = ''"
-            >
-              Tất cả
-            </button>
-            <button
-              v-for="item in categories"
-              :key="item"
-              :class="{ active: category === item }"
-              type="button"
-              @click="category = item"
-            >
-              {{ item }}
-            </button>
-          </div>
-          <label class="sort-control">
-            <span>Sắp xếp</span>
-            <select v-model="sort">
-              <option value="featured">Nổi bật</option>
-              <option value="price-asc">Giá thấp đến cao</option>
-              <option value="price-desc">Giá cao đến thấp</option>
-              <option value="name">Tên A–Z</option>
-            </select>
-          </label>
-        </div>
-
-        <div v-if="error" class="state-card error-state">
-          <span><i class="pi pi-wifi" /></span>
-          <div>
-            <strong>Chưa thể kết nối Product service</strong>
-            <p>{{ error }}</p>
-          </div>
-          <button type="button" @click="loadProducts">Thử lại</button>
-        </div>
-
-        <div v-else-if="loading" class="product-grid">
-          <article
-            v-for="item in 8"
-            :key="item"
-            class="product-card skeleton-card"
-          >
-            <div class="skeleton image-skeleton"></div>
-            <div class="skeleton line short"></div>
-            <div class="skeleton line"></div>
-            <div class="skeleton line medium"></div>
-          </article>
-        </div>
-
-        <div v-else-if="!visibleProducts.length" class="state-card empty-state">
-          <span><i class="pi pi-search" /></span>
-          <div>
-            <strong>Không tìm thấy sản phẩm</strong>
-            <p>Hãy thử từ khóa hoặc danh mục khác.</p>
-          </div>
-          <button type="button" @click="clearFilters">Xóa bộ lọc</button>
-        </div>
-
-        <div v-else class="product-grid">
-          <article
-            v-for="product in visibleProducts"
-            :key="product.id"
-            class="product-card"
-          >
-            <div class="product-image">
-              <span v-if="product.quantity <= 0" class="stock-badge sold-out"
-                >Hết hàng</span
-              >
-              <span
-                v-else-if="product.quantity <= product.reserveStock"
-                class="stock-badge low-stock"
-              >
-                Sắp hết
-              </span>
-              <img
-                v-if="product.imageUrl"
-                :src="product.imageUrl"
-                :alt="product.name"
-              />
-              <div v-else class="image-placeholder">
-                <i class="pi pi-box" />
-                <small>ID #{{ product.id }}</small>
-              </div>
+        <!-- If homepage: show featured products -->
+        <div v-if="!category && !showAllProducts">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">SẢN PHẨM KHUYÊN DÙNG</span>
+              <h2>Sản phẩm nổi bật</h2>
+              <p>Những sản phẩm được khách hàng lựa chọn nhiều nhất.</p>
             </div>
-            <div class="product-content">
-              <div class="product-labels">
-                <span>{{ product.categoryName || "Sản phẩm" }}</span>
-                <small>ID #{{ product.id }}</small>
-              </div>
-              <h3>{{ product.name }}</h3>
-              <div class="product-footer">
-                <div>
-                  <strong>{{ formatCurrency(product.sellingPrice) }}</strong>
-                  <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
-                    <i class="pi pi-check-circle" />
-                    {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
-                  </small>
-                  <small v-else class="unavailable">Tạm hết hàng</small>
+          </div>
+          
+          <div v-if="loading" class="product-grid" style="margin-top: 30px;">
+            <article v-for="item in 8" :key="item" class="product-card skeleton-card">
+              <div class="skeleton image-skeleton"></div>
+              <div class="skeleton line short"></div>
+              <div class="skeleton line"></div>
+              <div class="skeleton line medium"></div>
+            </article>
+          </div>
+          <div v-else class="product-grid" style="margin-top: 30px;">
+            <article v-for="product in featuredProducts" :key="product.id" class="product-card">
+              <div class="product-image">
+                <!-- Low Stock Ribbon -->
+                <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
+                  <div class="ribbon low-stock">Sắp hết</div>
                 </div>
-                <button
-                  type="button"
-                  :disabled="product.quantity <= 0"
-                  @click="addToCart(product)"
-                >
-                  <i class="pi pi-shopping-bag" />
-                  <span>Thêm</span>
-                </button>
+                
+                <span v-if="product.quantity <= 0" class="stock-badge sold-out">Hết hàng</span>
+                
+                <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
+                <div v-else class="image-placeholder">
+                  <i class="pi pi-box" />
+                  <small>ID #{{ product.id }}</small>
+                </div>
               </div>
+              <div class="product-content">
+                <div class="product-labels">
+                  <span>{{ product.categoryName || "Sản phẩm" }}</span>
+                  <small>ID #{{ product.id }}</small>
+                </div>
+                <h3>{{ product.name }}</h3>
+                <div class="product-footer">
+                  <div>
+                    <strong>{{ formatCurrency(product.sellingPrice) }}</strong>
+                    <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
+                      <i class="pi pi-check-circle" />
+                      {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
+                    </small>
+                    <small v-else class="unavailable">Tạm hết hàng</small>
+                  </div>
+                  <button type="button" :disabled="product.quantity <= 0" @click="addToCart(product)">
+                    <i class="pi pi-shopping-bag" />
+                    <span>Thêm</span>
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- If category page or showAllProducts page: show paginated products with search & sort -->
+        <div v-else>
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">DANH MỤC SẢN PHẨM</span>
+              <h2>{{ category || 'Tất cả sản phẩm' }}</h2>
+              <p>{{ visibleProducts.length }} sản phẩm phù hợp</p>
             </div>
-          </article>
+            
+            <div class="search-box">
+              <i class="pi pi-search" />
+              <input v-model="search" type="search" placeholder="Tìm tên, mã hoặc danh mục..." />
+            </div>
+          </div>
+
+          <!-- Toolbar with Sort only (category selection is in top nav-bar now) -->
+          <div class="catalog-toolbar">
+            <div class="active-filters">
+              <span class="filter-tag" v-if="search">Tìm kiếm: "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="search = ''" /></span>
+            </div>
+            <label class="sort-control">
+              <span>Sắp xếp</span>
+              <select v-model="sort">
+                <option value="featured">Nổi bật</option>
+                <option value="price-asc">Giá thấp đến cao</option>
+                <option value="price-desc">Giá cao đến thấp</option>
+                <option value="name">Tên A–Z</option>
+              </select>
+            </label>
+          </div>
+
+          <div v-if="error" class="state-card error-state">
+            <span><i class="pi pi-wifi" /></span>
+            <div>
+              <strong>Chưa thể kết nối Product service</strong>
+              <p>{{ error }}</p>
+            </div>
+            <button type="button" @click="loadProducts">Thử lại</button>
+          </div>
+
+          <div v-else-if="loading" class="product-grid">
+            <article v-for="item in 8" :key="item" class="product-card skeleton-card">
+              <div class="skeleton image-skeleton"></div>
+              <div class="skeleton line short"></div>
+              <div class="skeleton line"></div>
+              <div class="skeleton line medium"></div>
+            </article>
+          </div>
+
+          <div v-else-if="!visibleProducts.length" class="state-card empty-state">
+            <span><i class="pi pi-search" /></span>
+            <div>
+              <strong>Không tìm thấy sản phẩm</strong>
+              <p>Hãy thử từ khóa hoặc danh mục khác.</p>
+            </div>
+            <button type="button" @click="clearFilters">Xóa bộ lọc</button>
+          </div>
+
+          <div v-else>
+            <div class="product-grid">
+              <article v-for="product in paginatedProducts" :key="product.id" class="product-card">
+                <div class="product-image">
+                  <!-- Low Stock Ribbon -->
+                  <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
+                    <div class="ribbon low-stock">Sắp hết</div>
+                  </div>
+                  
+                  <span v-if="product.quantity <= 0" class="stock-badge sold-out">Hết hàng</span>
+                  
+                  <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
+                  <div v-else class="image-placeholder">
+                    <i class="pi pi-box" />
+                    <small>ID #{{ product.id }}</small>
+                  </div>
+                </div>
+                <div class="product-content">
+                  <div class="product-labels">
+                    <span>{{ product.categoryName || "Sản phẩm" }}</span>
+                    <small>ID #{{ product.id }}</small>
+                  </div>
+                  <h3>{{ product.name }}</h3>
+                  <div class="product-footer">
+                    <div>
+                      <strong>{{ formatCurrency(product.sellingPrice) }}</strong>
+                      <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
+                        <i class="pi pi-check-circle" />
+                        {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
+                      </small>
+                      <small v-else class="unavailable">Tạm hết hàng</small>
+                    </div>
+                    <button type="button" :disabled="product.quantity <= 0" @click="addToCart(product)">
+                      <i class="pi pi-shopping-bag" />
+                      <span>Thêm</span>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <!-- Storefront Pagination Controls -->
+            <div class="pagination-container" v-if="totalPages > 1">
+              <button class="pag-btn" :disabled="currentPage === 1" @click="currentPage--" aria-label="Trang trước">
+                <i class="pi pi-chevron-left" />
+              </button>
+              
+              <span class="pag-info">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+              
+              <button class="pag-btn" :disabled="currentPage === totalPages" @click="currentPage++" aria-label="Trang sau">
+                <i class="pi pi-chevron-right" />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
-
     </main>
 
     <button
@@ -773,9 +976,13 @@ onMounted(() => {
   background: var(--teal);
   transition: 0.2s ease;
 }
-.main-nav a:hover::after {
+.main-nav a:hover::after,
+.main-nav a.active::after {
   right: 0;
   left: 0;
+}
+.main-nav a.active {
+  color: var(--teal);
 }
 .cart-button {
   justify-self: end;
@@ -802,6 +1009,16 @@ onMounted(() => {
   place-items: center;
   font-size: 10px;
 }
+.cart-pop {
+  animation: cartBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes cartBounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35) rotate(-8deg); }
+  50% { transform: scale(0.85) rotate(8deg); }
+  85% { transform: scale(1.1) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
 main {
   max-width: 1240px;
   margin: auto;
@@ -826,7 +1043,8 @@ main {
 }
 .hero h1 em {
   color: var(--teal);
-  font-weight: 500;
+  font-weight: 800;
+  font-style: normal;
 }
 .hero-copy > p {
   max-width: 590px;
@@ -977,48 +1195,233 @@ main {
   right: -38px;
   bottom: 58px;
 }
-.service-strip {
-  margin-bottom: 100px;
-  padding: 25px 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* Carousel track & slide animations */
+.home-carousel {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  margin: 30px 0 50px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
-.service-strip article {
-  padding: 0 34px;
-  border-right: 1px solid var(--line);
+.carousel-track {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.carousel-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
   display: flex;
   align-items: center;
-  gap: 14px;
+  padding: 0 60px;
 }
-.service-strip article:first-child {
-  padding-left: 0;
+.carousel-slide.active {
+  opacity: 1;
+  visibility: visible;
 }
-.service-strip article:last-child {
-  padding-right: 0;
-  border-right: 0;
+.slide-content {
+  max-width: 600px;
+  color: white;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.service-strip article > span {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.slide-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: var(--teal);
+  color: white;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 99px;
+  margin-bottom: 18px;
+}
+.slide-content h2 {
+  font-family: Georgia, serif;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 500;
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+.slide-content p {
+  font-size: clamp(13px, 1.8vw, 16px);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 26px;
+  line-height: 1.6;
+}
+.slide-btn {
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 99px;
+  border: none;
+  background: white;
+  color: #0b0f19;
+  font-weight: 750;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+.slide-btn:hover {
+  transform: translateY(-2px);
+  background: var(--cream);
+}
+.carousel-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+}
+.carousel-dots .dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  color: var(--teal);
-  background: #e8f0ed;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.carousel-dots .dot.active {
+  width: 24px;
+  border-radius: 99px;
+  background: white;
+}
+
+/* Category grid horizontal cards */
+.category-strip {
+  margin-bottom: 80px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.category-banner-card {
+  position: relative;
+  min-height: 180px;
+  border-radius: 16px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: flex-end;
+  padding: 24px;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.category-banner-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+}
+.card-inner {
+  color: white;
+  position: relative;
+  z-index: 2;
+  text-align: left;
+}
+.card-inner h3 {
+  font-family: Georgia, serif;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+.card-inner p {
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Category header landing page banner */
+.category-hero-banner {
+  min-height: 250px;
+  margin: 20px 0 50px;
+  border-radius: 20px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  padding: 0 50px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  text-align: left;
+}
+.category-banner-content {
+  max-width: 650px;
+  color: white;
+}
+.category-banner-content h1 {
+  font-family: Georgia, serif;
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 500;
+  margin: 0 0 10px;
+  color: white;
+}
+.category-banner-content p {
+  font-size: clamp(12px, 1.5vw, 15px);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Pagination container and styling */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 50px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.pag-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line) !important;
+  background: white;
+  color: var(--ink);
   display: grid;
   place-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
-.service-strip article div {
-  display: grid;
-  gap: 4px;
+.pag-btn:hover:not(:disabled) {
+  border-color: var(--teal) !important;
+  color: var(--teal);
+  background: #f0fdfa;
 }
-.service-strip strong {
+.pag-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pag-info {
   font-size: 13px;
-}
-.service-strip small {
   color: var(--muted);
-  font-size: 11px;
+}
+.pag-info strong {
+  color: var(--ink);
 }
 .catalog {
   scroll-margin-top: 120px;
@@ -1219,7 +1622,7 @@ main {
   display: none;
 }
 .product-content {
-  padding: 14px 12px 12px;
+  padding: 10px 10px 8px;
 }
 .product-labels {
   display: flex;
@@ -1242,12 +1645,12 @@ main {
   font-size: 9px;
 }
 .product-content h3 {
-  min-height: 42px;
-  margin: 7px 0 15px;
+  min-height: 34px;
+  margin: 5px 0 8px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.25;
   color: var(--ink);
 }
 .product-footer {
@@ -1262,7 +1665,38 @@ main {
   gap: 5px;
 }
 .product-footer strong {
-  font-size: 15px;
+  font-size: 17px;
+  font-weight: 850;
+  color: #ef4444; /* Standout price */
+}
+.ribbon-wrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 85px;
+  height: 85px;
+  overflow: hidden;
+  z-index: 3;
+  pointer-events: none;
+}
+.ribbon {
+  position: absolute;
+  top: 15px;
+  right: -21px;
+  width: 110px;
+  padding: 3px 0;
+  background-color: #f59e0b; /* Amber warning color */
+  color: #fff;
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.app-dark .ribbon {
+  background-color: #d97706;
 }
 .product-footer small {
   color: #748079;
@@ -1403,8 +1837,8 @@ main {
   inset: 0;
   z-index: 49;
   border: 0;
-  background: rgb(9 20 31 / 55%);
-  backdrop-filter: blur(3px);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
 }
 .cart-panel {
   position: fixed;
