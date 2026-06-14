@@ -1173,7 +1173,7 @@ main {
   display: inline-block;
   padding: 6px 14px;
   background: var(--teal);
-  color: white;
+  color: #ffffff;
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.1em;
@@ -1184,15 +1184,17 @@ main {
 .slide-content h2 {
   font-family: sans-serif;
   font-size: clamp(28px, 4vw, 44px);
-  font-weight: 500;
+  font-weight: 700;
   margin: 0 0 12px;
   line-height: 1.2;
+  color: #ffffff;
 }
 .slide-content p {
   font-size: clamp(13px, 1.8vw, 16px);
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
   margin: 0 0 26px;
   line-height: 1.6;
+  font-weight: 500;
 }
 .slide-btn {
   min-height: 44px;
