@@ -60,7 +60,7 @@ const roleBranding = computed(() => {
   return {
     title: 'Xử lý Đơn hàng & Bán hàng',
     desc: 'Thiết lập đơn hàng tức thì cho khách hàng, quản lý công nợ và thống kê lịch sử bán lẻ chi tiết.',
-    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800'
+    image: 'src/views/processing-order.png'
   }
 })
 
@@ -173,7 +173,7 @@ async function submit() {
   padding: 40px 24px;
   /* Hình nền mờ kính với quang cảnh cửa hàng bán lẻ hiện đại có nhân viên và khách hàng tương tác */
   background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(30, 41, 59, 0.6)), 
-              url('image_5.png');
+              url('back-ground-login.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -263,7 +263,7 @@ async function submit() {
 }
 
 .image-panel-content h1 {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 32px;
   font-weight: 500;
   margin: 10px 0 16px;
@@ -317,7 +317,7 @@ async function submit() {
 }
 
 .logo-area strong {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: #0f172a;

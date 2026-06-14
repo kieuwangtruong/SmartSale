@@ -49,7 +49,7 @@ const visibleProducts = computed(() => {
     if (sort.value === "price-desc")
       return second.sellingPrice - first.sellingPrice;
     if (sort.value === "name")
-      return first.name.localeCompare(second.name, "vi");
+      return first.name.localeCompare(first.name, "vi");
     return Number(second.quantity > 0) - Number(first.quantity > 0);
   });
 });
@@ -305,21 +305,14 @@ onUnmounted(() => {
 <template>
   <div class="store">
     <div class="announcement">
-      <span
-        ><i class="pi pi-sparkles" /> Giá bán và tồn kho được đồng bộ trực
-        tiếp</span
-      >
-      <RouterLink to="/admin"
-        >Dành cho nhân viên <i class="pi pi-arrow-up-right"
-      /></RouterLink>
+      <span><i class="pi pi-sparkles" /> Giá bán và tồn kho được đồng bộ trực tiếp</span>
+      <RouterLink to="/admin">Dành cho nhân viên <i class="pi pi-arrow-up-right" /></RouterLink>
     </div>
 
     <header class="store-header">
       <RouterLink class="store-brand" to="/">
         <span class="brand-mark"><i class="pi pi-shopping-bag" /></span>
-        <span class="brand-copy"
-          ><strong>Smart Sale Store</strong><small>Smart store</small></span
-        >
+        <span class="brand-copy"><strong>Smart Sale Store</strong><small>Smart store</small></span>
       </RouterLink>
 
       <nav class="main-nav">
@@ -349,7 +342,6 @@ onUnmounted(() => {
     </header>
 
     <main>
-      <!-- 1. General Hero banner (only shown on the homepage) -->
       <section v-if="!category && !showAllProducts" class="hero">
         <div class="hero-copy">
           <span class="eyebrow">BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN</span>
@@ -362,10 +354,7 @@ onUnmounted(() => {
             <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
               Xem sản phẩm <i class="pi pi-arrow-right" />
             </a>
-            <span
-              ><i class="pi pi-check-circle" /> {{ availableProducts }} sản phẩm
-              sẵn hàng</span
-            >
+            <span><i class="pi pi-check-circle" /> {{ availableProducts }} sản phẩm sẵn hàng</span>
           </div>
         </div>
 
@@ -381,20 +370,15 @@ onUnmounted(() => {
           </div>
           <div class="floating-card top-card">
             <i class="pi pi-sync" />
-            <span
-              ><strong>Real-time</strong><small>Đồng bộ tồn kho</small></span
-            >
+            <span><strong>Real-time</strong><small>Đồng bộ tồn kho</small></span>
           </div>
           <div class="floating-card bottom-card">
             <i class="pi pi-shield" />
-            <span
-              ><strong>Minh bạch</strong><small>Giá và mã sản phẩm</small></span
-            >
+            <span><strong>Minh bạch</strong><small>Giá và mã sản phẩm</small></span>
           </div>
         </div>
       </section>
 
-      <!-- 2. Auto-sliding Banner (only shown on the homepage) -->
       <section v-if="!category && !showAllProducts" class="home-carousel">
         <div class="carousel-track">
           <div 
@@ -425,7 +409,6 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <!-- 3. Category horizontal banners (replacing .service-strip, only shown on homepage) -->
       <section v-if="!category && !showAllProducts" class="category-strip">
         <article 
           class="category-banner-card"
@@ -459,7 +442,6 @@ onUnmounted(() => {
         </article>
       </section>
 
-      <!-- 4. Category illustration banner (shown on category or all products pages) -->
       <section v-if="category || showAllProducts" class="category-hero-banner" :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.6)), url(${categoryBanner.image})` }">
         <div class="category-banner-content">
           <h1>{{ categoryBanner.title }}</h1>
@@ -467,9 +449,7 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <!-- 5. Products Catalog (rendered differently based on page mode) -->
       <section id="products" class="catalog">
-        <!-- If homepage: show featured products -->
         <div v-if="!category && !showAllProducts">
           <div class="section-heading">
             <div>
@@ -490,13 +470,10 @@ onUnmounted(() => {
           <div v-else class="product-grid" style="margin-top: 30px;">
             <article v-for="product in featuredProducts" :key="product.id" class="product-card">
               <div class="product-image">
-                <!-- Low Stock Ribbon -->
                 <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
                   <div class="ribbon low-stock">Sắp hết</div>
                 </div>
-                
                 <span v-if="product.quantity <= 0" class="stock-badge sold-out">Hết hàng</span>
-                
                 <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
                 <div v-else class="image-placeholder">
                   <i class="pi pi-box" />
@@ -528,7 +505,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- If category page or showAllProducts page: show paginated products with search & sort -->
         <div v-else>
           <div class="section-heading">
             <div>
@@ -536,14 +512,12 @@ onUnmounted(() => {
               <h2>{{ category || 'Tất cả sản phẩm' }}</h2>
               <p>{{ visibleProducts.length }} sản phẩm phù hợp</p>
             </div>
-            
             <div class="search-box">
               <i class="pi pi-search" />
               <input v-model="search" type="search" placeholder="Tìm tên, mã hoặc danh mục..." />
             </div>
           </div>
 
-          <!-- Toolbar with Sort only (category selection is in top nav-bar now) -->
           <div class="catalog-toolbar">
             <div class="active-filters">
               <span class="filter-tag" v-if="search">Tìm kiếm: "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="search = ''" /></span>
@@ -590,13 +564,10 @@ onUnmounted(() => {
             <div class="product-grid">
               <article v-for="product in paginatedProducts" :key="product.id" class="product-card">
                 <div class="product-image">
-                  <!-- Low Stock Ribbon -->
                   <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
                     <div class="ribbon low-stock">Sắp hết</div>
                   </div>
-                  
                   <span v-if="product.quantity <= 0" class="stock-badge sold-out">Hết hàng</span>
-                  
                   <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
                   <div v-else class="image-placeholder">
                     <i class="pi pi-box" />
@@ -627,14 +598,11 @@ onUnmounted(() => {
               </article>
             </div>
 
-            <!-- Storefront Pagination Controls -->
             <div class="pagination-container" v-if="totalPages > 1">
               <button class="pag-btn" :disabled="currentPage === 1" @click="currentPage--" aria-label="Trang trước">
                 <i class="pi pi-chevron-left" />
               </button>
-              
               <span class="pag-info">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
-              
               <button class="pag-btn" :disabled="currentPage === totalPages" @click="currentPage++" aria-label="Trang sau">
                 <i class="pi pi-chevron-right" />
               </button>
@@ -644,13 +612,6 @@ onUnmounted(() => {
       </section>
     </main>
 
-    <button
-      v-if="showCart"
-      class="cart-backdrop"
-      type="button"
-      aria-label="Đóng giỏ hàng"
-      @click="showCart = false"
-    />
     <aside class="cart-panel" :class="{ open: showCart }" aria-label="Giỏ hàng">
       <div class="cart-head">
         <div>
@@ -672,11 +633,7 @@ onUnmounted(() => {
       <div v-else class="cart-body">
         <div v-for="line in cart" :key="line.product.id" class="cart-line">
           <div class="cart-image">
-            <img
-              v-if="line.product.imageUrl"
-              :src="line.product.imageUrl"
-              :alt="line.product.name"
-            />
+            <img v-if="line.product.imageUrl" :src="line.product.imageUrl" :alt="line.product.name" />
             <i v-else class="pi pi-box" />
           </div>
           <div class="cart-info">
@@ -684,11 +641,7 @@ onUnmounted(() => {
             <strong>{{ line.product.name }}</strong>
             <span>{{ formatCurrency(line.product.sellingPrice) }}</span>
             <div class="quantity-control">
-              <button
-                type="button"
-                aria-label="Giảm số lượng"
-                @click="changeQuantity(line, line.quantity - 1)"
-              >
+              <button type="button" aria-label="Giảm số lượng" @click="changeQuantity(line, line.quantity - 1)">
                 <i class="pi pi-minus" />
               </button>
               <input
@@ -696,28 +649,14 @@ onUnmounted(() => {
                 type="number"
                 min="1"
                 :max="line.product.quantity"
-                @input="
-                  changeQuantity(
-                    line,
-                    Number(($event.target as HTMLInputElement).value),
-                  )
-                "
+                @input="changeQuantity(line, Number(($event.target as HTMLInputElement).value))"
               />
-              <button
-                type="button"
-                aria-label="Tăng số lượng"
-                @click="changeQuantity(line, line.quantity + 1)"
-              >
+              <button type="button" aria-label="Tăng số lượng" @click="changeQuantity(line, line.quantity + 1)">
                 <i class="pi pi-plus" />
               </button>
             </div>
           </div>
-          <button
-            class="remove-line"
-            type="button"
-            aria-label="Xóa sản phẩm"
-            @click="removeLine(line.product.id)"
-          >
+          <button class="remove-line" type="button" aria-label="Xóa sản phẩm" @click="removeLine(line.product.id)">
             <i class="pi pi-trash" />
           </button>
         </div>
@@ -727,17 +666,13 @@ onUnmounted(() => {
         <div>
           <span>Tạm tính</span><strong>{{ formatCurrency(cartTotal) }}</strong>
         </div>
-        <p>
-          <i class="pi pi-info-circle" /> Nhân viên bán hàng sẽ xác nhận thông
-          tin và tạo đơn.
-        </p>
+        <p><i class="pi pi-info-circle" /> Nhân viên bán hàng sẽ xác nhận thông tin và tạo đơn.</p>
         <button type="button" @click="openCheckoutModal">
           Liên hệ đặt hàng <i class="pi pi-arrow-right" />
         </button>
       </div>
     </aside>
 
-    <!-- Checkout Modal -->
     <div v-if="showCheckout" class="modal-backdrop" @click="showCheckout = false" />
     <aside v-if="showCheckout" class="checkout-modal" aria-label="Thông tin đặt hàng">
       <div class="modal-head">
@@ -942,7 +877,7 @@ onUnmounted(() => {
   line-height: 1.05;
 }
 .brand-copy strong {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 20px;
   letter-spacing: -0.02em;
 }
@@ -1145,7 +1080,7 @@ main {
 }
 .hero-product strong {
   margin: 6px 0;
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 62px;
   font-weight: 500;
   line-height: 1;
@@ -1195,7 +1130,6 @@ main {
   right: -38px;
   bottom: 58px;
 }
-/* Carousel track & slide animations */
 .home-carousel {
   position: relative;
   width: 100%;
@@ -1232,14 +1166,8 @@ main {
   animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .slide-badge {
   display: inline-block;
@@ -1254,7 +1182,7 @@ main {
   margin-bottom: 18px;
 }
 .slide-content h2 {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: clamp(28px, 4vw, 44px);
   font-weight: 500;
   margin: 0 0 12px;
@@ -1308,8 +1236,6 @@ main {
   border-radius: 99px;
   background: white;
 }
-
-/* Category grid horizontal cards */
 .category-strip {
   margin-bottom: 80px;
   display: grid;
@@ -1341,7 +1267,7 @@ main {
   text-align: left;
 }
 .card-inner h3 {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 20px;
   font-weight: 500;
   margin: 0 0 6px;
@@ -1352,8 +1278,6 @@ main {
   margin: 0;
   line-height: 1.4;
 }
-
-/* Category header landing page banner */
 .category-hero-banner {
   min-height: 250px;
   margin: 20px 0 50px;
@@ -1371,7 +1295,7 @@ main {
   color: white;
 }
 .category-banner-content h1 {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: clamp(28px, 3.5vw, 42px);
   font-weight: 500;
   margin: 0 0 10px;
@@ -1383,8 +1307,6 @@ main {
   margin: 0;
   line-height: 1.6;
 }
-
-/* Pagination container and styling */
 .pagination-container {
   display: flex;
   align-items: center;
@@ -1434,7 +1356,7 @@ main {
 }
 .section-heading h2 {
   margin: 12px 0 5px;
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 42px;
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -1667,7 +1589,7 @@ main {
 .product-footer strong {
   font-size: 17px;
   font-weight: 850;
-  color: #ef4444; /* Standout price */
+  color:#582cdb;
 }
 .ribbon-wrapper {
   position: absolute;
@@ -1685,7 +1607,7 @@ main {
   right: -21px;
   width: 110px;
   padding: 3px 0;
-  background-color: #f59e0b; /* Amber warning color */
+  background-color: #f59e0b;
   color: #fff;
   font-size: 9px;
   font-weight: 850;
@@ -1748,7 +1670,7 @@ main {
   font-size: 20px;
 }
 .state-card strong {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 20px;
 }
 .state-card p {
@@ -1811,7 +1733,7 @@ main {
 }
 .closing-banner h2 {
   margin: 13px 0 0;
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 36px;
   font-weight: 500;
   line-height: 1.08;
@@ -1832,14 +1754,10 @@ main {
   font-weight: 750;
   white-space: nowrap;
 }
-.cart-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 49;
-  border: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-}
+
+/* =========================================================================
+   THAY ĐỔI CSS SỬA LỖI GIỎ HÀNG: GỠ BỎ BACKDROP CHE KHUẤT, GIỮ CHO NỀN TỰ DO CLICK
+   ========================================================================= */
 .cart-panel {
   position: fixed;
   inset: 0 0 0 auto;
@@ -1847,19 +1765,19 @@ main {
   width: min(460px, 100vw);
   padding: 0;
   background: #fbfbf8;
-  box-shadow: -30px 0 80px rgb(10 24 35 / 24%);
+  /* Tăng cường độ đổ bóng rõ nét để phân tách giỏ hàng với lớp sản phẩm có thể tương tác phía sau */
+  box-shadow: -15px 0 40px rgba(10, 24, 35, 0.15);
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
   visibility: hidden;
-  transition:
-    transform 0.28s ease,
-    visibility 0.28s;
+  transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.28s;
 }
 .cart-panel.open {
   transform: translateX(0);
   visibility: visible;
 }
+
 .cart-head {
   min-height: 92px;
   padding: 22px 26px;
@@ -1876,7 +1794,7 @@ main {
 }
 .cart-head h2 {
   margin: 5px 0 0;
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 25px;
   font-weight: 500;
 }
@@ -1910,7 +1828,7 @@ main {
 }
 .empty-cart h3 {
   margin: 0;
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 25px;
   font-weight: 500;
 }
@@ -1924,7 +1842,7 @@ main {
   padding: 0 18px;
   border: 0;
   color: white;
-  background: var(--ink);
+  background: var(--teal);
 }
 .cart-body {
   flex: 1;
@@ -1970,7 +1888,7 @@ main {
 }
 .cart-info > strong {
   margin: 5px 0;
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 15px;
   font-weight: 500;
 }
@@ -2025,7 +1943,7 @@ main {
   font-size: 12px;
 }
 .cart-footer > div strong {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 24px;
   font-weight: 500;
 }
@@ -2221,19 +2139,6 @@ footer {
     width: min(500px, 92%);
     margin: 20px auto 0;
   }
-  .service-strip {
-    grid-template-columns: 1fr;
-  }
-  .service-strip article,
-  .service-strip article:first-child,
-  .service-strip article:last-child {
-    padding: 18px 5px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .service-strip article:last-child {
-    border-bottom: 0;
-  }
   .section-heading {
     align-items: stretch;
     flex-direction: column;
@@ -2336,9 +2241,6 @@ footer {
     right: -8px;
     bottom: 40px;
   }
-  .service-strip {
-    margin-bottom: 70px;
-  }
   .section-heading h2 {
     font-size: 34px;
   }
@@ -2419,7 +2321,7 @@ footer {
   margin-bottom: 20px;
 }
 .modal-head h2 {
-  font-family: Georgia, serif;
+  font-family: sans-serif;
   font-size: 22px;
   margin: 0;
   color: var(--ink);
@@ -2471,7 +2373,7 @@ footer {
   resize: vertical;
 }
 .required {
-  color: #ef4444;
+  color:#582cdb;
 }
 .checkout-error {
   padding: 10px;
