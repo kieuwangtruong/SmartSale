@@ -336,11 +336,7 @@ onUnmounted(() => {
       <section v-if="!category && !showAllProducts" class="hero">
         <div class="hero-copy">
           <span class="eyebrow">BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN</span>
-          <h1>Mua sắm tinh gọn.<br /><em>Chọn lựa thông minh.</em></h1>
-          <p>
-            Khám phá danh mục sản phẩm được cập nhật trực tiếp từ hệ thống quản
-            lý kho, với mức giá rõ ràng và số lượng tồn thực tế.
-          </p>
+          <h1>Mua sắm tinh gọn.<br /><em class="fs-6">Chọn lựa thông minh.</em></h1>
           <div class="hero-actions">
             <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
               Xem sản phẩm <i class="pi pi-arrow-right" />
@@ -1001,9 +997,11 @@ main {
   max-width: 700px;
 }
 .hero h1 em {
+  display: inline-block;
   color: var(--teal);
   font-weight: 800;
   font-style: normal;
+  white-space: nowrap;
 }
 .hero-copy > p {
   max-width: 590px;
@@ -2236,7 +2234,7 @@ footer {
     padding: 54px 0;
   }
   .store .hero-copy h1 {
-    font-size: 44px;
+    font-size: clamp(30px, 8vw, 44px);
   }
   .hero-copy > p {
     font-size: 14px;
