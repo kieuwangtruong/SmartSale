@@ -133,7 +133,7 @@ async function submit() {
 
           <form @submit.prevent="submit">
             <div class="input-group">
-              <label for="email">Tài khoản Email</label>
+              <label for="email">Email</label>
               <InputText id="email" v-model="email" type="email" autocomplete="email" placeholder="admin@company.com" fluid />
             </div>
             
