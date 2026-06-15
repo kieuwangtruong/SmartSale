@@ -302,7 +302,7 @@ onUnmounted(() => {
 
     <header class="store-header">
       <RouterLink class="store-brand" to="/">
-        <span class="brand-mark"><i class="pi pi-shopping-bag" /></span>
+        <span class="brand-mark"><img src="/icon.png" alt="Smart Sale Store"></span>
         <span class="brand-copy"><strong>Smart Sale Store</strong><small>Smart store</small></span>
       </RouterLink>
 
@@ -891,6 +891,12 @@ onUnmounted(() => {
   background: var(--teal);
   display: grid;
   place-items: center;
+}
+.store-header .brand-mark img {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  object-fit: contain;
 }
 .brand-copy {
   display: grid;
