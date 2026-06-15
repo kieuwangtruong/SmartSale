@@ -52,8 +52,8 @@ const visibleProducts = computed(() => {
     if (sort.value === "price-desc")
       return second.sellingPrice - first.sellingPrice;
     if (sort.value === "name")
-      return first.name.localeCompare(first.name, "vi");
-    return Number(second.quantity > 0) - Number(first.quantity > 0);
+      return first.name.localeCompare(second.name, "vi");
+    return 0;
   });
 });
 const cartCount = computed(() =>
