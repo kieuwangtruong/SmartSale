@@ -25,4 +25,6 @@ app.use(PrimeVue, {
 app.use(ToastService)
 app.use(ConfirmationService)
 
-app.mount('#app')
+void router.isReady().then(() => {
+  app.mount('#app')
+})

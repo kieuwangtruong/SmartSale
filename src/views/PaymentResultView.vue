@@ -77,7 +77,7 @@ async function loadStatus() {
 }
 
 onMounted(async () => {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
     await loadStatus()
     if (status.value && !['PendingPayment', 'ProcessingPayment'].includes(status.value))
       break
