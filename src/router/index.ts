@@ -54,7 +54,31 @@ const routes: RouteRecordRaw[] = [
     path: '/suppliers',
     name: 'suppliers',
     component: () => import('../views/SuppliersView.vue'),
-    meta: { roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
+    meta: { roles: ['WarehouseKeeper'] },
+  },
+  {
+    path: '/payment/success',
+    name: 'payment-success',
+    component: () => import('../views/PaymentResultView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/payment/cancelled',
+    name: 'payment-cancelled',
+    component: () => import('../views/PaymentResultView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/payment/expired',
+    name: 'payment-expired',
+    component: () => import('../views/PaymentResultView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/payment/failed',
+    name: 'payment-failed',
+    component: () => import('../views/PaymentResultView.vue'),
+    meta: { public: true },
   },
   {
     path: '/products',

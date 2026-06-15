@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
-import { formatCurrency, createOrder, createCustomer, getCustomers } from "../services/orderApi";
+import { useRoute } from "vue-router";
+import { formatCurrency, createPaymentLink } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
 
 interface CartLine {
@@ -19,6 +20,8 @@ const loading = ref(true);
 const error = ref("");
 const showCart = ref(false);
 const animateCart = ref(false);
+const route = useRoute();
+const CART_STORAGE_KEY = "storefront-cart";
 
 const categories = computed(() =>
   [
@@ -110,7 +113,7 @@ function clearFilters() {
 const showCheckout = ref(false);
 const checkoutLoading = ref(false);
 const checkoutError = ref("");
-const checkoutSuccess = ref(false);
+const showPaymentConfirm = ref(false);
 
 const customerForm = ref({
   fullName: "",
@@ -121,7 +124,6 @@ const customerForm = ref({
 
 function openCheckoutModal() {
   checkoutError.value = "";
-  checkoutSuccess.value = false;
   showCheckout.value = true;
 }
 
@@ -130,53 +132,28 @@ async function submitOrder() {
   checkoutLoading.value = true;
   checkoutError.value = "";
   try {
-    let customerId: number | null = null;
-    try {
-      const customersList = await getCustomers();
-      const existing = customersList.find((c) => c.phone === customerForm.value.phone);
-      if (existing) {
-        customerId = existing.id;
-      } else {
-        const newCust = await createCustomer({
-          fullName: customerForm.value.fullName,
-          phone: customerForm.value.phone,
-          email: customerForm.value.email || null,
-          address: customerForm.value.address || null
-        });
-        customerId = newCust.id;
-      }
-    } catch (e) {
-      console.warn("Failed to retrieve/create customer, using default guest id", e);
-      customerId = 1; 
-    }
-
-    const orderItems = cart.value.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity
-    }));
-
-    await createOrder({
-      userId: 1, // Default sales staff / admin ID
-      customerId,
-      discountAmount: 0,
-      amountPaid: 0,
-      orderItems
+    const payment = await createPaymentLink({
+      fullName: customerForm.value.fullName,
+      phone: customerForm.value.phone,
+      email: customerForm.value.email || null,
+      address: customerForm.value.address,
+      orderItems: cart.value.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      })),
     });
-
-    checkoutSuccess.value = true;
-    cart.value = []; // Empty cart
-    setTimeout(() => {
-      showCheckout.value = false;
-      showCart.value = false;
-      checkoutSuccess.value = false;
-      customerForm.value = { fullName: "", phone: "", email: "", address: "" };
-    }, 2500);
-
+    window.location.assign(payment.checkoutUrl);
   } catch (e) {
-    checkoutError.value = e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo đơn hàng.";
+    checkoutError.value = e instanceof Error ? e.message : "Không thể tạo liên kết thanh toán.";
+    showPaymentConfirm.value = false;
   } finally {
     checkoutLoading.value = false;
   }
+}
+
+function requestPaymentConfirmation() {
+  checkoutError.value = "";
+  showPaymentConfirm.value = true;
 }
 
 const isDark = ref(false);
@@ -293,9 +270,24 @@ onMounted(() => {
   } else {
     document.documentElement.classList.remove("app-dark");
   }
+  const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+  if (savedCart) {
+    try {
+      cart.value = JSON.parse(savedCart) as CartLine[];
+    } catch {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    }
+  }
+  showCart.value = route.query.cart === "open";
   loadProducts();
   startSlideTimer();
 });
+
+watch(
+  cart,
+  (value) => localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(value)),
+  { deep: true },
+);
 
 onUnmounted(() => {
   stopSlideTimer();
@@ -682,7 +674,7 @@ onUnmounted(() => {
         </button>
       </div>
       
-      <form class="modal-body" @submit.prevent="submitOrder">
+      <form class="modal-body" @submit.prevent="requestPaymentConfirmation">
         <p class="modal-summary">Bạn đang đặt mua <strong>{{ cartCount }}</strong> sản phẩm với tổng trị giá <strong>{{ formatCurrency(cartTotal) }}</strong>.</p>
         
         <label class="form-field">
@@ -709,16 +701,49 @@ onUnmounted(() => {
           <i class="pi pi-exclamation-circle"></i> {{ checkoutError }}
         </div>
         
-        <div v-if="checkoutSuccess" class="checkout-success">
-          <i class="pi pi-check-circle"></i> Đặt hàng thành công! Đơn hàng sẽ được nhân viên xử lý sớm.
-        </div>
-
         <button type="submit" class="submit-btn" :disabled="checkoutLoading">
-          <i v-if="checkoutLoading" class="pi pi-spin pi-spinner"></i>
-          <span v-else>Xác nhận đặt hàng</span>
+          <span>Xác nhận</span>
         </button>
       </form>
     </aside>
+
+    <div
+      v-if="showPaymentConfirm"
+      class="payment-confirm-overlay"
+      @click="!checkoutLoading && (showPaymentConfirm = false)"
+    />
+    <section
+      v-if="showPaymentConfirm"
+      class="payment-confirm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Xác nhận thanh toán"
+    >
+      <span class="confirm-icon"><i class="pi pi-question-circle" /></span>
+      <h2>Bạn đã chắc chắn với thông tin này!</h2>
+      <p>Đơn hàng sẽ được tạo và liên kết thanh toán có hiệu lực trong 10 phút.</p>
+      <div v-if="checkoutError" class="checkout-error">
+        <i class="pi pi-exclamation-circle" /> {{ checkoutError }}
+      </div>
+      <div class="confirm-actions">
+        <button
+          type="button"
+          :disabled="checkoutLoading"
+          @click="showPaymentConfirm = false"
+        >
+          Hủy
+        </button>
+        <button
+          type="button"
+          class="pay-button"
+          :disabled="checkoutLoading"
+          @click="submitOrder"
+        >
+          <i v-if="checkoutLoading" class="pi pi-spin pi-spinner" />
+          <span>{{ checkoutLoading ? 'Đang tạo liên kết...' : 'Thanh toán' }}</span>
+        </button>
+      </div>
+    </section>
 
     <footer id="footer">
       <div class="footer-content">
@@ -2616,5 +2641,82 @@ footer {
 }
 .app-dark .product-footer strong {
   color: var(--ink);
+}
+
+.payment-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgb(15 23 42 / 62%);
+  backdrop-filter: blur(6px);
+}
+.payment-confirm-modal {
+  position: fixed;
+  z-index: 81;
+  top: 50%;
+  left: 50%;
+  width: min(430px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  padding: 30px;
+  border-radius: 18px;
+  background: white;
+  color: #0f172a;
+  text-align: center;
+  box-shadow: 0 24px 80px rgb(15 23 42 / 30%);
+}
+.confirm-icon {
+  display: inline-grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ccfbf1;
+  color: #0f766e;
+  font-size: 28px;
+}
+.payment-confirm-modal h2 {
+  margin: 18px 0 8px;
+  font-size: 22px;
+}
+.payment-confirm-modal > p {
+  margin: 0 0 22px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+.confirm-actions button {
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: white;
+  color: #334155;
+  font-weight: 750;
+  cursor: pointer;
+}
+.confirm-actions .pay-button {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: white;
+}
+.confirm-actions button:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+.app-dark .payment-confirm-modal {
+  background: #151d30;
+  color: #f1f5f9;
+}
+.app-dark .confirm-actions button {
+  border-color: #334155;
+  background: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .confirm-actions .pay-button {
+  background: #0284c7;
 }
 </style>

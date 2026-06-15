@@ -1,7 +1,18 @@
 import { apiRequest } from './apiClient'
 import { API_URLS } from './config'
 
-export type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Completed' | 'Cancelled'
+export type OrderStatus =
+  | 'Pending'
+  | 'PendingPayment'
+  | 'ProcessingPayment'
+  | 'Paid'
+  | 'PaymentCancelled'
+  | 'PaymentExpired'
+  | 'PaymentFailed'
+  | 'Processing'
+  | 'Shipped'
+  | 'Completed'
+  | 'Cancelled'
 
 export interface OrderItem {
   id: number
@@ -61,6 +72,20 @@ export interface CreateOrderPayload {
   orderItems: Array<{ productId: number; quantity: number }>
 }
 
+export interface PaymentLink {
+  orderId: number
+  orderCode: number
+  checkoutUrl: string
+  expiresAt: string
+}
+
+export interface PaymentStatus {
+  orderId: number
+  orderCode: number
+  status: OrderStatus
+  expiresAt: string
+}
+
 export const ORDER_STATUSES: OrderStatus[] = [
   'Pending',
   'Processing',
@@ -79,6 +104,23 @@ export function createOrder(payload: CreateOrderPayload) {
     auth: true,
     body: JSON.stringify(payload),
   })
+}
+
+export function createPaymentLink(payload: {
+  fullName: string
+  phone: string
+  email?: string | null
+  address: string
+  orderItems: Array<{ productId: number; quantity: number }>
+}) {
+  return apiRequest<PaymentLink>(API_URLS.order, '/api/payments/links', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getPaymentStatus(orderCode: string | number) {
+  return apiRequest<PaymentStatus>(API_URLS.order, `/api/payments/${orderCode}`)
 }
 
 export function updateOrderStatus(id: number, status: OrderStatus) {

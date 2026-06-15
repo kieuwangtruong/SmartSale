@@ -9,6 +9,8 @@ export interface Product {
   imageUrl?: string | null
   categoryId: number
   categoryName: string
+  supplierId: number
+  supplierName: string
   quantity: number
   reserveStock: number
 }
@@ -25,6 +27,7 @@ export interface ProductPayload {
   sellingPrice: number
   imageUrl?: string | null
   categoryId: number
+  supplierId: number
   quantity: number
   reserveStock: number
 }

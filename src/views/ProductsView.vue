@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { formatCurrency } from '../services/orderApi'
+import { getSuppliers, type Supplier } from '../services/orderApi'
 import {
   createCategory,
   createProduct,
@@ -17,6 +18,7 @@ import { useAuthStore } from '../stores/authStore'
 const auth = useAuthStore()
 const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
+const suppliers = ref<Supplier[]>([])
 const search = ref('')
 const error = ref('')
 const editingId = ref<number | null>(null)
@@ -24,6 +26,7 @@ const categoryName = ref('')
 const form = reactive<ProductPayload>({
   name: '', importPrice: 0, sellingPrice: 0,
   imageUrl: '', categoryId: 0, quantity: 0, reserveStock: 0,
+  supplierId: 0,
 })
 
 const showProductModal = ref(false)
@@ -57,10 +60,20 @@ function reset() {
   editingId.value = null
   showProductModal.value = false
   showCategoryModal.value = false
-  Object.assign(form, { name: '', importPrice: 0, sellingPrice: 0, imageUrl: '', categoryId: 0, quantity: 0, reserveStock: 0 })
+  Object.assign(form, { name: '', importPrice: 0, sellingPrice: 0, imageUrl: '', categoryId: 0, supplierId: 0, quantity: 0, reserveStock: 0 })
 }
 async function load() {
-  try { ;[products.value, categories.value] = await Promise.all([getProducts(), getCategories()]) }
+  try {
+    const requests: [Promise<Product[]>, Promise<Category[]>, Promise<Supplier[] | null>] = [
+      getProducts(),
+      getCategories(),
+      auth.role === 'WarehouseKeeper' ? getSuppliers() : Promise.resolve(null),
+    ]
+    const [productData, categoryData, supplierData] = await Promise.all(requests)
+    products.value = productData
+    categories.value = categoryData
+    suppliers.value = supplierData ?? []
+  }
   catch (e) { error.value = e instanceof Error ? e.message : 'Không thể tải sản phẩm.' }
 }
 function edit(p: Product) {
@@ -68,7 +81,8 @@ function edit(p: Product) {
   Object.assign(form, {
     name: p.name, importPrice: p.importPrice,
     sellingPrice: p.sellingPrice, imageUrl: p.imageUrl || '',
-    categoryId: p.categoryId, quantity: p.quantity, reserveStock: p.reserveStock,
+    categoryId: p.categoryId, supplierId: p.supplierId,
+    quantity: p.quantity, reserveStock: p.reserveStock,
   })
   showProductModal.value = true
 }
@@ -105,7 +119,7 @@ onMounted(load)
       <div class="page-head-actions">
         <input v-model="search" placeholder="Tìm sản phẩm..." class="search-input" />
         
-        <div class="add-dropdown-container">
+        <div v-if="auth.role === 'WarehouseKeeper'" class="add-dropdown-container">
           <button type="button" class="primary" @click="toggleAddMenu">
             <i class="pi pi-plus" /> Thêm mới <i class="pi pi-angle-down" />
           </button>
@@ -130,6 +144,7 @@ onMounted(load)
         <label v-if="editingId">ID sản phẩm<input :value="editingId" disabled /></label>
         <label>Tên sản phẩm<input v-model="form.name" required /></label>
         <label>Danh mục<select v-model.number="form.categoryId" required><option :value="0">Chọn danh mục</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
+        <label>Nhà cung cấp<select v-model.number="form.supplierId" required><option :value="0">Chọn nhà cung cấp</option><option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option></select></label>
         <label>Giá nhập<input v-model.number="form.importPrice" type="number" min="0" /></label>
         <label>Giá bán<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
         <label>Tồn kho<input v-model.number="form.quantity" type="number" min="0" /></label>
@@ -159,6 +174,7 @@ onMounted(load)
           <tr>
             <th>Sản phẩm</th>
             <th>Danh mục</th>
+            <th>Nhà cung cấp</th>
             <th>Giá bán</th>
             <th>Tồn kho</th>
             <th>Hành động</th>
@@ -168,6 +184,7 @@ onMounted(load)
           <tr v-for="p in visible" :key="p.id">
             <td>{{ p.name }}<small>ID: #{{ p.id }}</small></td>
             <td>{{ p.categoryName }}</td>
+            <td>{{ p.supplierName }}</td>
             <td>{{ formatCurrency(p.sellingPrice) }}</td>
             <td>
               <span :class="{ warning: p.quantity <= p.reserveStock }">
@@ -175,7 +192,7 @@ onMounted(load)
               </span>
             </td>
             <td class="actions">
-              <button @click="edit(p)">Sửa</button>
+              <button v-if="auth.role === 'WarehouseKeeper'" @click="edit(p)">Sửa</button>
               <button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">Xóa</button>
             </td>
           </tr>
