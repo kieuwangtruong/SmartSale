@@ -23,22 +23,22 @@ const rolesList = [
     role: 'Admin' as UserRole, 
     label: 'Quản trị viên', 
     icon: 'pi pi-shield',
-    defaultEmail: 'admin@company.com',
-    defaultPassword: 'admin123'
+    defaultEmail: '',
+    defaultPassword: ''
   },
   { 
     role: 'SalesStaff' as UserRole, 
     label: 'Nhân viên bán lẻ', 
     icon: 'pi pi-users',
-    defaultEmail: 'sales@company.com',
-    defaultPassword: 'sales123'
+    defaultEmail: '',
+    defaultPassword: ''
   },
   { 
     role: 'WarehouseKeeper' as UserRole, 
     label: 'Thủ kho quản lý', 
     icon: 'pi pi-box',
-    defaultEmail: 'warehouse@company.com',
-    defaultPassword: 'warehouse123'
+    defaultEmail: '',
+    defaultPassword: ''
   }
 ]
 
