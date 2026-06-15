@@ -31,7 +31,7 @@ const content = computed(() => {
   if (current === 'PaymentExpired' || route.name === 'payment-expired') {
     return {
       icon: 'pi pi-clock',
-      title: 'Liên kết đã hết hạn',
+      title: 'LIÊN KẾT ĐÃ HẾT HẠN',
       message: 'Liên kết thanh toán chỉ có hiệu lực trong 10 phút.',
       tone: 'warning',
     }
@@ -39,14 +39,14 @@ const content = computed(() => {
   if (current === 'PaymentFailed' || route.name === 'payment-failed') {
     return {
       icon: 'pi pi-exclamation-triangle',
-      title: 'Thanh toán thất bại',
+      title: 'THANH TOÁN THẤT BẠI',
       message: 'Không thể hoàn tất thanh toán. Sản phẩm vẫn còn trong giỏ hàng.',
       tone: 'danger',
     }
   }
   return {
     icon: 'pi pi-spin pi-spinner',
-    title: 'Đang xác nhận thanh toán',
+    title: 'ĐANG XÁC NHẬN THANH TOÁN',
     message: 'Hệ thống đang chờ xác nhận an toàn từ PayOS.',
     tone: 'pending',
   }
@@ -90,7 +90,6 @@ onMounted(async () => {
   <main class="payment-result">
     <section class="result-card" :class="content.tone">
       <span class="result-icon"><i :class="content.icon" /></span>
-      <p class="eyebrow">KẾT QUẢ THANH TOÁN</p>
       <h1>{{ loading ? 'Đang kiểm tra thanh toán' : content.title }}</h1>
       <p>{{ error || content.message }}</p>
       <small v-if="orderCode">Mã thanh toán: {{ orderCode }}</small>

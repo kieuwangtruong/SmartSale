@@ -41,8 +41,7 @@ onMounted(loadCancellation)
   <main class="cancel-page">
     <section class="cancel-form">
       <span class="cancel-icon"><i class="pi pi-times-circle" /></span>
-      <p class="eyebrow">KẾT QUẢ THANH TOÁN</p>
-      <h1>Thanh toán đã được hủy</h1>
+      <h1>HỦY THANH TOÁN</h1>
       <p class="description">
         Đơn hàng chưa được thanh toán hãy thanh toán lại.
       </p>
