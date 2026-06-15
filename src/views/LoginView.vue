@@ -60,7 +60,7 @@ const roleBranding = computed(() => {
   return {
     title: 'Xử lý Đơn hàng & Bán hàng',
     desc: 'Thiết lập đơn hàng tức thì cho khách hàng, quản lý công nợ và thống kê lịch sử bán lẻ chi tiết.',
-    image: 'src/views/processing-order.png'
+    image: 'https://static.topcv.vn/cms/nhan-vien-ban-hang-la-gi-topcv-1164b8fce1e09aa.jpg'
   }
 })
 
