@@ -65,7 +65,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/payment/cancelled',
     name: 'payment-cancelled',
-    component: () => import('../views/PaymentResultView.vue'),
+    component: () => import('../views/PaymentCancelledView.vue'),
     meta: { public: true },
   },
   {
