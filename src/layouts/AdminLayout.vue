@@ -18,7 +18,7 @@ const allNavigation = [
   { to: '/customers', label: 'Khách hàng', icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
   { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['WarehouseKeeper'] },
   { to: '/products', label: 'Sản phẩm', icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
+  { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['WarehouseKeeper'] },
   { to: '/users', label: 'Tài khoản', icon: 'pi pi-user-edit', roles: ['Admin'] },
 ]
 

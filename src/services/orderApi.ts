@@ -88,6 +88,12 @@ export interface PaymentStatus {
 
 export const ORDER_STATUSES: OrderStatus[] = [
   'Pending',
+  'PendingPayment',
+  'ProcessingPayment',
+  'Paid',
+  'PaymentCancelled',
+  'PaymentExpired',
+  'PaymentFailed',
   'Processing',
   'Shipped',
   'Completed',
