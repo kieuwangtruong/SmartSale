@@ -4,6 +4,9 @@ import { createSupplier, deleteSupplier, getSuppliers, updateSupplier, type Supp
 import { useAuthStore } from '../stores/authStore'
 
 const auth = useAuthStore()
+const canManageSuppliers = computed(
+  () => auth.role === 'Admin' || auth.role === 'WarehouseKeeper',
+)
 const suppliers = ref<Supplier[]>([])
 const editingId = ref<number | null>(null)
 const error = ref('')
@@ -74,7 +77,7 @@ onMounted(load)
       <div class="page-head-actions">
         <input v-model="search" placeholder="Tìm nhà cung cấp..." class="search-input" />
         <button
-          v-if="auth.role === 'WarehouseKeeper'"
+          v-if="canManageSuppliers"
           type="button"
           class="primary"
           @click="showForm = true"
@@ -87,8 +90,8 @@ onMounted(load)
     <p v-if="error" class="alert error">{{ error }}</p>
 
     <!-- Supplier modal form dialog -->
-    <div v-if="showForm && auth.role === 'WarehouseKeeper'" class="modal-backdrop" @click="reset" />
-    <aside v-if="showForm && auth.role === 'WarehouseKeeper'" class="admin-modal" aria-label="Biểu mẫu nhà cung cấp">
+    <div v-if="showForm && canManageSuppliers" class="modal-backdrop" @click="reset" />
+    <aside v-if="showForm && canManageSuppliers" class="admin-modal" aria-label="Biểu mẫu nhà cung cấp">
       <div class="modal-head">
         <h2>{{ editingId ? 'Cập nhật nhà cung cấp' : 'Thêm nhà cung cấp' }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
@@ -116,7 +119,7 @@ onMounted(load)
             <th>Người liên hệ</th>
             <th>Liên lạc</th>
             <th>Ghi chú</th>
-            <th v-if="auth.role === 'WarehouseKeeper'">Hành động</th>
+            <th v-if="canManageSuppliers">Hành động</th>
           </tr>
         </thead>
         <tbody>
@@ -125,7 +128,7 @@ onMounted(load)
             <td>{{ item.contactName }}</td>
             <td>{{ item.phone }}<small>{{ item.email }}</small></td>
             <td>{{ item.notes }}</td>
-            <td v-if="auth.role === 'WarehouseKeeper'" class="actions">
+            <td v-if="canManageSuppliers" class="actions">
               <button @click="edit(item)">Sửa</button>
               <button class="danger" @click="remove(item)">Xóa</button>
             </td>

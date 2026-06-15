@@ -16,9 +16,9 @@ const allNavigation = [
   { to: '/dashboard', label: 'Tổng quan', icon: 'pi pi-chart-bar', roles: ['Admin'] },
   { to: '/orders', label: 'Đơn hàng', icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
   { to: '/customers', label: 'Khách hàng', icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
-  { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['WarehouseKeeper'] },
+  { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
   { to: '/products', label: 'Sản phẩm', icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['WarehouseKeeper'] },
+  { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
   { to: '/users', label: 'Tài khoản', icon: 'pi pi-user-edit', roles: ['Admin'] },
 ]
 

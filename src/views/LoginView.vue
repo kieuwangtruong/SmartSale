@@ -8,8 +8,8 @@ import { useAuthStore } from '../stores/authStore'
 import { homeForRole } from '../router'
 import type { UserRole } from '../services/apiClient'
 
-const email = ref('admin@company.com')
-const password = ref('admin123')
+const email = ref('')
+const password = ref('')
 const loading = ref(false)
 const error = ref('')
 const auth = useAuthStore()
@@ -135,7 +135,7 @@ async function submit() {
           <form @submit.prevent="submit">
             <div class="input-group">
               <label for="email">Tài khoản Email</label>
-              <InputText id="email" v-model="email" type="email" autocomplete="email" placeholder="name@company.com" fluid />
+              <InputText id="email" v-model="email" type="email" autocomplete="email" placeholder="admin@company.com" fluid />
             </div>
             
             <div class="input-group">

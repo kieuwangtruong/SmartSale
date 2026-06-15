@@ -16,6 +16,9 @@ import {
 import { useAuthStore } from '../stores/authStore'
 
 const auth = useAuthStore()
+const canManageProducts = computed(
+  () => auth.role === 'Admin' || auth.role === 'WarehouseKeeper',
+)
 const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
 const suppliers = ref<Supplier[]>([])
@@ -67,7 +70,7 @@ async function load() {
     const requests: [Promise<Product[]>, Promise<Category[]>, Promise<Supplier[] | null>] = [
       getProducts(),
       getCategories(),
-      auth.role === 'WarehouseKeeper' ? getSuppliers() : Promise.resolve(null),
+      canManageProducts.value ? getSuppliers() : Promise.resolve(null),
     ]
     const [productData, categoryData, supplierData] = await Promise.all(requests)
     products.value = productData
@@ -119,7 +122,7 @@ onMounted(load)
       <div class="page-head-actions">
         <input v-model="search" placeholder="Tìm sản phẩm..." class="search-input" />
         
-        <div v-if="auth.role === 'WarehouseKeeper'" class="add-dropdown-container">
+        <div v-if="canManageProducts" class="add-dropdown-container">
           <button type="button" class="primary" @click="toggleAddMenu">
             <i class="pi pi-plus" /> Thêm mới <i class="pi pi-angle-down" />
           </button>
@@ -192,7 +195,7 @@ onMounted(load)
               </span>
             </td>
             <td class="actions">
-              <button v-if="auth.role === 'WarehouseKeeper'" @click="edit(p)">Sửa</button>
+              <button v-if="canManageProducts" @click="edit(p)">Sửa</button>
               <button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">Xóa</button>
             </td>
           </tr>
