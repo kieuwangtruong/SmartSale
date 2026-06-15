@@ -116,7 +116,6 @@ async function submit() {
           </div>
 
           <h2>Đăng nhập hệ thống</h2>
-          <p class="subtitle">Chọn vai trò thích hợp để tự động điền thông tin tài khoản demo.</p>
 
           <div class="role-selector">
             <button 
