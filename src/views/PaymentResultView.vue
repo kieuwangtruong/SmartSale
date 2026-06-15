@@ -90,7 +90,7 @@ onMounted(async () => {
   <main class="payment-result">
     <section class="result-card" :class="content.tone">
       <span class="result-icon"><i :class="content.icon" /></span>
-      <p class="eyebrow">PAYOS CHECKOUT</p>
+      <p class="eyebrow">KẾT QUẢ THANH TOÁN</p>
       <h1>{{ loading ? 'Đang kiểm tra thanh toán' : content.title }}</h1>
       <p>{{ error || content.message }}</p>
       <small v-if="orderCode">Mã thanh toán: {{ orderCode }}</small>
