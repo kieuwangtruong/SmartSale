@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { createSupplier, deleteSupplier, getSuppliers, updateSupplier, type Supplier } from '../services/orderApi'
 import { useAuthStore } from '../stores/authStore'
 
@@ -15,11 +15,40 @@ const form = reactive({ name: '', contactName: '', phone: '', email: '', address
 const search = ref('')
 const showForm = ref(false)
 
-const visible = computed(() => {
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Filter logic
+const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
   return !q ? suppliers.value : suppliers.value.filter((s) =>
     [s.name, s.contactName, s.phone, s.email, s.address, s.notes].some((val) => val && val.toLowerCase().includes(q))
   )
+})
+
+// Pagination calculations
+const totalPages = computed(() => {
+  return Math.ceil(filtered.value.length / itemsPerPage) || 1
+})
+
+const visible = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filtered.value.slice(start, start + itemsPerPage)
+})
+
+// Status display
+const paginationInfo = computed(() => {
+  const total = filtered.value.length
+  if (total === 0) return ''
+  const start = (currentPage.value - 1) * itemsPerPage + 1
+  const end = Math.min(currentPage.value * itemsPerPage, total)
+  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+})
+
+// Reset to page 1 when search changes
+watch(search, () => {
+  currentPage.value = 1
 })
 
 function reset() {
@@ -135,6 +164,132 @@ onMounted(load)
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="pagination-footer">
+        <span class="pagination-info">{{ paginationInfo }}</span>
+        <div class="pagination-controls">
+          <button 
+            type="button" 
+            :disabled="currentPage === 1"
+            @click="currentPage = 1"
+            aria-label="Về đầu"
+            title="Về đầu"
+          >
+            <i class="pi pi-chevron-double-left" />
+          </button>
+          <button 
+            type="button" 
+            :disabled="currentPage === 1"
+            @click="currentPage--"
+            aria-label="Trang trước"
+          >
+            <i class="pi pi-chevron-left" />
+          </button>
+          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <button 
+            type="button" 
+            :disabled="currentPage === totalPages"
+            @click="currentPage++"
+            aria-label="Trang sau"
+          >
+            <i class="pi pi-chevron-right" />
+          </button>
+          <button 
+            type="button" 
+            :disabled="currentPage === totalPages"
+            @click="currentPage = totalPages"
+            aria-label="Về cuối"
+            title="Về cuối"
+          >
+            <i class="pi pi-chevron-double-right" />
+          </button>
+        </div>
+      </div>
     </article>
   </section>
 </template>
+
+<style scoped>
+/* Pagination Styles */
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  gap: 20px;
+}
+
+.app-dark .pagination-footer {
+  border-top-color: #374151;
+  background: #1f2937;
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: #6b7280;
+  min-width: 180px;
+}
+
+.app-dark .pagination-info {
+  color: #9ca3af;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-controls button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.app-dark .pagination-controls button {
+  border-color: #4b5563;
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.app-dark .pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #4b5563;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.app-dark .page-indicator {
+  color: #9ca3af;
+}
+</style>

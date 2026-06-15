@@ -373,7 +373,7 @@ onMounted(load)
 .donut-wrap { position: relative; width: min(270px, 100%); height: 215px; margin: 0 auto; }
 
 /* Khối text tổng doanh thu nằm ngay dưới biểu đồ */
-.donut-below-summary { display: grid; gap: 2px; text-align: center; margin-top: -26px; position: relative; z-index: 10; }
+.donut-below-summary { display: grid; gap: 2px; text-align: center; margin-top: -26px; position: relative; z-index: 10; background: rgba(241, 245, 249, 0.6); padding: 12px; border-radius: 8px; }
 .donut-below-summary small { color: #6366f1; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
 
 /* LIGHT MODE: Số tiền mặc định hiển thị màu đen xám của hệ thống */
@@ -408,14 +408,32 @@ onMounted(load)
 }
 
 /* --- DARK MODE: Tách biệt cấu trúc màu chữ sáng rực rỡ --- */
+:global(.app-dark) .donut-below-summary {
+  background: rgba(30, 41, 59, 0.5);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: -20px;
+}
+:global(.app-dark) .donut-below-summary small {
+  color: #38bdf8 !important;
+}
 :global(.app-dark) .donut-below-summary strong {
-  color: #ffffff !important; /* Bắt buộc đổi sang màu trắng tinh khi bật darkmode */
+  color: #f1f5f9 !important;
 }
 :global(.app-dark) .donut-below-summary span {
-  color: #cbd5e1 !important; /* Đổi màu số đơn hàng sang màu xám sáng */
+  color: #cbd5e1 !important;
 }
 :global(.app-dark) .legend-percentage {
   color: #cbd5e1 !important;
+}
+:global(.app-dark) .revenue-legend article {
+  color: #f1f5f9;
+}
+:global(.app-dark) .revenue-legend article strong {
+  color: #f1f5f9 !important;
+}
+:global(.app-dark) .revenue-legend article small {
+  color: #94a3b8 !important;
 }
 :global(.app-dark) .revenue-legend article:hover {
   background: #1d263b !important;
@@ -423,8 +441,17 @@ onMounted(load)
 :global(.app-dark) .chart-summary {
   border-top-color: #23304c !important;
 }
+:global(.app-dark) .chart-summary span {
+  color: #94a3b8 !important;
+}
+:global(.app-dark) .chart-summary strong {
+  color: #f1f5f9 !important;
+}
 :global(.app-dark) .panel-heading > small {
   color: #94a3b8 !important;
   background: #1e293b !important;
+}
+:global(.app-dark) .panel-heading span {
+  color: #38bdf8 !important;
 }
 </style>

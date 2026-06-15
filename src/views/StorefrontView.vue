@@ -23,6 +23,11 @@ const animateCart = ref(false);
 const route = useRoute();
 const CART_STORAGE_KEY = "storefront-cart";
 
+// Product Detail Modal state
+const selectedProduct = ref<Product | null>(null);
+const selectedImageIndex = ref(0);
+const productDetailQuantity = ref(1);
+
 const categories = computed(() =>
   [
     ...new Set(
@@ -81,10 +86,67 @@ async function loadProducts() {
   }
 }
 
-function addToCart(product: Product) {
-  const line = cart.value.find((item) => item.product.id === product.id);
+// Open product detail modal for quick view
+function openProductDetail(product: Product) {
+  selectedProduct.value = product;
+  selectedImageIndex.value = 0;
+  productDetailQuantity.value = 1;
+}
+
+// Close product detail modal
+function closeProductDetail() {
+  selectedProduct.value = null;
+  selectedImageIndex.value = 0;
+  productDetailQuantity.value = 1;
+}
+
+// Add to cart from product detail modal
+function addToCartFromDetail() {
+  if (!selectedProduct.value) return;
+  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id);
+  const quantity = productDetailQuantity.value;
+  
   if (line) {
-    if (line.quantity < product.quantity) line.quantity += 1;
+    if (line.quantity + quantity <= selectedProduct.value.quantity) {
+      line.quantity += quantity;
+    }
+  } else {
+    cart.value.push({ product: selectedProduct.value, quantity });
+  }
+  
+  // Animate cart button
+  animateCart.value = true;
+  setTimeout(() => {
+    animateCart.value = false;
+  }, 600);
+  
+  closeProductDetail();
+}
+
+// Mock additional product images (in real app, would come from API)
+function getProductImages(product: Product): string[] {
+  const images = [product.imageUrl || ""];
+  // Add mock alternative images for demo
+  if (images[0]) {
+    images.push(
+      `${images[0]}?alt=1`,
+      `${images[0]}?alt=2`,
+      `${images[0]}?alt=3`
+    );
+  }
+  return images.filter(Boolean);
+}
+
+// Direct add to cart (triggered from add button, not modal)
+function quickAddToCart(product: Product) {
+  if (product.quantity <= 0) return;
+  
+  const line = cart.value.find((item) => item.product.id === product.id);
+  
+  if (line) {
+    if (line.quantity + 1 <= product.quantity) {
+      line.quantity += 1;
+    }
   } else {
     cart.value.push({ product, quantity: 1 });
   }
@@ -455,7 +517,7 @@ onUnmounted(() => {
             </article>
           </div>
           <div v-else class="product-grid" style="margin-top: 30px;">
-            <article v-for="product in featuredProducts" :key="product.id" class="product-card">
+            <article v-for="product in featuredProducts" :key="product.id" class="product-card" @click="openProductDetail(product)">
               <div class="product-image">
                 <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
                   <div class="ribbon low-stock">Sắp hết</div>
@@ -482,7 +544,7 @@ onUnmounted(() => {
                     </small>
                     <small v-else class="unavailable">Tạm hết hàng</small>
                   </div>
-                  <button type="button" :disabled="product.quantity <= 0" @click="addToCart(product)">
+                  <button type="button" :disabled="product.quantity <= 0" @click.stop="quickAddToCart(product)">
                     <i class="pi pi-shopping-bag" />
                     <span>Thêm</span>
                   </button>
@@ -549,7 +611,7 @@ onUnmounted(() => {
 
           <div v-else>
             <div class="product-grid">
-              <article v-for="product in paginatedProducts" :key="product.id" class="product-card">
+              <article v-for="product in paginatedProducts" :key="product.id" class="product-card" @click="openProductDetail(product)">
                 <div class="product-image">
                   <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
                     <div class="ribbon low-stock">Sắp hết</div>
@@ -576,7 +638,7 @@ onUnmounted(() => {
                       </small>
                       <small v-else class="unavailable">Tạm hết hàng</small>
                     </div>
-                    <button type="button" :disabled="product.quantity <= 0" @click="addToCart(product)">
+                    <button type="button" :disabled="product.quantity <= 0" @click.stop="quickAddToCart(product)">
                       <i class="pi pi-shopping-bag" />
                       <span>Thêm</span>
                     </button>
@@ -598,6 +660,123 @@ onUnmounted(() => {
         </div>
       </section>
     </main>
+
+    <!-- Product Detail Modal (Full-screen) -->
+    <div v-if="selectedProduct" class="product-detail-overlay" @click.self="closeProductDetail" />
+    <div v-if="selectedProduct" class="product-detail-modal" aria-modal="true" role="dialog">
+      <!-- Close button -->
+      <button type="button" class="detail-close-btn" aria-label="Đóng" @click="closeProductDetail">
+        <i class="pi pi-times" />
+      </button>
+
+      <!-- Two-column layout -->
+      <div class="detail-container">
+        <!-- Left column: Image Gallery -->
+        <div class="detail-gallery">
+          <div class="main-image">
+            <img 
+              v-if="getProductImages(selectedProduct)[selectedImageIndex]" 
+              :src="getProductImages(selectedProduct)[selectedImageIndex]" 
+              :alt="selectedProduct.name"
+            />
+            <div v-else class="image-placeholder-large">
+              <i class="pi pi-box" />
+              <small>ID #{{ selectedProduct.id }}</small>
+            </div>
+          </div>
+          
+          <!-- Thumbnails -->
+          <div class="thumbnails">
+            <button 
+              v-for="(image, idx) in getProductImages(selectedProduct)" 
+              :key="idx"
+              type="button"
+              :class="{ active: idx === selectedImageIndex }"
+              @click="selectedImageIndex = idx"
+              :aria-label="`Image ${idx + 1}`"
+            >
+              <img :src="image" :alt="`Product image ${idx + 1}`" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Right column: Product Info & Actions -->
+        <div class="detail-info">
+          <div class="detail-header">
+            <span class="detail-category">{{ selectedProduct.categoryName || "Sản phẩm" }}</span>
+            <h1 class="detail-title">{{ selectedProduct.name }}</h1>
+            
+            <!-- Product ID and Stock Status -->
+            <div class="detail-meta">
+              <span class="product-id">Mã ID: <strong>#{{ selectedProduct.id }}</strong></span>
+              <div v-if="selectedProduct.quantity > 0" class="stock-status in-stock">
+                <i class="pi pi-check-circle" />
+                <span>{{ selectedProduct.quantity <= selectedProduct.reserveStock ? `Sắp hết (Còn ${selectedProduct.quantity})` : `Còn hàng (${selectedProduct.quantity} sản phẩm)` }}</span>
+              </div>
+              <div v-else class="stock-status out-of-stock">
+                <i class="pi pi-times-circle" />
+                <span>Hết hàng</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Price -->
+          <div class="detail-price">
+            <span class="price-label">Giá bán</span>
+            <strong class="price-value">{{ formatCurrency(selectedProduct.sellingPrice) }}</strong>
+          </div>
+
+          <!-- Quantity Picker -->
+          <div class="quantity-picker">
+            <label for="qty">Số lượng</label>
+            <div class="qty-controls">
+              <button 
+                type="button" 
+                aria-label="Giảm số lượng"
+                @click="productDetailQuantity = Math.max(1, productDetailQuantity - 1)"
+              >
+                <i class="pi pi-minus" />
+              </button>
+              <input 
+                id="qty"
+                v-model.number="productDetailQuantity"
+                type="number"
+                min="1"
+                :max="selectedProduct.quantity"
+              />
+              <button 
+                type="button"
+                aria-label="Tăng số lượng"
+                @click="productDetailQuantity = Math.min(selectedProduct.quantity, productDetailQuantity + 1)"
+              >
+                <i class="pi pi-plus" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="detail-actions">
+            <button 
+              type="button" 
+              class="btn-add-to-cart" 
+              :disabled="selectedProduct.quantity <= 0"
+              @click="addToCartFromDetail"
+            >
+              <i class="pi pi-shopping-bag" />
+              <span>Thêm vào giỏ hàng</span>
+            </button>
+            <button 
+              type="button" 
+              class="btn-back-to-store"
+              @click="closeProductDetail"
+            >
+              <i class="pi pi-arrow-left" />
+              <span>Quay lại cửa hàng</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <aside class="cart-panel" :class="{ open: showCart }" aria-label="Giỏ hàng">
       <div class="cart-head">
@@ -1474,6 +1653,7 @@ main {
   border: 1px solid #e8e7e1;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 .product-card:hover {
   transform: translateY(-4px);
@@ -1485,6 +1665,7 @@ main {
   border-radius: 14px;
   background: #ecebe5;
   overflow: hidden;
+  cursor: pointer;
 }
 .product-image::after {
   content: "";
@@ -1669,8 +1850,10 @@ main {
   gap: 6px;
   font-size: 10px;
   font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.product-footer > button:hover {
+.product-footer > button:hover:not(:disabled) {
   border-color: var(--teal);
   color: white;
   background: var(--teal);
@@ -1679,6 +1862,360 @@ main {
   opacity: 0.42;
   cursor: not-allowed;
 }
+
+/* =========================================================================
+   PRODUCT DETAIL MODAL (FULL-SCREEN)
+   ========================================================================= */
+.product-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 60;
+  backdrop-filter: blur(4px);
+}
+
+.product-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.detail-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.detail-close-btn:hover {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+
+.detail-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  max-width: 1400px;
+  margin: auto;
+  width: 100%;
+  padding-top: 40px;
+}
+
+/* Gallery Section */
+.detail-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.main-image {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background: var(--cream);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-placeholder-large {
+  width: 100%;
+  height: 100%;
+  color: #80918d;
+  background: linear-gradient(145deg, #edf1ee, #dfe8e4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-size: 48px;
+}
+
+.app-dark .image-placeholder-large {
+  color: #6b7280;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+}
+
+.thumbnails {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.thumbnails button {
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.thumbnails button:hover {
+  border-color: var(--teal);
+}
+
+.thumbnails button.active {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px var(--teal);
+}
+
+.thumbnails button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Product Info Section */
+.detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-top: 20px;
+}
+
+.detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-category {
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.detail-title {
+  font-family: sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--ink);
+}
+
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.product-id {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.product-id strong {
+  color: var(--ink);
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.stock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.stock-status.in-stock {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.stock-status.out-of-stock {
+  color: #7f1d1d;
+  background: #fee2e2;
+}
+
+.stock-status i {
+  font-size: 14px;
+}
+
+/* Price Section */
+.detail-price {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+}
+
+.price-label {
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.price-value {
+  font-family: sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #582cdb;
+}
+
+/* Quantity Picker */
+.quantity-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quantity-picker label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.qty-controls {
+  display: grid;
+  grid-template-columns: 44px 80px 44px;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.qty-controls button {
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: var(--cream);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qty-controls button:last-child {
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+
+.qty-controls button:hover {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--teal);
+}
+
+.qty-controls input {
+  padding: 0;
+  border: 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.qty-controls input:focus {
+  outline: none;
+}
+
+.qty-controls input::-webkit-outer-spin-button,
+.qty-controls input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* Action Buttons */
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.btn-add-to-cart {
+  min-height: 52px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--teal);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-to-cart:hover:not(:disabled) {
+  background: var(--teal-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+}
+
+.btn-add-to-cart:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-back-to-store {
+  min-height: 52px;
+  padding: 0 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back-to-store:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: white;
+}
+
 .state-card {
   display: flex;
   align-items: center;
@@ -1827,15 +2364,25 @@ main {
 }
 .cart-head button,
 .remove-line {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--ink);
   background: transparent;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cart-head button:hover,
+.remove-line:hover {
+  border-color: var(--teal);
+  background: #f0fdfa;
+  color: var(--teal);
 }
 .empty-cart {
   margin: auto;
@@ -1950,8 +2497,8 @@ main {
   appearance: none;
 }
 .remove-line {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   color: #8b5555;
   font-size: 11px;
 }
@@ -2187,6 +2734,14 @@ footer {
     opacity: 1;
     transform: none;
   }
+  .detail-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    padding-top: 30px;
+  }
+  .detail-title {
+    font-size: 28px;
+  }
   .closing-banner {
     padding: 40px;
     grid-template-columns: 1fr;
@@ -2284,6 +2839,29 @@ footer {
   }
   .product-footer > button span {
     display: inline;
+  }
+  .product-detail-modal {
+    padding: 20px;
+  }
+  .detail-container {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-top: 20px;
+  }
+  .detail-title {
+    font-size: 22px;
+  }
+  .detail-close-btn {
+    width: 40px;
+    height: 40px;
+    top: 16px;
+    right: 16px;
+  }
+  .thumbnails {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .detail-actions {
+    grid-template-columns: 1fr;
   }
   .state-card {
     align-items: center;

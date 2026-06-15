@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { formatCurrency, getSuppliers, type Supplier } from '../services/orderApi'
 import {
   cancelStockReceipt,
@@ -28,6 +28,10 @@ const receipt = reactive({
 const search = ref('')
 const showReceiptForm = ref(false)
 
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = 10
+
 const inventoryValue = computed(() => products.value.reduce((sum, p) => sum + p.importPrice * p.quantity, 0))
 
 const filteredProducts = computed(() => {
@@ -35,6 +39,30 @@ const filteredProducts = computed(() => {
   return !q ? products.value : products.value.filter((p) =>
     p.name.toLowerCase().includes(q) || String(p.id).includes(q)
   )
+})
+
+// Pagination calculations
+const totalPages = computed(() => {
+  return Math.ceil(filteredProducts.value.length / itemsPerPage) || 1
+})
+
+const visibleProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredProducts.value.slice(start, start + itemsPerPage)
+})
+
+// Status display
+const paginationInfo = computed(() => {
+  const total = filteredProducts.value.length
+  if (total === 0) return ''
+  const start = (currentPage.value - 1) * itemsPerPage + 1
+  const end = Math.min(currentPage.value * itemsPerPage, total)
+  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+})
+
+// Reset to page 1 when search changes
+watch(search, () => {
+  currentPage.value = 1
 })
 
 function resetReceipt() {
@@ -148,7 +176,7 @@ onMounted(load)
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in filteredProducts" :key="p.id">
+            <tr v-for="p in visibleProducts" :key="p.id">
               <td>{{ p.name }}<small>ID: #{{ p.id }}</small></td>
               <td><input v-if="inventoryDraft[p.id]" v-model.number="inventoryDraft[p.id]!.quantity" type="number" min="0" class="table-number-input" /></td>
               <td><input v-if="inventoryDraft[p.id]" v-model.number="inventoryDraft[p.id]!.reserveStock" type="number" min="0" class="table-number-input" /></td>
@@ -156,6 +184,48 @@ onMounted(load)
             </tr>
           </tbody>
         </table>
+
+        <!-- Pagination -->
+        <div v-if="totalPages > 1" class="pagination-footer">
+          <span class="pagination-info">{{ paginationInfo }}</span>
+          <div class="pagination-controls">
+            <button 
+              type="button" 
+              :disabled="currentPage === 1"
+              @click="currentPage = 1"
+              aria-label="Về đầu"
+              title="Về đầu"
+            >
+              <i class="pi pi-chevron-double-left" />
+            </button>
+            <button 
+              type="button" 
+              :disabled="currentPage === 1"
+              @click="currentPage--"
+              aria-label="Trang trước"
+            >
+              <i class="pi pi-chevron-left" />
+            </button>
+            <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+            <button 
+              type="button" 
+              :disabled="currentPage === totalPages"
+              @click="currentPage++"
+              aria-label="Trang sau"
+            >
+              <i class="pi pi-chevron-right" />
+            </button>
+            <button 
+              type="button" 
+              :disabled="currentPage === totalPages"
+              @click="currentPage = totalPages"
+              aria-label="Về cuối"
+              title="Về cuối"
+            >
+              <i class="pi pi-chevron-double-right" />
+            </button>
+          </div>
+        </div>
       </article>
 
       <article class="panel table-wrap" style="margin-top: 24px;">
@@ -240,5 +310,87 @@ onMounted(load)
 }
 .full-width-tables-container {
   margin-top: 24px;
+}
+
+/* Pagination Styles */
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  gap: 20px;
+}
+
+.app-dark .pagination-footer {
+  border-top-color: #374151;
+  background: #1f2937;
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: #6b7280;
+  min-width: 180px;
+}
+
+.app-dark .pagination-info {
+  color: #9ca3af;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-controls button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.app-dark .pagination-controls button {
+  border-color: #4b5563;
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.app-dark .pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #4b5563;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.app-dark .page-indicator {
+  color: #9ca3af;
 }
 </style>
