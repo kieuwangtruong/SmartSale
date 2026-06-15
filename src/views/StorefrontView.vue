@@ -145,7 +145,6 @@ async function submitOrder() {
     window.location.assign(payment.checkoutUrl);
   } catch (e) {
     checkoutError.value = e instanceof Error ? e.message : "Không thể tạo liên kết thanh toán.";
-    showPaymentConfirm.value = false;
   } finally {
     checkoutLoading.value = false;
   }
