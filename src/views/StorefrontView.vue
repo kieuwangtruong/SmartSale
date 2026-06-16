@@ -383,6 +383,10 @@ onUnmounted(() => {
       </nav>
 
       <div class="header-right">
+        <RouterLink class="customer-link" to="/customer-login">
+          <i class="pi pi-user" />
+          <span>Tai khoan</span>
+        </RouterLink>
         <button class="theme-toggle" type="button" @click="toggleDarkMode" aria-label="Đổi giao diện">
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
@@ -537,7 +541,8 @@ onUnmounted(() => {
                 <h3>{{ product.name }}</h3>
                 <div class="product-footer">
                   <div>
-                    <strong>{{ formatCurrency(product.sellingPrice) }}</strong>
+                    <del v-if="product.salePrice && product.salePrice < product.originalPrice">{{ formatCurrency(product.originalPrice) }}</del>
+                    <strong :class="{ sale: product.salePrice && product.salePrice < product.originalPrice }">{{ formatCurrency(product.sellingPrice) }}</strong>
                     <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
                       <i class="pi pi-check-circle" />
                       {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
@@ -631,7 +636,8 @@ onUnmounted(() => {
                   <h3>{{ product.name }}</h3>
                   <div class="product-footer">
                     <div>
-                      <strong>{{ formatCurrency(product.sellingPrice) }}</strong>
+                      <del v-if="product.salePrice && product.salePrice < product.originalPrice">{{ formatCurrency(product.originalPrice) }}</del>
+                      <strong :class="{ sale: product.salePrice && product.salePrice < product.originalPrice }">{{ formatCurrency(product.sellingPrice) }}</strong>
                       <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
                         <i class="pi pi-check-circle" />
                         {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
@@ -1804,6 +1810,13 @@ main {
   font-size: 17px;
   font-weight: 850;
   color:#582cdb;
+}
+.product-footer del {
+  color: #94a3b8;
+  font-size: 13px;
+}
+.product-footer strong.sale {
+  color: #dc2626;
 }
 .ribbon-wrapper {
   position: absolute;
@@ -3155,6 +3168,19 @@ footer {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.customer-link {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 800;
+  border: 1px solid #d9d9d2;
 }
 .theme-toggle {
   width: 40px;

@@ -27,9 +27,27 @@ const routes: RouteRecordRaw[] = [
     redirect: '/admin',
   },
   {
+    path: '/customer-login',
+    name: 'customer-login',
+    component: () => import('../views/CustomerAuthView.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: () => import('../views/AdminDashboard.vue'),
+    meta: { roles: ['Admin'] },
+  },
+  {
+    path: '/customer',
+    name: 'customer-profile',
+    component: () => import('../views/CustomerProfileView.vue'),
+    meta: { roles: ['Customer'] },
+  },
+  {
+    path: '/employees',
+    name: 'employees',
+    component: () => import('../views/EmployeesView.vue'),
     meta: { roles: ['Admin'] },
   },
   {
@@ -106,6 +124,7 @@ const router = createRouter({
 function homeForRole(role: UserRole) {
   if (role === 'Admin') return '/dashboard'
   if (role === 'WarehouseKeeper') return '/inventory'
+  if (role === 'Customer') return '/customer'
   return '/orders'
 }
 

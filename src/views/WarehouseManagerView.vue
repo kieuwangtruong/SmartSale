@@ -9,6 +9,7 @@ import {
   getLowStock,
   getProducts,
   getStockReceipts,
+  submitStockReceipt,
   updateInventory,
   type Product,
   type StockReceipt,
@@ -22,6 +23,8 @@ const error = ref('')
 const inventoryDraft = reactive<Record<number, { quantity: number; reserveStock: number }>>({})
 const receipt = reactive({
   supplierId: 0,
+  invoiceNumber: '',
+  importDate: new Date().toISOString().slice(0, 10),
   note: '',
   items: [{ productId: 0, quantity: 1, importPrice: 0 }],
 })
@@ -78,7 +81,13 @@ watch(search, () => {
 
 function resetReceipt() {
   showReceiptForm.value = false
-  Object.assign(receipt, { supplierId: 0, note: '', items: [{ productId: 0, quantity: 1, importPrice: 0 }] })
+  Object.assign(receipt, {
+    supplierId: 0,
+    invoiceNumber: '',
+    importDate: new Date().toISOString().slice(0, 10),
+    note: '',
+    items: [{ productId: 0, quantity: 1, importPrice: 0 }],
+  })
 }
 
 async function load() {
@@ -111,7 +120,13 @@ async function submitReceipt() {
   const items = receipt.items.filter((x) => x.productId && x.quantity > 0)
   if (!receipt.supplierId || !items.length) { error.value = 'Chọn nhà cung cấp và sản phẩm nhập.'; return }
   try {
-    await createStockReceipt({ supplierId: receipt.supplierId, note: receipt.note, items })
+    await createStockReceipt({
+      supplierId: receipt.supplierId,
+      invoiceNumber: receipt.invoiceNumber,
+      importDate: receipt.importDate,
+      note: receipt.note,
+      items,
+    })
     resetReceipt()
     await load()
   } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể tạo phiếu nhập.' }
@@ -120,6 +135,10 @@ async function submitReceipt() {
 async function confirmReceipt(item: StockReceipt) {
   try { await confirmStockReceipt(item.id); await load() }
   catch (e) { error.value = e instanceof Error ? e.message : 'Không thể xác nhận phiếu.' }
+}
+async function submitReceiptForApproval(item: StockReceipt) {
+  try { await submitStockReceipt(item.id); await load() }
+  catch (e) { error.value = e instanceof Error ? e.message : 'Khong the gui duyet phieu.' }
 }
 async function cancelReceipt(item: StockReceipt) {
   try { await cancelStockReceipt(item.id); await load() }
@@ -162,7 +181,9 @@ onMounted(load)
         <label>Nhà cung cấp
           <SearchableSelect v-model="receipt.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
         </label>
-        <label>Ghi chú<input v-model="receipt.note" /></label>
+        <label>Ma hoa don<input v-model="receipt.invoiceNumber" /></label>
+        <label>Ngay nhap<input v-model="receipt.importDate" type="date" /></label>
+        <label>Ghi chu<input v-model="receipt.note" /></label>
         
         <div class="form-section-title">Danh sách mặt hàng nhập</div>
         <div v-for="(item, index) in receipt.items" :key="index" class="receipt-item">
@@ -264,8 +285,9 @@ onMounted(load)
               <td>{{ item.items.map((x) => `${x.productName} x${x.quantity}`).join(', ') }}</td>
               <td>{{ item.status }}</td>
               <td class="actions">
-                <button v-if="item.status === 'Draft'" class="primary" @click="confirmReceipt(item)">Xác nhận</button>
-                <button v-if="item.status === 'Draft'" class="danger" @click="cancelReceipt(item)">Hủy</button>
+                <button v-if="item.status === 'Draft'" class="primary" @click="submitReceiptForApproval(item)">Gui duyet</button>
+                <button v-if="item.status === 'PendingApproval'" class="primary" @click="confirmReceipt(item)">Duyet</button>
+                <button v-if="item.status === 'PendingApproval'" class="danger" @click="cancelReceipt(item)">Tu choi</button>
               </td>
             </tr>
           </tbody>

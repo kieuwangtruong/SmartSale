@@ -72,6 +72,25 @@ export function loginUser(payload: { email: string; password: string }) {
   })
 }
 
+export function registerCustomer(payload: {
+  userName: string
+  fullName: string
+  email: string
+  password: string
+  dateOfBirth: string
+  sex: number
+  address: string
+}) {
+  return apiRequest<UserDto>(API_URLS.user, '/api/User/register-customer', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }).then(normalizeUser)
+}
+
+export function getMyProfile() {
+  return apiRequest<UserDto>(API_URLS.user, '/api/User/me', { auth: true }).then(normalizeUser)
+}
+
 export function logoutUser(payload: { refreshToken: string }) {
   return apiRequest<unknown>(API_URLS.user, '/api/User/logout', {
     method: 'POST',
@@ -122,4 +141,45 @@ export function getRevenueChart(groupBy: 'day' | 'month' = 'day') {
     `/api/reports/revenue-chart?groupBy=${groupBy}`,
     { auth: true },
   )
+}
+
+export interface AttendanceRecord {
+  id: number
+  userId: number
+  workDate: string
+  checkIn?: string | null
+  checkOut?: string | null
+  status: string
+  hoursWorked: number
+  note?: string | null
+}
+
+export function getEmployees(search = '') {
+  const query = search ? `?search=${encodeURIComponent(search)}` : ''
+  return apiRequest<UserDto[]>(API_URLS.user, `/api/hr/employees${query}`, { auth: true }).then((users) =>
+    users.map(normalizeUser),
+  )
+}
+
+export function getEmployee(id: number) {
+  return apiRequest<UserDto>(API_URLS.user, `/api/hr/employees/${id}`, { auth: true }).then(normalizeUser)
+}
+
+export function getEmployeeAttendance(id: number) {
+  return apiRequest<AttendanceRecord[]>(API_URLS.user, `/api/hr/employees/${id}/attendance`, { auth: true })
+}
+
+export function upsertAttendance(payload: {
+  userId: number
+  workDate: string
+  checkIn?: string | null
+  checkOut?: string | null
+  status: string
+  note?: string | null
+}) {
+  return apiRequest<AttendanceRecord>(API_URLS.user, '/api/hr/attendance', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
 }

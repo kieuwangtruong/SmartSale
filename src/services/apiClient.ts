@@ -1,12 +1,13 @@
 import { API_URLS } from './config'
 import { getErrorMessage, translateApiMessage } from './apiMessages'
 
-export type UserRole = 'SalesStaff' | 'Admin' | 'WarehouseKeeper'
+export type UserRole = 'SalesStaff' | 'Admin' | 'WarehouseKeeper' | 'Customer'
 
 export const USER_ROLES: Array<{ value: UserRole; label: string; apiValue: number }> = [
-  { value: 'SalesStaff', label: 'Nhân viên bán hàng', apiValue: 0 },
-  { value: 'Admin', label: 'Quản trị viên', apiValue: 1 },
-  { value: 'WarehouseKeeper', label: 'Thủ kho', apiValue: 2 },
+  { value: 'SalesStaff', label: 'Nhan vien ban hang', apiValue: 0 },
+  { value: 'Admin', label: 'Quan tri vien', apiValue: 1 },
+  { value: 'WarehouseKeeper', label: 'Thu kho', apiValue: 2 },
+  { value: 'Customer', label: 'Khach hang', apiValue: 3 },
 ]
 
 export interface AuthUser {
@@ -18,6 +19,10 @@ export interface AuthUser {
   dateOfBirth: string
   sex: number
   address: string
+  paidOrderCount?: number
+  customerTier?: string
+  customerTierLabel?: string
+  workStatus?: string
   createdAt: string
   lastModified?: string | null
 }
@@ -46,6 +51,7 @@ let refreshPromise: Promise<string | null> | null = null
 export function normalizeRole(role: unknown): UserRole {
   if (role === 1 || role === '1' || role === 'Admin') return 'Admin'
   if (role === 2 || role === '2' || role === 'WarehouseKeeper') return 'WarehouseKeeper'
+  if (role === 3 || role === '3' || role === 'Customer') return 'Customer'
   return 'SalesStaff'
 }
 
@@ -170,4 +176,3 @@ export async function apiRequest<T>(
 
   return await parseResponse<T>(response)
 }
-

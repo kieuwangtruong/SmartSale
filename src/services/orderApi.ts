@@ -192,6 +192,10 @@ export function getOrders() {
   return apiRequest<Order[]>(API_URLS.order, '/api/Order', { auth: true })
 }
 
+export function getMyPurchases() {
+  return apiRequest<Order[]>(API_URLS.order, '/api/Order/my-purchases', { auth: true })
+}
+
 export function createOrder(payload: CreateOrderPayload) {
   return apiRequest<Order>(API_URLS.order, '/api/Order', {
     method: 'POST',

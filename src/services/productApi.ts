@@ -6,6 +6,8 @@ export interface Product {
   name: string
   importPrice: number
   sellingPrice: number
+  originalPrice: number
+  salePrice?: number | null
   imageUrl?: string | null
   categoryId: number
   categoryName: string
@@ -25,6 +27,8 @@ export interface ProductPayload {
   name: string
   importPrice: number
   sellingPrice: number
+  originalPrice?: number | null
+  salePrice?: number | null
   imageUrl?: string | null
   categoryId: number
   supplierId: number
@@ -37,10 +41,16 @@ export interface StockReceipt {
   supplierId: number
   supplierName: string
   note?: string | null
-  status: 'Draft' | 'Confirmed' | 'Cancelled'
+  status: 'Draft' | 'PendingApproval' | 'Approved' | 'Rejected' | 'Confirmed' | 'Cancelled'
+  invoiceNumber: string
+  importDate: string
   createdAt: string
+  submittedAt?: string | null
+  approvedAt?: string | null
   confirmedAt?: string | null
   createdByUserId: number
+  approvedByUserId?: number | null
+  totalAmount: number
   items: Array<{
     productId: number
     productName: string
@@ -112,6 +122,8 @@ export function getStockReceipts() {
 
 export function createStockReceipt(payload: {
   supplierId: number
+  invoiceNumber?: string
+  importDate?: string
   note?: string
   items: Array<{ productId: number; quantity: number; importPrice: number }>
 }) {
@@ -123,14 +135,21 @@ export function createStockReceipt(payload: {
 }
 
 export function confirmStockReceipt(id: number) {
-  return apiRequest<StockReceipt>(API_URLS.product, `/api/stock-receipts/${id}/confirm`, {
+  return apiRequest<StockReceipt>(API_URLS.product, `/api/stock-receipts/${id}/approve`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+export function submitStockReceipt(id: number) {
+  return apiRequest<StockReceipt>(API_URLS.product, `/api/stock-receipts/${id}/submit`, {
     method: 'POST',
     auth: true,
   })
 }
 
 export function cancelStockReceipt(id: number) {
-  return apiRequest<unknown>(API_URLS.product, `/api/stock-receipts/${id}/cancel`, {
+  return apiRequest<unknown>(API_URLS.product, `/api/stock-receipts/${id}/reject`, {
     method: 'POST',
     auth: true,
   })
