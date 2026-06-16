@@ -43,8 +43,8 @@ async function submit() {
       <h1>{{ mode === 'login' ? 'Đăng nhập khách hàng' : 'Đăng ký khách hàng' }}</h1>
       <p>Đăng nhập để xem hạng thành viên và lịch sử mua hàng.</p>
       <form @submit.prevent="submit">
-        <input v-if="mode === 'register'" v-model="form.userName" required placeholder="Ten dang nhap" />
-        <input v-if="mode === 'register'" v-model="form.fullName" required placeholder="Ho ten" />
+        <input v-if="mode === 'register'" v-model="form.userName" required placeholder="Tên đăng nhập" />
+        <input v-if="mode === 'register'" v-model="form.fullName" required placeholder="Họ tên" />
         <input v-model="form.email" required type="email" placeholder="Email" />
         <input v-model="form.password" required type="password" placeholder="Mật khẩu" />
         <input v-if="mode === 'register'" v-model="form.dateOfBirth" type="date" />
