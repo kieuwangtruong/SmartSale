@@ -213,6 +213,7 @@ export function createPaymentLink(payload: {
 }) {
   return apiRequest<PaymentLink>(API_URLS.order, '/api/payments/links', {
     method: 'POST',
+    auth: true,
     body: JSON.stringify(payload),
   })
 }

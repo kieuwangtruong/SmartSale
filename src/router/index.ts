@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+﻿import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { getSession, type UserRole } from '../services/apiClient'
 
 declare module 'vue-router' {
@@ -124,7 +124,7 @@ const router = createRouter({
 function homeForRole(role: UserRole) {
   if (role === 'Admin') return '/dashboard'
   if (role === 'WarehouseKeeper') return '/inventory'
-  if (role === 'Customer') return '/customer'
+  if (role === 'Customer') return '/'
   return '/orders'
 }
 
@@ -132,7 +132,9 @@ router.beforeEach((to) => {
   const session = getSession()
 
   if (to.meta.public) {
-    return to.meta.adminLogin && session ? homeForRole(session.user.role) : true
+    return to.meta.adminLogin && session && session.user.role !== 'Customer'
+      ? homeForRole(session.user.role)
+      : true
   }
 
   if (!session) {

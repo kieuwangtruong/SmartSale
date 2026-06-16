@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerCustomer } from '../services/userApi'
@@ -26,8 +26,13 @@ async function submit() {
     if (mode.value === 'register') {
       await registerCustomer(form)
     }
-    await auth.login(form.email, form.password)
-    await router.replace('/customer')
+    const user = await auth.login(form.email, form.password)
+    if (user.role !== 'Customer') {
+      await auth.logout()
+      error.value = 'Tài khoản nhân viên vui lòng đăng nhập ở cổng /admin.'
+      return
+    }
+    await router.replace('/')
   } catch (exception) {
     error.value = exception instanceof Error ? exception.message : 'Không thể xử lý tài khoản.'
   } finally {

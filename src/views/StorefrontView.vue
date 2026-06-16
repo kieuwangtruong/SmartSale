@@ -1,8 +1,10 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { formatCurrency, createPaymentLink } from "../services/orderApi";
+import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
+import { getMyProfile, type UserDto } from "../services/userApi";
+import { useAuthStore } from "../stores/authStore";
 
 interface CartLine {
   product: Product;
@@ -21,7 +23,14 @@ const error = ref("");
 const showCart = ref(false);
 const animateCart = ref(false);
 const route = useRoute();
+const auth = useAuthStore();
 const CART_STORAGE_KEY = "storefront-cart";
+const showCustomerPanel = ref(false);
+const customerProfile = ref<UserDto | null>(auth.user);
+const customerOrders = ref<Order[]>([]);
+const customerPanelLoading = ref(false);
+const customerPanelError = ref("");
+const customerPanelLoaded = ref(false);
 
 // Product Detail Modal state
 const selectedProduct = ref<Product | null>(null);
@@ -70,6 +79,21 @@ const cartTotal = computed(() =>
     0,
   ),
 );
+const customerInitials = computed(() => {
+  const name = (customerProfile.value?.fullName || auth.user?.fullName || "").trim();
+  if (!name) return "KH";
+  const parts = name.split(/\s+/).filter(Boolean);
+  const first = parts[0] ?? "K";
+  const second = parts[1] ?? first[1] ?? "H";
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
+  return `${first[0] ?? "K"}${second[0] ?? "H"}`.toUpperCase();
+});
+const isCustomerLoggedIn = computed(() => auth.user?.role === "Customer");
+const paidCustomerOrders = computed(() =>
+  customerOrders.value.filter((order) =>
+    ["Paid", "Processing", "Shipped", "Completed"].includes(order.status),
+  ),
+);
 
 async function loadProducts() {
   loading.value = true;
@@ -84,6 +108,38 @@ async function loadProducts() {
   } finally {
     loading.value = false;
   }
+}
+
+async function toggleCustomerPanel() {
+  showCustomerPanel.value = !showCustomerPanel.value;
+  if (showCustomerPanel.value && !customerPanelLoaded.value) {
+    await loadCustomerPanel();
+  }
+}
+
+async function loadCustomerPanel() {
+  if (!isCustomerLoggedIn.value) return;
+  customerPanelLoading.value = true;
+  customerPanelError.value = "";
+  try {
+    const [profile, orders] = await Promise.all([getMyProfile(), getMyPurchases()]);
+    customerProfile.value = profile;
+    customerOrders.value = orders;
+    customerPanelLoaded.value = true;
+  } catch (exception) {
+    customerPanelError.value =
+      exception instanceof Error ? exception.message : "Không thể tải thông tin tài khoản.";
+  } finally {
+    customerPanelLoading.value = false;
+  }
+}
+
+async function logoutCustomer() {
+  await auth.logout();
+  customerProfile.value = null;
+  customerOrders.value = [];
+  customerPanelLoaded.value = false;
+  showCustomerPanel.value = false;
 }
 
 // Open product detail modal for quick view
@@ -383,10 +439,54 @@ onUnmounted(() => {
       </nav>
 
       <div class="header-right">
-        <RouterLink class="customer-link" to="/customer-login">
+        <RouterLink v-if="!isCustomerLoggedIn" class="customer-link" to="/customer-login">
           <i class="pi pi-user" />
           <span>Tài khoản</span>
         </RouterLink>
+        <div v-else class="customer-menu">
+          <button class="customer-avatar" type="button" @click="toggleCustomerPanel">
+            {{ customerInitials }}
+          </button>
+          <aside v-if="showCustomerPanel" class="customer-panel">
+            <div class="customer-panel-head">
+              <span class="customer-avatar large">{{ customerInitials }}</span>
+              <div>
+                <strong>{{ customerProfile?.fullName || auth.user?.fullName }}</strong>
+                <small>{{ customerProfile?.email || auth.user?.email }}</small>
+              </div>
+            </div>
+            <p v-if="customerPanelError" class="customer-panel-error">{{ customerPanelError }}</p>
+            <p v-else-if="customerPanelLoading" class="customer-panel-muted">Đang tải thông tin...</p>
+            <template v-else>
+              <div class="customer-tier-card">
+                <small>Hạng thành viên</small>
+                <strong>{{ customerProfile?.customerTierLabel || 'Thành viên thường' }}</strong>
+                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} đơn đã thanh toán</span>
+              </div>
+              <div class="customer-info">
+                <p><b>Tài khoản:</b> {{ customerProfile?.userName || auth.user?.userName }}</p>
+                <p><b>Địa chỉ:</b> {{ customerProfile?.address || auth.user?.address || 'Chưa cập nhật' }}</p>
+              </div>
+              <div class="customer-history">
+                <div class="customer-history-title">
+                  <strong>Lịch sử đơn hàng</strong>
+                  <button type="button" @click="loadCustomerPanel">Làm mới</button>
+                </div>
+                <div v-if="!customerOrders.length" class="customer-panel-muted">Chưa có đơn hàng.</div>
+                <article v-for="order in customerOrders.slice(0, 5)" :key="order.id" class="customer-order-line">
+                  <div>
+                    <strong>#{{ order.id }} - {{ getOrderStatusLabel(order.status) }}</strong>
+                    <small>{{ order.orderItems.map((item) => `${item.productName} x${item.quantity}`).join(', ') }}</small>
+                  </div>
+                  <span>{{ formatCurrency(order.total) }}</span>
+                </article>
+              </div>
+            </template>
+            <button class="logout-customer" type="button" @click="logoutCustomer">
+              <i class="pi pi-sign-out" /> Đăng xuất
+            </button>
+          </aside>
+        </div>
         <button class="theme-toggle" type="button" @click="toggleDarkMode" aria-label="Đổi giao diện">
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
@@ -582,7 +682,7 @@ onUnmounted(() => {
                 <option value="featured">Nổi bật</option>
                 <option value="price-asc">Giá thấp đến cao</option>
                 <option value="price-desc">Giá cao đến thấp</option>
-                <option value="name">Tên A–Z</option>
+                <option value="name">Tên A-Z</option>
               </select>
             </label>
           </div>
@@ -2339,7 +2439,7 @@ main {
 }
 
 /* =========================================================================
-   THAY ĐỔI CSS SỬA LỖI GIỎ HÀNG: GỠ BỎ BACKDROP CHE KHUẤT, GIỮ CHO NỀN TỰ DO CLICK
+   THAY DOI CSS SUA LOI GIO HANG: GO BO BACKDROP CHE KHUAT, GIU CHO NEN TU DO CLICK
    ========================================================================= */
 .cart-panel {
   position: fixed;
@@ -2348,7 +2448,7 @@ main {
   width: min(460px, 100vw);
   padding: 0;
   background: #fbfbf8;
-  /* Tăng cường độ đổ bóng rõ nét để phân tách giỏ hàng với lớp sản phẩm có thể tương tác phía sau */
+  /* Tang cuong do do bong ro net de phan tach gio hang voi lop san pham co the tuong tac phia sau */
   box-shadow: -15px 0 40px rgba(10, 24, 35, 0.15);
   display: flex;
   flex-direction: column;
@@ -3181,6 +3281,125 @@ footer {
   text-decoration: none;
   font-weight: 800;
   border: 1px solid #d9d9d2;
+}
+.customer-menu {
+  position: relative;
+}
+.customer-avatar {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: var(--teal);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgb(15 118 110 / 24%);
+}
+.customer-avatar.large {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+}
+.customer-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 40;
+  width: min(380px, calc(100vw - 28px));
+  max-height: 75vh;
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 18%);
+}
+.customer-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.customer-panel-head strong,
+.customer-order-line strong {
+  display: block;
+  color: var(--ink);
+}
+.customer-panel-head small,
+.customer-order-line small,
+.customer-panel-muted,
+.customer-info p,
+.customer-tier-card span {
+  color: #64748b;
+}
+.customer-tier-card {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f0fdfa;
+  display: grid;
+  gap: 4px;
+}
+.customer-tier-card small,
+.customer-history-title {
+  font-weight: 800;
+  color: var(--teal);
+}
+.customer-tier-card strong {
+  color: #0f172a;
+  font-size: 20px;
+}
+.customer-info {
+  margin: 14px 0;
+}
+.customer-info p {
+  margin: 6px 0;
+}
+.customer-history-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.customer-history-title button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 800;
+  cursor: pointer;
+}
+.customer-order-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #e5e7eb;
+}
+.customer-order-line span {
+  color: #dc2626;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.customer-panel-error {
+  color: #dc2626;
+}
+.logout-customer {
+  width: 100%;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ef4444;
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
 }
 .theme-toggle {
   width: 40px;

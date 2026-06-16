@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -83,6 +83,11 @@ async function submit() {
   error.value = ''
   try {
     const user = await auth.login(email.value.trim(), password.value)
+    if (user.role === 'Customer') {
+      await auth.logout()
+      error.value = 'Tài khoản khách hàng vui lòng đăng nhập ở trang bán hàng.'
+      return
+    }
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
     await router.replace(redirect || homeForRole(user.role))
   } catch (exception) {
@@ -163,14 +168,14 @@ async function submit() {
 </template>
 
 <style scoped>
-/* Toàn bộ trang với hình nền mới liên quan đến Smart Sale mờ kính */
+
 .login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  /* Hình nền mờ kính với quang cảnh cửa hàng bán lẻ hiện đại có nhân viên và khách hàng tương tác */
+  
   background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(30, 41, 59, 0.6)), 
               url('back-ground-login.png');
   background-size: cover;
@@ -178,24 +183,24 @@ async function submit() {
   background-attachment: fixed;
 }
 
-/* Khung bọc lớn - Biến thành kính suốt */
+
 .login-wrapper {
   position: relative;
   width: 1000px;
   max-width: 100%;
   height: 620px;
-  /* Nền trắng suốt 45% + hiệu ứng mờ backdrop cực mạnh */
+  
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
   border-radius: 28px;
   overflow: hidden;
-  /* Viền mỏng màu trắng tạo khối 3D giả kính */
+  
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
 }
 
-/* Base style cho 2 cột trượt qua nhau */
+
 .image-panel,
 .form-panel {
   position: absolute;
@@ -205,7 +210,7 @@ async function submit() {
   transition: transform 0.75s cubic-bezier(0.66, 0, 0.00, 1), left 0.75s cubic-bezier(0.66, 0, 0.00, 1);
 }
 
-/* VỊ TRÍ MẶC ĐỊNH (Sales/Warehouse): Form bên TRÁI, Ảnh bên PHẢI */
+
 .form-panel {
   left: 0;
 }
@@ -213,7 +218,7 @@ async function submit() {
   left: 50%;
 }
 
-/* VỊ TRÍ KHI LÀ ADMIN: Đổi chỗ bằng cách dịch chuyển X */
+
 .is-admin-layout .form-panel {
   transform: translateX(100%);
 }
@@ -221,7 +226,7 @@ async function submit() {
   transform: translateX(-100%);
 }
 
-/* Thiết lập cho cột hình ảnh */
+
 .image-panel {
   background-size: cover;
   background-position: center;
@@ -234,7 +239,7 @@ async function submit() {
   content: '';
   position: absolute;
   inset: 0;
-  /* Làm tối ảnh nền phụ thuộc vai trò để nổi chữ trắng */
+  
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.55) 100%);
   z-index: 1;
 }
@@ -282,9 +287,9 @@ async function submit() {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Thiết lập cho cột Form (Kính suốt hoàn toàn) */
+
 .form-panel {
-  background: transparent; /* Xóa bỏ nền trắng đặc */
+  background: transparent; 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -336,7 +341,7 @@ async function submit() {
   margin: 0 0 24px;
 }
 
-/* Nút chọn Vai trò (Cũng làm kính suốt nhẹ) */
+
 .role-selector {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -375,7 +380,7 @@ async function submit() {
   font-size: 16px;
 }
 
-/* Các trường nhập liệu (Input) */
+
 .input-group {
   display: flex;
   flex-direction: column;
@@ -389,7 +394,7 @@ async function submit() {
   color: #1e293b;
 }
 
-/* Tùy chỉnh nhẹ các Input của PrimeVue để tiệp với nền kính */
+
 :deep(.p-inputtext) {
   background: rgba(255, 255, 255, 0.6) !important;
   border: 1px solid rgba(15, 23, 42, 0.15) !important;
@@ -428,11 +433,9 @@ async function submit() {
   text-decoration: underline;
 }
 
-/* ==========================================================================
-   CHẾ ĐỘ TỐI (DARK MODE OVERRIDES) - Tự động đổi màu kính tối sang xịn mịn hơn
-   ========================================================================== */
+
 .app-dark .login-wrapper {
-  background: rgba(15, 23, 42, 0.55); /* Kính tối */
+  background: rgba(15, 23, 42, 0.55); 
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
 }
@@ -487,7 +490,7 @@ async function submit() {
   color: #60a5fa;
 }
 
-/* Responsive di động */
+
 @media (max-width: 850px) {
   .login-wrapper {
     height: auto;
@@ -504,7 +507,7 @@ async function submit() {
     left: 0 !important;
   }
   .image-panel {
-    display: none; /* Trên mobile giấu hẳn phần ảnh để tối ưu chiều dọc */
+    display: none; 
   }
   .form-panel {
     padding: 45px 24px;
