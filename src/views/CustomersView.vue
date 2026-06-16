@@ -1,40 +1,59 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { createCustomer, deleteCustomer, formatCurrency, getCustomers, updateCustomer, type Customer } from '../services/orderApi'
+import SearchableSelect from '../components/SearchableSelect.vue'
+import { normalizeCustomerFormExtras } from '../services/customerExtraStorage'
+import {
+  createCustomer,
+  deleteCustomer,
+  formatCurrency,
+  getCustomers,
+  getGenderLabel,
+  GENDER_OPTIONS,
+  updateCustomer,
+  type Customer,
+} from '../services/orderApi'
 import { useAuthStore } from '../stores/authStore'
 
 const auth = useAuthStore()
 const customers = ref<Customer[]>([])
 const editingId = ref<number | null>(null)
 const error = ref('')
-const form = reactive({ fullName: '', phone: '', email: '', address: '' })
+const form = reactive({
+  fullName: '',
+  phone: '',
+  email: '',
+  address: '',
+  gender: 0,
+  cccd: '',
+  age: null as number | null,
+})
 
 const search = ref('')
 const showForm = ref(false)
-
-// Pagination state
 const currentPage = ref(1)
 const itemsPerPage = 10
 
-// Filter logic
+const genderOptions = computed(() =>
+  GENDER_OPTIONS.map((g) => ({ label: g.label, value: g.value })),
+)
+
 const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
-  return !q ? customers.value : customers.value.filter((c) =>
-    [c.fullName, c.phone, c.email, c.address].some((val) => val && val.toLowerCase().includes(q))
-  )
+  return !q
+    ? customers.value
+    : customers.value.filter((c) =>
+        [c.fullName, c.phone, c.email, c.address, c.cccd, getGenderLabel(c.gender)]
+          .some((val) => val && String(val).toLowerCase().includes(q)),
+      )
 })
 
-// Pagination calculations
-const totalPages = computed(() => {
-  return Math.ceil(filtered.value.length / itemsPerPage) || 1
-})
+const totalPages = computed(() => Math.ceil(filtered.value.length / itemsPerPage) || 1)
 
 const visible = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filtered.value.slice(start, start + itemsPerPage)
 })
 
-// Status display
 const paginationInfo = computed(() => {
   const total = filtered.value.length
   if (total === 0) return ''
@@ -43,7 +62,6 @@ const paginationInfo = computed(() => {
   return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
 })
 
-// Reset to page 1 when search changes
 watch(search, () => {
   currentPage.value = 1
 })
@@ -51,7 +69,9 @@ watch(search, () => {
 function reset() {
   editingId.value = null
   showForm.value = false
-  Object.assign(form, { fullName: '', phone: '', email: '', address: '' })
+  Object.assign(form, {
+    fullName: '', phone: '', email: '', address: '', gender: 0, cccd: '', age: null,
+  })
 }
 
 async function load() {
@@ -68,24 +88,39 @@ function edit(item: Customer) {
     fullName: item.fullName,
     phone: item.phone,
     email: item.email || '',
-    address: item.address || ''
+    address: item.address || '',
+    gender: item.gender ?? 0,
+    cccd: item.cccd || '',
+    age: item.age ?? null,
   })
   showForm.value = true
 }
 
 async function save() {
+  error.value = ''
   try {
+    const extras = normalizeCustomerFormExtras(form)
     if (editingId.value) {
       const current = customers.value.find((x) => x.id === editingId.value)!
-      await updateCustomer({ ...current, ...form })
-    } else await createCustomer(form)
-    reset(); await load()
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể lưu khách hàng.' }
+      await updateCustomer({ ...current, ...form, ...extras })
+    } else {
+      await createCustomer({ ...form, ...extras })
+    }
+    reset()
+    await load()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Không thể lưu khách hàng.'
+  }
 }
 
 async function remove(item: Customer) {
   if (!confirm(`Xóa khách hàng ${item.fullName}?`)) return
-  try { await deleteCustomer(item.id); await load() } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể xóa.' }
+  try {
+    await deleteCustomer(item.id, item.phone)
+    await load()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Không thể xóa.'
+  }
 }
 
 onMounted(load)
@@ -108,7 +143,6 @@ onMounted(load)
 
     <p v-if="error" class="alert error">{{ error }}</p>
 
-    <!-- Customer modal form dialog -->
     <div v-if="showForm" class="modal-backdrop" @click="reset" />
     <aside v-if="showForm" class="admin-modal" aria-label="Biểu mẫu khách hàng">
       <div class="modal-head">
@@ -120,6 +154,11 @@ onMounted(load)
         <label>Số điện thoại<input v-model="form.phone" required /></label>
         <label>Email<input v-model="form.email" type="email" /></label>
         <label>Địa chỉ<input v-model="form.address" /></label>
+        <label>Giới tính
+          <SearchableSelect v-model="form.gender" :options="genderOptions" placeholder="Chọn giới tính" />
+        </label>
+        <label>CCCD<input v-model="form.cccd" /></label>
+        <label>Tuổi<input v-model.number="form.age" type="number" min="1" max="120" /></label>
         <div class="actions">
           <button class="primary">Lưu</button>
           <button type="button" @click="reset">Hủy</button>
@@ -127,13 +166,15 @@ onMounted(load)
       </form>
     </aside>
 
-    <!-- Full width table -->
     <article class="panel table-wrap">
       <table>
         <thead>
           <tr>
             <th>Khách hàng</th>
             <th>Liên hệ</th>
+            <th>Giới tính</th>
+            <th>CCCD</th>
+            <th>Tuổi</th>
             <th>Đơn hàng</th>
             <th>Đã mua</th>
             <th>Công nợ</th>
@@ -144,6 +185,9 @@ onMounted(load)
           <tr v-for="item in visible" :key="item.id">
             <td>{{ item.fullName }}<small>{{ item.address }}</small></td>
             <td>{{ item.phone }}<small>{{ item.email }}</small></td>
+            <td>{{ getGenderLabel(item.gender) }}</td>
+            <td>{{ item.cccd || '—' }}</td>
+            <td>{{ item.age ?? '—' }}</td>
             <td>{{ item.orderCount }}</td>
             <td>{{ formatCurrency(item.totalSpent) }}</td>
             <td>{{ formatCurrency(item.currentDebt) }}</td>
@@ -155,45 +199,14 @@ onMounted(load)
         </tbody>
       </table>
 
-      <!-- Pagination -->
       <div v-if="totalPages > 1" class="pagination-footer">
         <span class="pagination-info">{{ paginationInfo }}</span>
         <div class="pagination-controls">
-          <button 
-            type="button" 
-            :disabled="currentPage === 1"
-            @click="currentPage = 1"
-            aria-label="Về đầu"
-            title="Về đầu"
-          >
-            <i class="pi pi-chevron-double-left" />
-          </button>
-          <button 
-            type="button" 
-            :disabled="currentPage === 1"
-            @click="currentPage--"
-            aria-label="Trang trước"
-          >
-            <i class="pi pi-chevron-left" />
-          </button>
+          <button type="button" :disabled="currentPage === 1" @click="currentPage = 1"><i class="pi pi-chevron-double-left" /></button>
+          <button type="button" :disabled="currentPage === 1" @click="currentPage--"><i class="pi pi-chevron-left" /></button>
           <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
-          <button 
-            type="button" 
-            :disabled="currentPage === totalPages"
-            @click="currentPage++"
-            aria-label="Trang sau"
-          >
-            <i class="pi pi-chevron-right" />
-          </button>
-          <button 
-            type="button" 
-            :disabled="currentPage === totalPages"
-            @click="currentPage = totalPages"
-            aria-label="Về cuối"
-            title="Về cuối"
-          >
-            <i class="pi pi-chevron-double-right" />
-          </button>
+          <button type="button" :disabled="currentPage === totalPages" @click="currentPage++"><i class="pi pi-chevron-right" /></button>
+          <button type="button" :disabled="currentPage === totalPages" @click="currentPage = totalPages"><i class="pi pi-chevron-double-right" /></button>
         </div>
       </div>
     </article>
@@ -201,7 +214,6 @@ onMounted(load)
 </template>
 
 <style scoped>
-/* Pagination Styles */
 .pagination-footer {
   display: flex;
   align-items: center;
@@ -211,28 +223,20 @@ onMounted(load)
   background: #fafafa;
   gap: 20px;
 }
-
 .app-dark .pagination-footer {
   border-top-color: #374151;
   background: #1f2937;
 }
-
 .pagination-info {
   font-size: 12px;
   color: #6b7280;
   min-width: 180px;
 }
-
-.app-dark .pagination-info {
-  color: #9ca3af;
-}
-
 .pagination-controls {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .pagination-controls button {
   width: 36px;
   height: 36px;
@@ -240,46 +244,15 @@ onMounted(load)
   border: 1px solid #d1d5db;
   border-radius: 4px;
   background: white;
-  color: #374151;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
 }
-
-.app-dark .pagination-controls button {
-  border-color: #4b5563;
-  background: #374151;
-  color: #e5e7eb;
-}
-
-.pagination-controls button:hover:not(:disabled) {
-  border-color: #3b82f6;
-  background: #f3f4f6;
-  color: #1f2937;
-}
-
-.app-dark .pagination-controls button:hover:not(:disabled) {
-  border-color: #3b82f6;
-  background: #4b5563;
-  color: #e5e7eb;
-}
-
 .pagination-controls button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 .page-indicator {
   font-size: 12px;
   color: #6b7280;
   padding: 0 10px;
-  white-space: nowrap;
-}
-
-.app-dark .page-indicator {
-  color: #9ca3af;
 }
 </style>

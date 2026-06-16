@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import {
   createUser,
   deleteUser,
@@ -50,6 +51,20 @@ const visible = computed(() => {
   return filtered.value.slice(start, start + itemsPerPage)
 })
 
+const editingUser = computed(() =>
+  editingId.value ? users.value.find((u) => u.id === editingId.value) ?? null : null,
+)
+const isEditingAdmin = computed(() => editingUser.value?.role === 'Admin')
+
+const roleOptions = computed(() =>
+  USER_ROLES.map((role) => ({ label: role.label, value: role.value })),
+)
+const sexOptions = [
+  { label: 'Nam', value: 0 },
+  { label: 'Nữ', value: 1 },
+  { label: 'Khác', value: 2 },
+]
+
 // Status display
 const paginationInfo = computed(() => {
   const total = filtered.value.length
@@ -99,7 +114,7 @@ async function save() {
       const payload = {
         id: editingId.value,
         ...values,
-        ...(passwordHash ? { passwordHash } : {}),
+        ...(passwordHash && !isEditingAdmin.value ? { passwordHash } : {}),
       }
       await updateUser(payload)
     } else {
@@ -147,10 +162,23 @@ onMounted(load)
         <label>Tên đăng nhập<input v-model="form.userName" required /></label>
         <label>Họ tên<input v-model="form.fullName" required /></label>
         <label>Email<input v-model="form.email" type="email" required /></label>
-        <label>Mật khẩu<input v-model="form.passwordHash" type="password" :required="!editingId" /></label>
+        <label>Mật khẩu
+          <input
+            v-model="form.passwordHash"
+            type="password"
+            :required="!editingId"
+            :disabled="isEditingAdmin"
+            :placeholder="isEditingAdmin ? '********' : ''"
+          />
+        </label>
+        <p v-if="isEditingAdmin" class="admin-password-note">Không thể đổi mật khẩu tài khoản Admin.</p>
         <label>Ngày sinh<input v-model="form.dateOfBirth" type="date" required /></label>
-        <label>Vai trò<select v-model="form.role"><option v-for="role in USER_ROLES" :key="role.value" :value="role.value">{{ role.label }}</option></select></label>
-        <label>Giới tính<select v-model.number="form.sex"><option :value="0">Nam</option><option :value="1">Nữ</option><option :value="2">Khác</option></select></label>
+        <label>Vai trò
+          <SearchableSelect v-model="form.role" :options="roleOptions" placeholder="Chọn vai trò" />
+        </label>
+        <label>Giới tính
+          <SearchableSelect v-model="form.sex" :options="sexOptions" placeholder="Chọn giới tính" />
+        </label>
         <label>Địa chỉ<input v-model="form.address" /></label>
         <div class="actions">
           <button class="primary">Lưu</button>
@@ -229,6 +257,11 @@ onMounted(load)
 
 <style scoped>
 .role-label { display: inline-flex; padding: 6px 9px; border-radius: 99px; color: #4338ca; background: #eef2ff; font-size: 11px; font-weight: 750; }
+.admin-password-note {
+  margin: -6px 0 10px;
+  font-size: 12px;
+  color: #64748b;
+}
 .app-dark .role-label { color: #a5b4fc; background: rgb(99 102 241 / 15%); }
 
 /* Pagination Styles */

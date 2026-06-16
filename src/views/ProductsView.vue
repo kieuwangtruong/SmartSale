@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import { formatCurrency } from '../services/orderApi'
 import { getSuppliers, type Supplier } from '../services/orderApi'
 import {
@@ -73,6 +74,15 @@ const visible = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filtered.value.slice(start, start + itemsPerPage)
 })
+
+const categoryOptions = computed(() => [
+  { label: 'Chọn danh mục', value: 0 },
+  ...categories.value.map((c) => ({ label: c.name, value: c.id })),
+])
+const supplierOptions = computed(() => [
+  { label: 'Chọn nhà cung cấp', value: 0 },
+  ...suppliers.value.map((s) => ({ label: s.name, value: s.id })),
+])
 
 // Status display
 const paginationInfo = computed(() => {
@@ -175,8 +185,12 @@ onMounted(load)
       <form class="form admin-modal-body" @submit.prevent="save">
         <label v-if="editingId">ID sản phẩm<input :value="editingId" disabled /></label>
         <label>Tên sản phẩm<input v-model="form.name" required /></label>
-        <label>Danh mục<select v-model.number="form.categoryId" required><option :value="0">Chọn danh mục</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
-        <label>Nhà cung cấp<select v-model.number="form.supplierId" required><option :value="0">Chọn nhà cung cấp</option><option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option></select></label>
+        <label>Danh mục
+          <SearchableSelect v-model="form.categoryId" :options="categoryOptions" placeholder="Tìm danh mục..." />
+        </label>
+        <label>Nhà cung cấp
+          <SearchableSelect v-model="form.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
+        </label>
         <label>Giá nhập<input v-model.number="form.importPrice" type="number" min="0" /></label>
         <label>Giá bán<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
         <label>Tồn kho<input v-model.number="form.quantity" type="number" min="0" /></label>

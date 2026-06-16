@@ -1,4 +1,5 @@
 import { API_URLS } from './config'
+import { getErrorMessage, translateApiMessage } from './apiMessages'
 
 export type UserRole = 'SalesStaff' | 'Admin' | 'WarehouseKeeper'
 
@@ -97,7 +98,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
     try {
       payload = JSON.parse(text) as ApiEnvelope<T> | T
     } catch {
-      throw new Error(text)
+      throw new Error(translateApiMessage(text))
     }
   }
 
@@ -106,7 +107,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
       payload && typeof payload === 'object' && 'message' in payload
         ? String((payload as ApiEnvelope<T>).message || response.statusText)
         : response.statusText
-    throw new Error(message || `HTTP ${response.status}`)
+    throw new Error(translateApiMessage(message || `HTTP ${response.status}`))
   }
 
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -142,6 +143,8 @@ async function refreshAccessToken(): Promise<string | null> {
 
   return refreshPromise
 }
+
+export { getErrorMessage, translateApiMessage } from './apiMessages'
 
 export async function apiRequest<T>(
   baseUrl: string,
