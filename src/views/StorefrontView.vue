@@ -385,7 +385,7 @@ onUnmounted(() => {
       <div class="header-right">
         <RouterLink class="customer-link" to="/customer-login">
           <i class="pi pi-user" />
-          <span>Tai khoan</span>
+          <span>Tài khoản</span>
         </RouterLink>
         <button class="theme-toggle" type="button" @click="toggleDarkMode" aria-label="Đổi giao diện">
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />

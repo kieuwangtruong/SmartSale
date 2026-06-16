@@ -29,7 +29,7 @@ async function submit() {
     await auth.login(form.email, form.password)
     await router.replace('/customer')
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Khong the xu ly tai khoan.'
+    error.value = exception instanceof Error ? exception.message : 'Không thể xử lý tài khoản.'
   } finally {
     loading.value = false
   }
@@ -40,25 +40,25 @@ async function submit() {
   <main class="customer-auth">
     <section class="auth-card">
       <span class="eyebrow">CUSTOMER</span>
-      <h1>{{ mode === 'login' ? 'Dang nhap khach hang' : 'Dang ky khach hang' }}</h1>
-      <p>Dang nhap de xem hang thanh vien va lich su mua hang.</p>
+      <h1>{{ mode === 'login' ? 'Đăng nhập khách hàng' : 'Đăng ký khách hàng' }}</h1>
+      <p>Đăng nhập để xem hạng thành viên và lịch sử mua hàng.</p>
       <form @submit.prevent="submit">
         <input v-if="mode === 'register'" v-model="form.userName" required placeholder="Ten dang nhap" />
         <input v-if="mode === 'register'" v-model="form.fullName" required placeholder="Ho ten" />
         <input v-model="form.email" required type="email" placeholder="Email" />
-        <input v-model="form.password" required type="password" placeholder="Mat khau" />
+        <input v-model="form.password" required type="password" placeholder="Mật khẩu" />
         <input v-if="mode === 'register'" v-model="form.dateOfBirth" type="date" />
         <select v-if="mode === 'register'" v-model.number="form.sex">
           <option :value="0">Nam</option>
           <option :value="1">Nu</option>
           <option :value="2">Khac</option>
         </select>
-        <input v-if="mode === 'register'" v-model="form.address" placeholder="Dia chi" />
+        <input v-if="mode === 'register'" v-model="form.address" placeholder="Địa chỉ" />
         <p v-if="error" class="error">{{ error }}</p>
-        <button :disabled="loading" type="submit">{{ loading ? 'Dang xu ly...' : 'Tiep tuc' }}</button>
+        <button :disabled="loading" type="submit">{{ loading ? 'Đang xử lý...' : 'Tiếp tục' }}</button>
       </form>
       <button class="link-button" type="button" @click="mode = mode === 'login' ? 'register' : 'login'">
-        {{ mode === 'login' ? 'Chua co tai khoan? Dang ky' : 'Da co tai khoan? Dang nhap' }}
+        {{ mode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập' }}
       </button>
     </section>
   </main>

@@ -45,7 +45,7 @@ async function saveAttendance() {
     })
     await selectEmployee(selected.value)
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Khong the luu cham cong.'
+    error.value = exception instanceof Error ? exception.message : 'Không thể lưu chấm công.'
   }
 }
 
@@ -56,7 +56,7 @@ onMounted(loadEmployees)
   <section class="hr-grid">
     <aside class="panel">
       <div class="heading">
-        <h2>Nhan su</h2>
+        <h2>Nhân sự</h2>
         <input v-model="search" placeholder="Tim ten/email..." @keyup.enter="loadEmployees" />
       </div>
       <button type="button" @click="loadEmployees">Tim kiem</button>
@@ -93,8 +93,8 @@ onMounted(loadEmployees)
           <option value="Late">Late</option>
           <option value="Leave">Leave</option>
         </select>
-        <input v-model="form.note" placeholder="Ghi chu" />
-        <button type="button" @click="saveAttendance">Luu cham cong</button>
+        <input v-model="form.note" placeholder="Ghi chú" />
+        <button type="button" @click="saveAttendance">Lưu chấm công</button>
       </div>
 
       <table>
@@ -105,7 +105,7 @@ onMounted(loadEmployees)
             <th>Gio ra</th>
             <th>Trang thai</th>
             <th>Gio lam</th>
-            <th>Ghi chu</th>
+            <th>Ghi chú</th>
           </tr>
         </thead>
         <tbody>
@@ -118,7 +118,7 @@ onMounted(loadEmployees)
             <td>{{ record.note || '-' }}</td>
           </tr>
           <tr v-if="!attendance.length">
-            <td colspan="6">Chua co du lieu cham cong.</td>
+            <td colspan="6">Chưa có dữ liệu chấm công.</td>
           </tr>
         </tbody>
       </table>

@@ -22,7 +22,7 @@ async function load() {
     profile.value = me
     orders.value = history
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Khong the tai ho so khach hang.'
+    error.value = exception instanceof Error ? exception.message : 'Không thể tải hồ sơ khách hàng.'
   } finally {
     loading.value = false
   }
@@ -36,42 +36,42 @@ onMounted(load)
     <div class="page-heading">
       <div>
         <span class="eyebrow">CUSTOMER</span>
-        <h2>Ho so va hang thanh vien</h2>
+        <h2>Hồ sơ và hạng thành viên</h2>
       </div>
-      <button type="button" @click="load">Lam moi</button>
+      <button type="button" @click="load">Làm mới</button>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <p v-else-if="loading">Dang tai du lieu...</p>
+    <p v-else-if="loading">Đang tải dữ liệu...</p>
 
     <div v-else class="profile-grid">
       <article class="metric-card">
-        <small>Khach hang</small>
+        <small>Khách hàng</small>
         <strong>{{ profile?.fullName }}</strong>
         <span>{{ profile?.email }}</span>
       </article>
       <article class="metric-card">
-        <small>Hang thanh vien</small>
-        <strong>{{ profile?.customerTierLabel || 'Thanh vien thuong' }}</strong>
+        <small>Hạng thành viên</small>
+        <strong>{{ profile?.customerTierLabel || 'Thành viên thường' }}</strong>
         <span>{{ profile?.paidOrderCount ?? paidOrders.length }} don da thanh toan</span>
       </article>
       <article class="metric-card">
-        <small>Tong lich su mua</small>
+        <small>Tổng lịch sử mua</small>
         <strong>{{ orders.length }}</strong>
         <span>Chi tinh hang dua tren don da thanh toan</span>
       </article>
     </div>
 
     <div class="table-card">
-      <h3>Lich su don hang</h3>
+      <h3>Lịch sử đơn hàng</h3>
       <table>
         <thead>
           <tr>
             <th>Ma don</th>
             <th>Ngay tao</th>
             <th>Trang thai</th>
-            <th>San pham</th>
-            <th>Tong tien</th>
+            <th>Sản phẩm</th>
+            <th>Tổng tiền</th>
             <th>Giam gia</th>
           </tr>
         </thead>
@@ -85,7 +85,7 @@ onMounted(load)
             <td>{{ formatCurrency(order.discountAmount) }}</td>
           </tr>
           <tr v-if="!orders.length">
-            <td colspan="6">Chua co don hang.</td>
+            <td colspan="6">Chưa có đơn hàng.</td>
           </tr>
         </tbody>
       </table>

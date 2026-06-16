@@ -138,7 +138,7 @@ async function confirmReceipt(item: StockReceipt) {
 }
 async function submitReceiptForApproval(item: StockReceipt) {
   try { await submitStockReceipt(item.id); await load() }
-  catch (e) { error.value = e instanceof Error ? e.message : 'Khong the gui duyet phieu.' }
+  catch (e) { error.value = e instanceof Error ? e.message : 'Không thể gửi duyệt phiếu.' }
 }
 async function cancelReceipt(item: StockReceipt) {
   try { await cancelStockReceipt(item.id); await load() }
@@ -181,9 +181,9 @@ onMounted(load)
         <label>Nhà cung cấp
           <SearchableSelect v-model="receipt.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
         </label>
-        <label>Ma hoa don<input v-model="receipt.invoiceNumber" /></label>
-        <label>Ngay nhap<input v-model="receipt.importDate" type="date" /></label>
-        <label>Ghi chu<input v-model="receipt.note" /></label>
+        <label>Mã hóa đơn<input v-model="receipt.invoiceNumber" /></label>
+        <label>Ngày nhập<input v-model="receipt.importDate" type="date" /></label>
+        <label>Ghi chú<input v-model="receipt.note" /></label>
         
         <div class="form-section-title">Danh sách mặt hàng nhập</div>
         <div v-for="(item, index) in receipt.items" :key="index" class="receipt-item">
@@ -285,9 +285,9 @@ onMounted(load)
               <td>{{ item.items.map((x) => `${x.productName} x${x.quantity}`).join(', ') }}</td>
               <td>{{ item.status }}</td>
               <td class="actions">
-                <button v-if="item.status === 'Draft'" class="primary" @click="submitReceiptForApproval(item)">Gui duyet</button>
-                <button v-if="item.status === 'PendingApproval'" class="primary" @click="confirmReceipt(item)">Duyet</button>
-                <button v-if="item.status === 'PendingApproval'" class="danger" @click="cancelReceipt(item)">Tu choi</button>
+                <button v-if="item.status === 'Draft'" class="primary" @click="submitReceiptForApproval(item)">Gửi duyệt</button>
+                <button v-if="item.status === 'PendingApproval'" class="primary" @click="confirmReceipt(item)">Duyệt</button>
+                <button v-if="item.status === 'PendingApproval'" class="danger" @click="cancelReceipt(item)">Từ chối</button>
               </td>
             </tr>
           </tbody>

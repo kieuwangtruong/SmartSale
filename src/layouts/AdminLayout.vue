@@ -13,15 +13,15 @@ const router = useRouter()
 const sidebarOpen = ref(false)
 
 const allNavigation = [
-  { to: '/dashboard', label: 'Tong quan', icon: 'pi pi-chart-bar', roles: ['Admin'] },
-  { to: '/orders', label: 'Don hang', icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
-  { to: '/customers', label: 'Khach hang', icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
-  { to: '/suppliers', label: 'Nha cung cap', icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/products', label: 'San pham', icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/inventory', label: 'Kho hang', icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/users', label: 'Nhan su', icon: 'pi pi-user-edit', roles: ['Admin'] },
-  { to: '/employees', label: 'Cham cong', icon: 'pi pi-calendar-clock', roles: ['Admin'] },
-  { to: '/customer', label: 'Ho so cua toi', icon: 'pi pi-id-card', roles: ['Customer'] },
+  { to: '/dashboard', label: 'Tổng quan', icon: 'pi pi-chart-bar', roles: ['Admin'] },
+  { to: '/orders', label: 'Đơn hàng', icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
+  { to: '/customers', label: 'Khách hàng', icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
+  { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
+  { to: '/products', label: 'Sản phẩm', icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper'] },
+  { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
+  { to: '/users', label: 'Nhân sự', icon: 'pi pi-user-edit', roles: ['Admin'] },
+  { to: '/employees', label: 'Chấm công', icon: 'pi pi-calendar-clock', roles: ['Admin'] },
+  { to: '/customer', label: 'Hồ sơ của tôi', icon: 'pi pi-id-card', roles: ['Customer'] },
 ]
 const navigation = computed(() =>
   allNavigation.filter((item) => auth.role && item.roles.includes(auth.role)),
