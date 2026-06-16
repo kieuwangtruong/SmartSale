@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { getSession, type UserRole } from '../services/apiClient'
 
 declare module 'vue-router' {
@@ -17,14 +17,30 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
   {
-    path: '/admin',
+    path: '/login/admin',
     name: 'admin-login',
     component: () => import('../views/LoginView.vue'),
-    meta: { public: true, adminLogin: true },
+    meta: { public: true, adminLogin: true, loginRole: 'Admin' },
+  },
+  {
+    path: '/login/staff',
+    name: 'staff-login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { public: true, adminLogin: true, loginRole: 'SalesStaff' },
+  },
+  {
+    path: '/login/warehouse',
+    name: 'warehouse-login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { public: true, adminLogin: true, loginRole: 'WarehouseKeeper' },
+  },
+  {
+    path: '/admin',
+    redirect: '/login/admin',
   },
   {
     path: '/login',
-    redirect: '/admin',
+    redirect: '/login/admin',
   },
   {
     path: '/customer-login',
@@ -138,6 +154,12 @@ router.beforeEach((to) => {
   }
 
   if (!session) {
+    if (to.path.includes('/inventory') || to.path.includes('/products') || to.path.includes('/suppliers')) {
+      return { name: 'warehouse-login', query: { redirect: to.fullPath } }
+    }
+    if (to.path.includes('/orders') || to.path.includes('/customers')) {
+      return { name: 'staff-login', query: { redirect: to.fullPath } }
+    }
     return { name: 'admin-login', query: { redirect: to.fullPath } }
   }
 

@@ -28,8 +28,15 @@ const error = ref('')
 const editingId = ref<number | null>(null)
 const categoryName = ref('')
 const form = reactive<ProductPayload>({
-  name: '', importPrice: 0, sellingPrice: 0,
-  imageUrl: '', categoryId: 0, quantity: 0, reserveStock: 0,
+  name: '',
+  importPrice: 0,
+  sellingPrice: 0,
+  originalPrice: null,
+  salePrice: null,
+  imageUrl: '',
+  categoryId: 0,
+  quantity: 0,
+  reserveStock: 0,
   supplierId: 0,
 })
 
@@ -102,7 +109,18 @@ function reset() {
   editingId.value = null
   showProductModal.value = false
   showCategoryModal.value = false
-  Object.assign(form, { name: '', importPrice: 0, sellingPrice: 0, imageUrl: '', categoryId: 0, supplierId: 0, quantity: 0, reserveStock: 0 })
+  Object.assign(form, {
+    name: '',
+    importPrice: 0,
+    sellingPrice: 0,
+    originalPrice: null,
+    salePrice: null,
+    imageUrl: '',
+    categoryId: 0,
+    supplierId: 0,
+    quantity: 0,
+    reserveStock: 0,
+  })
 }
 async function load() {
   try {
@@ -121,10 +139,16 @@ async function load() {
 function edit(p: Product) {
   editingId.value = p.id
   Object.assign(form, {
-    name: p.name, importPrice: p.importPrice,
-    sellingPrice: p.sellingPrice, imageUrl: p.imageUrl || '',
-    categoryId: p.categoryId, supplierId: p.supplierId,
-    quantity: p.quantity, reserveStock: p.reserveStock,
+    name: p.name,
+    importPrice: p.importPrice,
+    sellingPrice: p.sellingPrice,
+    originalPrice: p.originalPrice ?? null,
+    salePrice: p.salePrice ?? null,
+    imageUrl: p.imageUrl || '',
+    categoryId: p.categoryId,
+    supplierId: p.supplierId,
+    quantity: p.quantity,
+    reserveStock: p.reserveStock,
   })
   showProductModal.value = true
 }
@@ -183,20 +207,42 @@ onMounted(load)
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="save">
-        <label v-if="editingId">ID sản phẩm<input :value="editingId" disabled /></label>
-        <label>Tên sản phẩm<input v-model="form.name" required /></label>
-        <label>Danh mục
-          <SearchableSelect v-model="form.categoryId" :options="categoryOptions" placeholder="Tìm danh mục..." />
-        </label>
-        <label>Nhà cung cấp
-          <SearchableSelect v-model="form.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
-        </label>
-        <label>Giá nhập<input v-model.number="form.importPrice" type="number" min="0" /></label>
-        <label>Giá bán<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
-        <label>Tồn kho<input v-model.number="form.quantity" type="number" min="0" /></label>
-        <label>Ngưỡng cảnh báo<input v-model.number="form.reserveStock" type="number" min="0" /></label>
-        <label>Ảnh URL<input v-model="form.imageUrl" /></label>
-        <div class="actions"><button class="primary">Lưu</button><button type="button" @click="reset">Hủy</button></div>
+        <div class="form-row" v-if="editingId">
+          <label>ID sản phẩm<input :value="editingId" disabled /></label>
+          <label>Tên sản phẩm<input v-model="form.name" required /></label>
+        </div>
+        <label v-else>Tên sản phẩm<input v-model="form.name" required /></label>
+
+        <div class="form-row">
+          <label>Danh mục
+            <SearchableSelect v-model="form.categoryId" :options="categoryOptions" placeholder="Tìm danh mục..." />
+          </label>
+          <label>Nhà cung cấp
+            <SearchableSelect v-model="form.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>Giá nhập (VND)<input v-model.number="form.importPrice" type="number" min="0" /></label>
+          <label>Giá bán hiện tại (VND)<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
+        </div>
+
+        <div class="form-row">
+          <label>Giá gốc (để gạch ngang)<input v-model.number="form.originalPrice" type="number" min="0" placeholder="Chỉ nhập khi giảm giá" /></label>
+          <label>Giá khuyến mãi (sale)<input v-model.number="form.salePrice" type="number" min="0" placeholder="Chỉ nhập khi giảm giá" /></label>
+        </div>
+
+        <div class="form-row">
+          <label>Tồn kho ban đầu<input v-model.number="form.quantity" type="number" min="0" /></label>
+          <label>Ngưỡng cảnh báo<input v-model.number="form.reserveStock" type="number" min="0" /></label>
+        </div>
+
+        <label>Ảnh URL<input v-model="form.imageUrl" placeholder="https://..." /></label>
+
+        <div class="actions">
+          <button class="primary">Lưu sản phẩm</button>
+          <button type="button" @click="reset">Hủy</button>
+        </div>
       </form>
     </aside>
 

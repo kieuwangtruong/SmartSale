@@ -30,7 +30,9 @@ const orders = ref<Order[]>([])
 const products = ref<Product[]>([])
 const customers = ref<Customer[]>([])
 const loading = ref(false)
-const error = ref('')
+const pageError = ref('')
+const orderError = ref('')
+const customerError = ref('')
 const filter = ref<'All' | OrderStatus>('All')
 const form = reactive({
   customerId: null as number | null,
@@ -125,6 +127,7 @@ function getProductPrice(productId: number) {
 
 function resetCustomerForm() {
   showCustomerForm.value = false
+  customerError.value = ''
   Object.assign(customerForm, {
     fullName: '', phone: '', email: '', address: '', gender: 0, cccd: '', age: null,
   })
@@ -132,6 +135,7 @@ function resetCustomerForm() {
 
 function reset() {
   showForm.value = false
+  orderError.value = ''
   resetCustomerForm()
   Object.assign(form, {
     customerId: null, discountAmount: 0, amountPaid: 0, items: [{ productId: 0, quantity: 1 }],
@@ -146,7 +150,7 @@ function syncStatusDrafts(list: Order[] = orders.value) {
 
 async function load() {
   loading.value = true
-  error.value = ''
+  pageError.value = ''
   try {
     ;[orders.value, products.value, customers.value] = await Promise.all([
       getOrders(), getProducts(), getCustomers(),
@@ -154,7 +158,7 @@ async function load() {
     orders.value = filterVisibleOrders(orders.value)
     syncStatusDrafts()
   } catch (e) {
-    error.value = getErrorMessage(e, 'Không thể tải dữ liệu.')
+    pageError.value = getErrorMessage(e, 'Không thể tải dữ liệu.')
   } finally {
     loading.value = false
   }
@@ -169,7 +173,7 @@ function removeItem(index: number) {
 }
 
 async function submitCustomer() {
-  error.value = ''
+  customerError.value = ''
   try {
     const extras = normalizeCustomerFormExtras(customerForm)
     const created = await createCustomer({ ...customerForm, ...extras })
@@ -177,14 +181,14 @@ async function submitCustomer() {
     resetCustomerForm()
     customers.value = await getCustomers()
   } catch (e) {
-    error.value = getErrorMessage(e, 'Không thể tạo khách hàng.')
+    customerError.value = getErrorMessage(e, 'Không thể tạo khách hàng.')
   }
 }
 
 async function submit() {
   const items = form.items.filter((item) => item.productId > 0 && item.quantity > 0)
   if (!auth.user || !items.length) {
-    error.value = 'Vui lòng chọn ít nhất một sản phẩm.'
+    orderError.value = 'Vui lòng chọn ít nhất một sản phẩm.'
     return
   }
   try {
@@ -198,7 +202,7 @@ async function submit() {
     reset()
     await load()
   } catch (e) {
-    error.value = getErrorMessage(e, 'Không thể tạo đơn.')
+    orderError.value = getErrorMessage(e, 'Không thể tạo đơn.')
   }
 }
 
@@ -228,25 +232,25 @@ async function changeStatus(order: Order, status: OrderStatus | null) {
     resetStatusDraft(order)
     return
   }
-  error.value = ''
+  pageError.value = ''
   try {
     await updateOrderStatus(order.id, status)
     await load()
   } catch (e) {
     resetStatusDraft(order)
-    error.value = getErrorMessage(e, 'Không thể cập nhật trạng thái.')
+    pageError.value = getErrorMessage(e, 'Không thể cập nhật trạng thái.')
   }
 }
 
 async function remove(order: Order) {
   if (!confirm(`Xóa đơn #${order.id} (${getOrderStatusLabel(order.status)})?`)) return
 
-  error.value = ''
+  pageError.value = ''
   try {
     await deleteOrderAnyStatus(order.id, order.status)
     await load()
   } catch (e) {
-    error.value = getErrorMessage(e, 'Không thể xóa đơn.')
+    pageError.value = getErrorMessage(e, 'Không thể xóa đơn.')
   }
 }
 
@@ -274,7 +278,7 @@ onMounted(load)
       </div>
     </div>
 
-    <p v-if="error" class="alert error">{{ error }}</p>
+    <p v-if="pageError" class="alert error">{{ pageError }}</p>
 
     <div v-if="showForm" class="modal-backdrop" @click="reset" />
     <aside v-if="showForm" class="admin-modal" aria-label="Tạo đơn bán hàng">
@@ -283,6 +287,7 @@ onMounted(load)
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="submit">
+        <p v-if="orderError" class="alert error" style="margin-bottom: 15px;">{{ orderError }}</p>
         <div class="customer-row">
           <label>Khách hàng
             <SearchableSelect
@@ -330,6 +335,7 @@ onMounted(load)
         <button type="button" @click="resetCustomerForm"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="submitCustomer">
+        <p v-if="customerError" class="alert error" style="margin-bottom: 15px;">{{ customerError }}</p>
         <label>Họ tên<input v-model="customerForm.fullName" required /></label>
         <label>Số điện thoại<input v-model="customerForm.phone" required /></label>
         <label>Email<input v-model="customerForm.email" type="email" /></label>
@@ -379,7 +385,7 @@ onMounted(load)
                 class="status-select-wrap"
                 @update:model-value="changeStatus(order, $event as OrderStatus)"
               />
-              <span v-else class="status-badge">{{ getOrderStatusLabel(order.status) }}</span>
+              <span v-else :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span>
             </td>
             <td>
               <button v-if="isAdmin" class="danger" @click="remove(order)">Xóa</button>

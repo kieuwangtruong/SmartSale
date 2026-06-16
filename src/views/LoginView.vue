@@ -1,5 +1,5 @@
-﻿<script setup lang="ts">
-import { computed, ref } from 'vue'
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
@@ -17,6 +17,17 @@ const router = useRouter()
 const route = useRoute()
 
 const activeRole = ref<UserRole>('Admin')
+const isRoleLocked = computed(() => !!route.meta.loginRole)
+
+watch(
+  () => route.meta.loginRole,
+  (newRole) => {
+    if (newRole) {
+      activeRole.value = newRole as UserRole
+    }
+  },
+  { immediate: true },
+)
 
 const rolesList = [
   { 
@@ -71,6 +82,10 @@ function changeRole(role: UserRole) {
     email.value = found.defaultEmail
     password.value = found.defaultPassword
   }
+  // Redirect to sync URL and load correct layout
+  if (role === 'Admin') router.push('/login/admin')
+  else if (role === 'SalesStaff') router.push('/login/staff')
+  else if (role === 'WarehouseKeeper') router.push('/login/warehouse')
 }
 
 async function submit() {
@@ -88,6 +103,15 @@ async function submit() {
       error.value = 'Tài khoản khách hàng vui lòng đăng nhập ở trang bán hàng.'
       return
     }
+
+    if (user.role !== activeRole.value) {
+      await auth.logout()
+      const currentRoleObj = rolesList.find((r) => r.role === activeRole.value)
+      const roleLabel = currentRoleObj ? currentRoleObj.label : activeRole.value
+      error.value = `Tài khoản này không có quyền đăng nhập với vai trò ${roleLabel}.`
+      return
+    }
+
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
     await router.replace(redirect || homeForRole(user.role))
   } catch (exception) {
@@ -396,13 +420,16 @@ async function submit() {
 
 
 :deep(.p-inputtext) {
-  background: rgba(255, 255, 255, 0.6) !important;
-  border: 1px solid rgba(15, 23, 42, 0.15) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(15, 23, 42, 0.18) !important;
   color: #0f172a !important;
 }
 :deep(.p-inputtext:focus) {
-  background: #ffffff !important;
+  background: rgba(255, 255, 255, 0.25) !important;
   border-color: #1d4ed8 !important;
+}
+:deep(.p-inputtext::placeholder) {
+  color: rgba(15, 23, 42, 0.5) !important;
 }
 
 .error-msg {
@@ -471,13 +498,16 @@ async function submit() {
 }
 
 :deep(.app-dark .p-inputtext) {
-  background: rgba(15, 23, 42, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
 }
 :deep(.app-dark .p-inputtext:focus) {
-  background: #0f172a !important;
+  background: rgba(255, 255, 255, 0.15) !important;
   border-color: #3b82f6 !important;
+}
+:deep(.app-dark .p-inputtext::placeholder) {
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
 .app-dark .error-msg {

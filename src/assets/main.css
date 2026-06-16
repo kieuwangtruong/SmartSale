@@ -575,3 +575,107 @@ td small { display: block; margin-top: 4px; color: #9199aa; }
   color: #f1f5f9 !important;
 }
 
+/* Multi-column aligned form layout */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+/* Compact status badges style matching image_eab221.png */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+.status-badge.pending,
+.status-badge.pendingpayment,
+.status-badge.processingpayment {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+.status-badge.paid {
+  background-color: #ccfbf1;
+  color: #0f766e;
+}
+.status-badge.completed {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+.status-badge.shipped {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+}
+.status-badge.processing {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+.status-badge.paymentcancelled,
+.status-badge.paymentexpired,
+.status-badge.paymentfailed,
+.status-badge.cancelled {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Dark Mode Overrides for Status Badges */
+.app-dark .status-badge.pending,
+.app-dark .status-badge.pendingpayment,
+.app-dark .status-badge.processingpayment {
+  background-color: rgb(217 119 6 / 15%);
+  color: #fbbf24;
+}
+.app-dark .status-badge.paid {
+  background-color: rgb(15 118 110 / 15%);
+  color: #2dd4bf;
+}
+.app-dark .status-badge.completed {
+  background-color: rgb(21 128 61 / 15%);
+  color: #4ade80;
+}
+.app-dark .status-badge.shipped {
+  background-color: rgb(126 34 206 / 15%);
+  color: #c084fc;
+}
+.app-dark .status-badge.processing {
+  background-color: rgb(29 78 216 / 15%);
+  color: #60a5fa;
+}
+.app-dark .status-badge.paymentcancelled,
+.app-dark .status-badge.paymentexpired,
+.app-dark .status-badge.paymentfailed,
+.app-dark .status-badge.cancelled {
+  background-color: rgb(185 28 28 / 15%);
+  color: #fca5a5;
+}
+
+/* Transparent logo & user card styles in Dark Mode to prevent text/image loss */
+.app-dark .admin-brand-mark {
+  background: transparent !important;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+}
+.app-dark .brand-logo {
+  background: transparent !important;
+  border: 1.5px solid #3b82f6;
+  color: #3b82f6;
+}
+.app-dark .profile-avatar {
+  background: transparent !important;
+  border: 1px solid #23304c;
+  color: #a5b4fc;
+}
+.app-dark input:not(.p-inputtext),
+.app-dark select:not(.p-select),
+.app-dark textarea {
+  background: transparent !important;
+  border-color: #23304c;
+  color: #f1f5f9;
+}

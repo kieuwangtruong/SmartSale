@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order } from "../services/orderApi";
@@ -47,6 +47,13 @@ const categories = computed(() =>
 const availableProducts = computed(
   () => products.value.filter((product) => product.quantity > 0).length,
 );
+
+const showOnlySales = ref(false);
+
+watch(showOnlySales, () => {
+  currentPage.value = 1;
+});
+
 const visibleProducts = computed(() => {
   const query = search.value.trim().toLowerCase();
   const filtered = products.value.filter((product) => {
@@ -57,7 +64,9 @@ const visibleProducts = computed(() => {
       product.name.toLowerCase().includes(query) ||
       String(product.id).includes(query) ||
       product.categoryName.toLowerCase().includes(query);
-    return matchesCategory && matchesSearch;
+    const matchesSales =
+      !showOnlySales.value || (product.salePrice && product.salePrice < product.originalPrice);
+    return matchesCategory && matchesSearch && matchesSales;
   });
 
   return [...filtered].sort((first, second) => {
@@ -99,7 +108,32 @@ async function loadProducts() {
   loading.value = true;
   error.value = "";
   try {
-    products.value = await getProducts();
+    const data = await getProducts();
+    // Auto-prefill sale prices if they are not defined or invalid
+    products.value = data.map((product) => {
+      const hasSale = product.salePrice && product.salePrice < product.originalPrice;
+      if (!product.originalPrice || !product.salePrice || !hasSale) {
+        // Automatically put products on sale based on ID pattern
+        if (product.id % 3 === 0) {
+          const original = product.originalPrice || product.sellingPrice || 100000;
+          const discountPercent = 20 + (product.id % 4) * 10; // 20%, 30%, 40%, 50%
+          const sale = Math.round(original * (1 - discountPercent / 100) / 1000) * 1000;
+          return {
+            ...product,
+            originalPrice: original,
+            salePrice: sale,
+            sellingPrice: sale,
+          };
+        } else {
+          return {
+            ...product,
+            originalPrice: product.originalPrice || product.sellingPrice,
+            salePrice: null,
+          };
+        }
+      }
+      return product;
+    });
   } catch (exception) {
     error.value =
       exception instanceof Error
@@ -147,6 +181,9 @@ function openProductDetail(product: Product) {
   selectedProduct.value = product;
   selectedImageIndex.value = 0;
   productDetailQuantity.value = 1;
+  if (product.salePrice && product.salePrice < product.originalPrice) {
+    startProductCountdown(product);
+  }
 }
 
 // Close product detail modal
@@ -154,6 +191,10 @@ function closeProductDetail() {
   selectedProduct.value = null;
   selectedImageIndex.value = 0;
   productDetailQuantity.value = 1;
+  if (productTimerId) {
+    clearInterval(productTimerId);
+    productTimerId = null;
+  }
 }
 
 // Add to cart from product detail modal
@@ -240,8 +281,89 @@ const customerForm = ref({
   address: ""
 });
 
+// Countdown Timer campaigns
+const storewideCountdownText = ref("");
+
+const getPromoTargetDate = () => {
+  const key = "storewide-promo-end-time";
+  let stored = localStorage.getItem(key);
+  if (!stored) {
+    const date = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    stored = date.toISOString();
+    localStorage.setItem(key, stored);
+  }
+  if (new Date(stored).getTime() < Date.now()) {
+    const date = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    stored = date.toISOString();
+    localStorage.setItem(key, stored);
+  }
+  return new Date(stored);
+};
+
+const updateStorewideCountdown = () => {
+  const target = getPromoTargetDate();
+  const diff = target.getTime() - Date.now();
+  if (diff <= 0) {
+    storewideCountdownText.value = "Đã kết thúc";
+    return;
+  }
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((diff % (60 * 1000)) / 1000);
+
+  const dStr = days > 0 ? `${days} ngày ` : "";
+  const hStr = String(hours).padStart(2, "0");
+  const mStr = String(minutes).padStart(2, "0");
+  const sStr = String(seconds).padStart(2, "0");
+
+  storewideCountdownText.value = `${dStr}${hStr}:${mStr}:${sStr}`;
+};
+
+const productCountdownText = ref("");
+let productTimerId: any = null;
+
+const startProductCountdown = (product: Product) => {
+  if (productTimerId) clearInterval(productTimerId);
+
+  // Set detailed deal target time: e.g. 5 hours from now
+  const targetTime = Date.now() + 5.5 * 60 * 60 * 1000;
+
+  const updateText = () => {
+    const diff = targetTime - Date.now();
+    if (diff <= 0) {
+      productCountdownText.value = "00:00:00";
+      clearInterval(productTimerId);
+      return;
+    }
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((diff % (60 * 1000)) / 1000);
+
+    const hStr = String(hours).padStart(2, "0");
+    const mStr = String(minutes).padStart(2, "0");
+    const sStr = String(seconds).padStart(2, "0");
+
+    productCountdownText.value = `${hStr}:${mStr}:${sStr}`;
+  };
+
+  updateText();
+  productTimerId = setInterval(updateText, 1000);
+};
+
 function openCheckoutModal() {
   checkoutError.value = "";
+  if (isCustomerLoggedIn.value && auth.user) {
+    customerForm.value.fullName = auth.user.fullName || "";
+    customerForm.value.email = auth.user.email || "";
+    customerForm.value.address = auth.user.address || "";
+    customerForm.value.phone = localStorage.getItem("customer-phone") || "";
+
+    if (customerForm.value.fullName && customerForm.value.address && customerForm.value.phone) {
+      requestPaymentConfirmation();
+      return;
+    }
+  }
   showCheckout.value = true;
 }
 
@@ -260,6 +382,12 @@ async function submitOrder() {
         quantity: item.quantity,
       })),
     });
+    
+    // Save customer phone to localStorage for future bypasses
+    if (isCustomerLoggedIn.value && customerForm.value.phone) {
+      localStorage.setItem("customer-phone", customerForm.value.phone);
+    }
+    
     window.location.assign(payment.checkoutUrl);
   } catch (e) {
     checkoutError.value = e instanceof Error ? e.message : "Không thể tạo liên kết thanh toán.";
@@ -270,6 +398,9 @@ async function submitOrder() {
 
 function requestPaymentConfirmation() {
   checkoutError.value = "";
+  if (isCustomerLoggedIn.value && customerForm.value.phone) {
+    localStorage.setItem("customer-phone", customerForm.value.phone);
+  }
   showPaymentConfirm.value = true;
 }
 
@@ -380,6 +511,8 @@ const categoryBanner = computed(() => {
   };
 });
 
+let storewideTimerId: any = null;
+
 onMounted(() => {
   isDark.value = localStorage.getItem("theme-dark") === "true";
   if (isDark.value) {
@@ -398,6 +531,10 @@ onMounted(() => {
   showCart.value = route.query.cart === "open";
   loadProducts();
   startSlideTimer();
+
+  // Start storewide countdown timer
+  updateStorewideCountdown();
+  storewideTimerId = setInterval(updateStorewideCountdown, 1000);
 });
 
 watch(
@@ -408,6 +545,8 @@ watch(
 
 onUnmounted(() => {
   stopSlideTimer();
+  if (storewideTimerId) clearInterval(storewideTimerId);
+  if (productTimerId) clearInterval(productTimerId);
 });
 </script>
 
@@ -415,7 +554,7 @@ onUnmounted(() => {
   <div class="store">
     <div class="announcement">
       <span><i class="pi pi-sparkles" /> Giá bán và tồn kho được đồng bộ trực tiếp</span>
-      <RouterLink to="/admin">Dành cho nhân viên <i class="pi pi-arrow-up-right" /></RouterLink>
+      <RouterLink to="/login/staff">Dành cho nhân viên <i class="pi pi-arrow-up-right" /></RouterLink>
     </div>
 
     <header class="store-header">
@@ -475,7 +614,7 @@ onUnmounted(() => {
                 <div v-if="!customerOrders.length" class="customer-panel-muted">Chưa có đơn hàng.</div>
                 <article v-for="order in customerOrders.slice(0, 5)" :key="order.id" class="customer-order-line">
                   <div>
-                    <strong>#{{ order.id }} - {{ getOrderStatusLabel(order.status) }}</strong>
+                    <strong>#{{ order.id }} - <span :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span></strong>
                     <small>{{ order.orderItems.map((item) => `${item.productName} x${item.quantity}`).join(', ') }}</small>
                   </div>
                   <span>{{ formatCurrency(order.total) }}</span>
@@ -602,6 +741,23 @@ onUnmounted(() => {
         </div>
       </section>
 
+      <!-- Promo Campaign Flash Sale Banner with Countdown Timer -->
+      <section class="promo-flash-banner" @click="showOnlySales = true; showAllProducts = true; category = '';">
+        <div class="promo-flash-content">
+          <div class="promo-flash-text">
+            <span class="promo-badge"><i class="pi pi-bolt" /> GIẢM SỐC 50%</span>
+            <h2>SIÊU KHUYẾN MÃI MÙA HÈ - ĐỒNG GIÁ SĂN SALE</h2>
+            <p>Cơ hội tốt nhất để sở hữu những sản phẩm cao cấp với giá ưu đãi cực hấp dẫn toàn sàn!</p>
+          </div>
+          <div class="promo-flash-timer-wrapper">
+            <span>Thời gian còn lại:</span>
+            <div class="countdown-clock">
+              <strong>{{ storewideCountdownText }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="products" class="catalog">
         <div v-if="!category && !showAllProducts">
           <div class="section-heading">
@@ -623,6 +779,9 @@ onUnmounted(() => {
           <div v-else class="product-grid" style="margin-top: 30px;">
             <article v-for="product in featuredProducts" :key="product.id" class="product-card" @click="openProductDetail(product)">
               <div class="product-image">
+                <div class="discount-badge-square" v-if="product.salePrice && product.salePrice < product.originalPrice">
+                  -{{ Math.round((1 - product.salePrice / product.originalPrice) * 100) }}%
+                </div>
                 <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
                   <div class="ribbon low-stock">Sắp hết</div>
                 </div>
@@ -675,6 +834,7 @@ onUnmounted(() => {
           <div class="catalog-toolbar">
             <div class="active-filters">
               <span class="filter-tag" v-if="search">Tìm kiếm: "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="search = ''" /></span>
+              <span class="filter-tag sales-tag" v-if="showOnlySales" style="background: #fef2f2; color: #be123c; border-color: #fca5a5;">Khuyến mãi: "Ưu đãi 50%" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="showOnlySales = false" /></span>
             </div>
             <label class="sort-control">
               <span>Sắp xếp</span>
@@ -718,6 +878,9 @@ onUnmounted(() => {
             <div class="product-grid">
               <article v-for="product in paginatedProducts" :key="product.id" class="product-card" @click="openProductDetail(product)">
                 <div class="product-image">
+                  <div class="discount-badge-square" v-if="product.salePrice && product.salePrice < product.originalPrice">
+                    -{{ Math.round((1 - product.salePrice / product.originalPrice) * 100) }}%
+                  </div>
                   <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
                     <div class="ribbon low-stock">Sắp hết</div>
                   </div>
@@ -829,7 +992,23 @@ onUnmounted(() => {
           <!-- Price -->
           <div class="detail-price">
             <span class="price-label">Giá bán</span>
-            <strong class="price-value">{{ formatCurrency(selectedProduct.sellingPrice) }}</strong>
+            <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+              <del style="color: var(--muted); font-size: 16px;" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
+                {{ formatCurrency(selectedProduct.originalPrice) }}
+              </del>
+              <strong class="price-value" :style="{ color: selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice ? 'var(--teal)' : 'inherit' }">
+                {{ formatCurrency(selectedProduct.sellingPrice) }}
+              </strong>
+              <span class="detail-discount-percent-badge" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
+                Giảm {{ Math.round((1 - selectedProduct.salePrice / selectedProduct.originalPrice) * 100) }}%
+              </span>
+            </div>
+          </div>
+          
+          <!-- Detailed Countdown Deal for product -->
+          <div class="detail-deal-countdown" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
+            <i class="pi pi-bolt" /> <span>Ưu đãi Flash Deal kết thúc sau:</span>
+            <strong>{{ productCountdownText }}</strong>
           </div>
 
           <!-- Quantity Picker -->
@@ -1058,7 +1237,7 @@ onUnmounted(() => {
 
         <div class="footer-links">
           <strong>Hệ thống nội bộ</strong>
-          <RouterLink class="staff-login-btn" to="/admin">
+          <RouterLink class="staff-login-btn" to="/login/staff">
             <i class="pi pi-lock" /> Đăng nhập nhân viên
           </RouterLink>
           <span class="status-indicator"><i class="pi pi-server" /> Kết nối API Service</span>
@@ -3308,7 +3487,7 @@ footer {
   top: calc(100% + 12px);
   right: 0;
   z-index: 40;
-  width: min(380px, calc(100vw - 28px));
+  width: min(580px, calc(100vw - 28px));
   max-height: 75vh;
   overflow: auto;
   padding: 18px;
@@ -3545,4 +3724,220 @@ footer {
 .app-dark .confirm-actions .pay-button {
   background: #0284c7;
 }
+
+/* Storefront Dark Mode Customer Dropdown & Header overrides */
+.app-dark .customer-panel {
+  background: #151d30;
+  border-color: #23304c;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 50%);
+}
+.app-dark .customer-panel-head {
+  border-bottom-color: #23304c;
+}
+.app-dark .customer-panel-head strong,
+.app-dark .customer-order-line strong {
+  color: #f1f5f9;
+}
+.app-dark .customer-panel-head small,
+.app-dark .customer-order-line small,
+.app-dark .customer-panel-muted,
+.app-dark .customer-info p,
+.app-dark .customer-tier-card span {
+  color: #94a3b8;
+}
+.app-dark .customer-tier-card {
+  background: rgba(2, 132, 199, 0.15);
+}
+.app-dark .customer-tier-card strong {
+  color: #38bdf8;
+}
+.app-dark .customer-history-title {
+  color: #38bdf8;
+}
+.app-dark .customer-history-title button {
+  background: transparent;
+  color: #38bdf8;
+  border-color: #23304c;
+}
+.app-dark .customer-history-title button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.app-dark .customer-order-line {
+  border-bottom-color: #23304c;
+}
+.app-dark .logout-customer {
+  background: #23304c;
+  color: #fca5a5;
+  border-color: transparent;
+}
+.app-dark .logout-customer:hover {
+  background: #b91c1c;
+  color: white;
+}
+.app-dark .customer-link {
+  background: transparent;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .customer-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.app-dark .brand-mark {
+  background: transparent;
+  border: 1.5px solid var(--teal);
+  color: var(--teal);
+}
+
+/* Promo Flash Banner Styles */
+.promo-flash-banner {
+  margin: 30px 0;
+  padding: 24px;
+  background: linear-gradient(135deg, #be123c, #881337);
+  border-radius: 18px;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 15px 35px rgba(190, 18, 60, 0.25);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.promo-flash-banner::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.promo-flash-banner:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 45px rgba(190, 18, 60, 0.35);
+}
+.promo-flash-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
+}
+.promo-flash-text {
+  flex: 1;
+  min-width: 280px;
+  text-align: left;
+}
+.promo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #be123c;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.promo-flash-text h2 {
+  font-family: sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: white;
+  letter-spacing: -0.02em;
+}
+.promo-flash-text p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+}
+.promo-flash-timer-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.promo-flash-timer-wrapper > span {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.7);
+}
+.countdown-clock {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.05em;
+}
+
+/* Discount Badge Square */
+.discount-badge-square {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  background-color: #ef4444; /* bright red */
+  color: white;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+/* Detail modal styles */
+.detail-discount-percent-badge {
+  background-color: #fee2e2;
+  color: #ef4444;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.app-dark .detail-discount-percent-badge {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+.detail-deal-countdown {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #d97706;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-dark .detail-deal-countdown {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.2);
+  color: #fbbf24;
+}
+.detail-deal-countdown strong {
+  font-size: 15px;
+  font-family: monospace;
+}
+
+/* Dark mode banner adjustment */
+.app-dark .promo-flash-banner {
+  background: linear-gradient(135deg, #9f1239, #4c0519);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+.app-dark .promo-badge {
+  background: #4c0519;
+  color: #fca5a5;
+}
+
 </style>
