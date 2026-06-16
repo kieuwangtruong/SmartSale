@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import {
   createUser,
   deleteUser,
@@ -28,11 +29,54 @@ const form = reactive<CreateUserPayload>({
 const search = ref('')
 const showForm = ref(false)
 
-const visible = computed(() => {
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Filter logic
+const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
   return !q ? users.value : users.value.filter((u) =>
     [u.userName, u.fullName, u.email].some((val) => val && val.toLowerCase().includes(q))
   )
+})
+
+// Pagination calculations
+const totalPages = computed(() => {
+  return Math.ceil(filtered.value.length / itemsPerPage) || 1
+})
+
+const visible = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filtered.value.slice(start, start + itemsPerPage)
+})
+
+const editingUser = computed(() =>
+  editingId.value ? users.value.find((u) => u.id === editingId.value) ?? null : null,
+)
+const isEditingAdmin = computed(() => editingUser.value?.role === 'Admin')
+
+const roleOptions = computed(() =>
+  USER_ROLES.map((role) => ({ label: role.label, value: role.value })),
+)
+const sexOptions = [
+  { label: 'Nam', value: 0 },
+  { label: 'Nữ', value: 1 },
+  { label: 'Khác', value: 2 },
+]
+
+// Status display
+const paginationInfo = computed(() => {
+  const total = filtered.value.length
+  if (total === 0) return ''
+  const start = (currentPage.value - 1) * itemsPerPage + 1
+  const end = Math.min(currentPage.value * itemsPerPage, total)
+  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+})
+
+// Reset to page 1 when search changes
+watch(search, () => {
+  currentPage.value = 1
 })
 
 function reset() {
@@ -70,7 +114,7 @@ async function save() {
       const payload = {
         id: editingId.value,
         ...values,
-        ...(passwordHash ? { passwordHash } : {}),
+        ...(passwordHash && !isEditingAdmin.value ? { passwordHash } : {}),
       }
       await updateUser(payload)
     } else {
@@ -108,7 +152,6 @@ onMounted(load)
 
     <p v-if="error" class="alert error">{{ error }}</p>
 
-    <!-- User modal form dialog -->
     <div v-if="showForm" class="modal-backdrop" @click="reset" />
     <aside v-if="showForm" class="admin-modal" aria-label="Biểu mẫu tài khoản">
       <div class="modal-head">
@@ -119,10 +162,23 @@ onMounted(load)
         <label>Tên đăng nhập<input v-model="form.userName" required /></label>
         <label>Họ tên<input v-model="form.fullName" required /></label>
         <label>Email<input v-model="form.email" type="email" required /></label>
-        <label>Mật khẩu<input v-model="form.passwordHash" type="password" :required="!editingId" /></label>
+        <label>Mật khẩu
+          <input
+            v-model="form.passwordHash"
+            type="password"
+            :required="!editingId"
+            :disabled="isEditingAdmin"
+            :placeholder="isEditingAdmin ? '********' : ''"
+          />
+        </label>
+        <p v-if="isEditingAdmin" class="admin-password-note">Không thể đổi mật khẩu tài khoản Admin.</p>
         <label>Ngày sinh<input v-model="form.dateOfBirth" type="date" required /></label>
-        <label>Vai trò<select v-model="form.role"><option v-for="role in USER_ROLES" :key="role.value" :value="role.value">{{ role.label }}</option></select></label>
-        <label>Giới tính<select v-model.number="form.sex"><option :value="0">Nam</option><option :value="1">Nữ</option><option :value="2">Khác</option></select></label>
+        <label>Vai trò
+          <SearchableSelect v-model="form.role" :options="roleOptions" placeholder="Chọn vai trò" />
+        </label>
+        <label>Giới tính
+          <SearchableSelect v-model="form.sex" :options="sexOptions" placeholder="Chọn giới tính" />
+        </label>
         <label>Địa chỉ<input v-model="form.address" /></label>
         <div class="actions">
           <button class="primary">Lưu</button>
@@ -131,7 +187,6 @@ onMounted(load)
       </form>
     </aside>
 
-    <!-- Full width table -->
     <article class="panel table-wrap">
       <p v-if="loading">Đang tải...</p>
       <table v-else>
@@ -155,11 +210,139 @@ onMounted(load)
           </tr>
         </tbody>
       </table>
+
+      <div v-if="!loading && totalPages > 1" class="pagination-footer">
+        <span class="pagination-info">{{ paginationInfo }}</span>
+        <div class="pagination-controls">
+          <button 
+            type="button" 
+            :disabled="currentPage === 1"
+            @click="currentPage = 1"
+            aria-label="Về đầu"
+            title="Về đầu"
+          >
+            <i class="pi pi-chevron-double-left" />
+          </button>
+          <button 
+            type="button" 
+            :disabled="currentPage === 1"
+            @click="currentPage--"
+            aria-label="Trang trước"
+          >
+            <i class="pi pi-chevron-left" />
+          </button>
+          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <button 
+            type="button" 
+            :disabled="currentPage === totalPages"
+            @click="currentPage++"
+            aria-label="Trang sau"
+          >
+            <i class="pi pi-chevron-right" />
+          </button>
+          <button 
+            type="button" 
+            :disabled="currentPage === totalPages"
+            @click="currentPage = totalPages"
+            aria-label="Về cuối"
+            title="Về cuối"
+          >
+            <i class="pi pi-chevron-double-right" />
+          </button>
+        </div>
+      </div>
     </article>
   </section>
 </template>
 
 <style scoped>
 .role-label { display: inline-flex; padding: 6px 9px; border-radius: 99px; color: #4338ca; background: #eef2ff; font-size: 11px; font-weight: 750; }
+.admin-password-note {
+  margin: -6px 0 10px;
+  font-size: 12px;
+  color: #64748b;
+}
 .app-dark .role-label { color: #a5b4fc; background: rgb(99 102 241 / 15%); }
+
+/* Pagination Styles */
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  gap: 20px;
+}
+
+.app-dark .pagination-footer {
+  border-top-color: #374151;
+  background: #1f2937;
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: #6b7280;
+  min-width: 180px;
+}
+
+.app-dark .pagination-info {
+  color: #9ca3af;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-controls button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.app-dark .pagination-controls button {
+  border-color: #4b5563;
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.app-dark .pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #4b5563;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.app-dark .page-indicator {
+  color: #9ca3af;
+}
 </style>

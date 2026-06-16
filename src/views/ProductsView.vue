@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import { formatCurrency } from '../services/orderApi'
 import { getSuppliers, type Supplier } from '../services/orderApi'
 import {
@@ -36,6 +37,10 @@ const showProductModal = ref(false)
 const showCategoryModal = ref(false)
 const showAddMenu = ref(false)
 
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = 10
+
 function toggleAddMenu() {
   showAddMenu.value = !showAddMenu.value
 }
@@ -52,11 +57,45 @@ function openAddCategory() {
   showCategoryModal.value = true
 }
 
-const visible = computed(() => {
+// Filter logic
+const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
   return !q ? products.value : products.value.filter((p) =>
     [p.name, p.categoryName, String(p.id)].some((value) => value.toLowerCase().includes(q)),
   )
+})
+
+// Pagination calculations
+const totalPages = computed(() => {
+  return Math.ceil(filtered.value.length / itemsPerPage) || 1
+})
+
+const visible = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filtered.value.slice(start, start + itemsPerPage)
+})
+
+const categoryOptions = computed(() => [
+  { label: 'Chọn danh mục', value: 0 },
+  ...categories.value.map((c) => ({ label: c.name, value: c.id })),
+])
+const supplierOptions = computed(() => [
+  { label: 'Chọn nhà cung cấp', value: 0 },
+  ...suppliers.value.map((s) => ({ label: s.name, value: s.id })),
+])
+
+// Status display
+const paginationInfo = computed(() => {
+  const total = filtered.value.length
+  if (total === 0) return ''
+  const start = (currentPage.value - 1) * itemsPerPage + 1
+  const end = Math.min(currentPage.value * itemsPerPage, total)
+  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+})
+
+// Reset to page 1 when search changes
+watch(search, () => {
+  currentPage.value = 1
 })
 
 function reset() {
@@ -146,8 +185,12 @@ onMounted(load)
       <form class="form admin-modal-body" @submit.prevent="save">
         <label v-if="editingId">ID sản phẩm<input :value="editingId" disabled /></label>
         <label>Tên sản phẩm<input v-model="form.name" required /></label>
-        <label>Danh mục<select v-model.number="form.categoryId" required><option :value="0">Chọn danh mục</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
-        <label>Nhà cung cấp<select v-model.number="form.supplierId" required><option :value="0">Chọn nhà cung cấp</option><option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option></select></label>
+        <label>Danh mục
+          <SearchableSelect v-model="form.categoryId" :options="categoryOptions" placeholder="Tìm danh mục..." />
+        </label>
+        <label>Nhà cung cấp
+          <SearchableSelect v-model="form.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
+        </label>
         <label>Giá nhập<input v-model.number="form.importPrice" type="number" min="0" /></label>
         <label>Giá bán<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
         <label>Tồn kho<input v-model.number="form.quantity" type="number" min="0" /></label>
@@ -201,6 +244,134 @@ onMounted(load)
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="pagination-footer">
+        <span class="pagination-info">{{ paginationInfo }}</span>
+        <div class="pagination-controls">
+          <button 
+            type="button" 
+            :disabled="currentPage === 1"
+            @click="currentPage = 1"
+            aria-label="Về đầu"
+            title="Về đầu"
+          >
+            <i class="pi pi-chevron-double-left" />
+          </button>
+          <button 
+            type="button" 
+            :disabled="currentPage === 1"
+            @click="currentPage--"
+            aria-label="Trang trước"
+          >
+            <i class="pi pi-chevron-left" />
+          </button>
+          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <button 
+            type="button" 
+            :disabled="currentPage === totalPages"
+            @click="currentPage++"
+            aria-label="Trang sau"
+          >
+            <i class="pi pi-chevron-right" />
+          </button>
+          <button 
+            type="button" 
+            :disabled="currentPage === totalPages"
+            @click="currentPage = totalPages"
+            aria-label="Về cuối"
+            title="Về cuối"
+          >
+            <i class="pi pi-chevron-double-right" />
+          </button>
+        </div>
+      </div>
     </article>
   </section>
 </template>
+
+<style scoped>
+.warning { color: #d97706; }
+
+/* Pagination Styles */
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  gap: 20px;
+}
+
+.app-dark .pagination-footer {
+  border-top-color: #374151;
+  background: #1f2937;
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: #6b7280;
+  min-width: 180px;
+}
+
+.app-dark .pagination-info {
+  color: #9ca3af;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-controls button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.app-dark .pagination-controls button {
+  border-color: #4b5563;
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.app-dark .pagination-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #4b5563;
+  color: #e5e7eb;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.app-dark .page-indicator {
+  color: #9ca3af;
+}
+</style>

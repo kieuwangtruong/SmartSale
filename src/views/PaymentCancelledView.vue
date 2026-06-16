@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { getPaymentStatus } from '../services/orderApi'
+import { getPaymentStatus, getOrderStatusLabel } from '../services/orderApi'
+import { getErrorMessage } from '../services/apiClient'
 
 const route = useRoute()
 const loading = ref(true)
@@ -22,13 +23,10 @@ async function loadCancellation() {
     if (payment.status === 'Paid') {
       error.value = 'Đơn hàng này đã được thanh toán và không thể hủy.'
     } else if (payment.status !== 'PaymentCancelled') {
-      error.value = `Trạng thái hiện tại của đơn hàng: ${payment.status}.`
+      error.value = `Trạng thái hiện tại của đơn hàng: ${getOrderStatusLabel(payment.status)}.`
     }
   } catch (exception) {
-    error.value =
-      exception instanceof Error
-        ? exception.message
-        : 'Không thể kiểm tra trạng thái hủy đơn hàng.'
+    error.value = getErrorMessage(exception, 'Không thể kiểm tra trạng thái hủy đơn hàng.')
   } finally {
     loading.value = false
   }

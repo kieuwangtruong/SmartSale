@@ -6,6 +6,8 @@ import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Select from 'primevue/select'
 import { formatCurrency, getOrders, type Order } from '../services/orderApi'
+import { getLowStock, getProducts, getStockReceipts, type Product, type StockReceipt } from '../services/productApi'
+
 import {
   getDashboardReport,
   getRevenueChart,
@@ -18,6 +20,15 @@ const chart = ref<RevenueChart | null>(null)
 const groupBy = ref<'day' | 'month'>('day')
 const loading = ref(true)
 const error = ref('')
+const warehouseStats = ref({
+  productCount: 0,
+  totalStock: 0,
+  lowStockCount: 0,
+  inventoryValue: 0,
+  productsSoldThisMonth: 0,
+  importQuantityThisMonth: 0,
+  importQuantityTotal: 0,
+})
 
 const groupOptions = [
   { label: 'Theo ngày', value: 'day' },
@@ -102,6 +113,78 @@ const chartOptions = {
       },
     },
   },
+}
+
+function calculateImportStats(receipts: StockReceipt[]) {
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  let importQuantityThisMonth = 0
+  let importQuantityTotal = 0
+
+  for (const receipt of receipts) {
+    if (receipt.status !== 'Confirmed') continue
+    for (const item of receipt.items) {
+      importQuantityTotal += item.quantity
+      if (new Date(receipt.confirmedAt ?? receipt.createdAt) >= startOfMonth) {
+        importQuantityThisMonth += item.quantity
+      }
+    }
+  }
+
+  return { importQuantityThisMonth, importQuantityTotal }
+}
+
+function calculateWarehouseStats(allProducts: Product[], allOrders: Order[]) {
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  let productsSoldThisMonth = 0
+  for (const order of allOrders) {
+    if (order.status === 'Cancelled') continue
+    if (new Date(order.createdAt) >= startOfMonth) {
+      for (const item of order.orderItems) {
+        productsSoldThisMonth += item.quantity
+      }
+    }
+  }
+
+  return {
+    productCount: allProducts.length,
+    totalStock: allProducts.reduce((sum, p) => sum + p.quantity, 0),
+    lowStockCount: allProducts.filter((p) => p.quantity <= p.reserveStock).length,
+    inventoryValue: allProducts.reduce((sum, p) => sum + p.importPrice * p.quantity, 0),
+    productsSoldThisMonth,
+  }
+}
+
+async function loadWarehouseStats(allOrders?: Order[]) {
+  try {
+    const [allProducts, lowStock, receipts, orders] = await Promise.all([
+      getProducts(),
+      getLowStock(),
+      getStockReceipts(),
+      allOrders ? Promise.resolve(allOrders) : getOrders(),
+    ])
+    const importStats = calculateImportStats(receipts)
+    warehouseStats.value = {
+      ...calculateWarehouseStats(allProducts, orders),
+      lowStockCount: lowStock.length,
+      ...importStats,
+    }
+  } catch {
+    warehouseStats.value = {
+      productCount: 0,
+      totalStock: 0,
+      lowStockCount: 0,
+      inventoryValue: 0,
+      productsSoldThisMonth: 0,
+      importQuantityThisMonth: 0,
+      importQuantityTotal: 0,
+    }
+  }
 }
 
 function calculateReport(allOrders: Order[]): DashboardReport {
@@ -251,17 +334,20 @@ async function load() {
     if (apiReport && (apiReport.orderCount > 0 || apiReport.revenueToday > 0 || apiReport.revenueThisMonth > 0)) {
       report.value = apiReport
       chart.value = apiChart
+      await loadWarehouseStats()
     } else {
       const allOrders = await getOrders()
       report.value = calculateReport(allOrders)
       chart.value = calculateChart(allOrders, groupBy.value)
+      await loadWarehouseStats(allOrders)
     }
   } catch (exception) {
-    console.warn("Reports API error, falling back to local orders calculation:", exception)
+    console.warn('Reports API error, falling back to local orders calculation:', exception)
     try {
       const allOrders = await getOrders()
       report.value = calculateReport(allOrders)
       chart.value = calculateChart(allOrders, groupBy.value)
+      await loadWarehouseStats(allOrders)
     } catch (fallbackException) {
       error.value = fallbackException instanceof Error ? fallbackException.message : 'Không thể tải báo cáo.'
     }
@@ -298,6 +384,16 @@ onMounted(load)
         <article><i class="pi pi-calendar stat-icon blue"></i><span>Doanh thu tuần</span><strong>{{ formatCurrency(report.revenueThisWeek) }}</strong></article>
         <article><i class="pi pi-chart-line stat-icon green"></i><span>Doanh thu tháng</span><strong>{{ formatCurrency(report.revenueThisMonth) }}</strong></article>
         <article><i class="pi pi-shopping-cart stat-icon orange"></i><span>Số đơn hàng</span><strong>{{ report.orderCount }}</strong></article>
+      </div>
+
+      <div class="stats warehouse-stats">
+        <article><i class="pi pi-box stat-icon teal"></i><span>Sản phẩm</span><strong>{{ warehouseStats.productCount }}</strong></article>
+        <article><i class="pi pi-database stat-icon indigo"></i><span>Tổng tồn kho</span><strong>{{ warehouseStats.totalStock }}</strong></article>
+        <article><i class="pi pi-exclamation-triangle stat-icon red"></i><span>Sắp hết hàng</span><strong>{{ warehouseStats.lowStockCount }}</strong></article>
+        <article><i class="pi pi-money-bill stat-icon yellow"></i><span>Giá trị tồn kho</span><strong>{{ formatCurrency(warehouseStats.inventoryValue) }}</strong></article>
+        <article><i class="pi pi-shopping-bag stat-icon cyan"></i><span>Bán tháng này</span><strong>{{ warehouseStats.productsSoldThisMonth }}</strong></article>
+        <article><i class="pi pi-download stat-icon purple"></i><span>Nhập tháng này</span><strong>{{ warehouseStats.importQuantityThisMonth }}</strong></article>
+        <article><i class="pi pi-truck stat-icon blue"></i><span>Tổng nhập (NCC)</span><strong>{{ warehouseStats.importQuantityTotal }}</strong></article>
       </div>
 
       <div class="grid-2">
@@ -373,7 +469,7 @@ onMounted(load)
 .donut-wrap { position: relative; width: min(270px, 100%); height: 215px; margin: 0 auto; }
 
 /* Khối text tổng doanh thu nằm ngay dưới biểu đồ */
-.donut-below-summary { display: grid; gap: 2px; text-align: center; margin-top: -26px; position: relative; z-index: 10; }
+.donut-below-summary { display: grid; gap: 2px; text-align: center; margin-top: -26px; position: relative; z-index: 10; background: rgba(241, 245, 249, 0.6); padding: 12px; border-radius: 8px; }
 .donut-below-summary small { color: #6366f1; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
 
 /* LIGHT MODE: Số tiền mặc định hiển thị màu đen xám của hệ thống */
@@ -400,6 +496,14 @@ onMounted(load)
 .stat-icon.blue { color: #0284c7; background: #e0f2fe; }
 .stat-icon.green { color: #059669; background: #d1fae5; }
 .stat-icon.orange { color: #ea580c; background: #ffedd5; }
+.warehouse-stats { margin-top: 16px; }
+.stat-icon.teal { color: #0d9488; background: #ccfbf1; }
+.stat-icon.indigo { color: #4f46e5; background: #eef2ff; }
+.stat-icon.red { color: #dc2626; background: #fee2e2; }
+.stat-icon.yellow { color: #ca8a04; background: #fef9c3; }
+.stat-icon.cyan { color: #0891b2; background: #cffafe; }
+.stat-icon.purple { color: #7c3aed; background: #ede9fe; }
+.stat-icon.blue { color: #0284c7; background: #e0f2fe; }
 
 @media (max-width: 620px) {
   .revenue-chart-layout { grid-template-columns: 1fr; }
@@ -408,14 +512,32 @@ onMounted(load)
 }
 
 /* --- DARK MODE: Tách biệt cấu trúc màu chữ sáng rực rỡ --- */
+:global(.app-dark) .donut-below-summary {
+  background: rgba(30, 41, 59, 0.5);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: -20px;
+}
+:global(.app-dark) .donut-below-summary small {
+  color: #38bdf8 !important;
+}
 :global(.app-dark) .donut-below-summary strong {
-  color: #ffffff !important; /* Bắt buộc đổi sang màu trắng tinh khi bật darkmode */
+  color: #f1f5f9 !important;
 }
 :global(.app-dark) .donut-below-summary span {
-  color: #cbd5e1 !important; /* Đổi màu số đơn hàng sang màu xám sáng */
+  color: #cbd5e1 !important;
 }
 :global(.app-dark) .legend-percentage {
   color: #cbd5e1 !important;
+}
+:global(.app-dark) .revenue-legend article {
+  color: #f1f5f9;
+}
+:global(.app-dark) .revenue-legend article strong {
+  color: #f1f5f9 !important;
+}
+:global(.app-dark) .revenue-legend article small {
+  color: #94a3b8 !important;
 }
 :global(.app-dark) .revenue-legend article:hover {
   background: #1d263b !important;
@@ -423,8 +545,17 @@ onMounted(load)
 :global(.app-dark) .chart-summary {
   border-top-color: #23304c !important;
 }
+:global(.app-dark) .chart-summary span {
+  color: #94a3b8 !important;
+}
+:global(.app-dark) .chart-summary strong {
+  color: #f1f5f9 !important;
+}
 :global(.app-dark) .panel-heading > small {
   color: #94a3b8 !important;
   background: #1e293b !important;
+}
+:global(.app-dark) .panel-heading span {
+  color: #38bdf8 !important;
 }
 </style>
