@@ -15,6 +15,8 @@ import {
   type ProductPayload,
 } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
 
 const auth = useAuthStore()
 const canManageProducts = computed(
@@ -27,6 +29,18 @@ const search = ref('')
 const error = ref('')
 const editingId = ref<number | null>(null)
 const categoryName = ref('')
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
+
 const form = reactive<ProductPayload>({
   name: '',
   importPrice: 0,
@@ -83,11 +97,11 @@ const visible = computed(() => {
 })
 
 const categoryOptions = computed(() => [
-  { label: 'Chọn danh mục', value: 0 },
+  { label: t('Chọn danh mục', 'Select category'), value: 0 },
   ...categories.value.map((c) => ({ label: c.name, value: c.id })),
 ])
 const supplierOptions = computed(() => [
-  { label: 'Chọn nhà cung cấp', value: 0 },
+  { label: t('Chọn nhà cung cấp', 'Select supplier'), value: 0 },
   ...suppliers.value.map((s) => ({ label: s.name, value: s.id })),
 ])
 
@@ -97,7 +111,7 @@ const paginationInfo = computed(() => {
   if (total === 0) return ''
   const start = (currentPage.value - 1) * itemsPerPage + 1
   const end = Math.min(currentPage.value * itemsPerPage, total)
-  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+  return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
 // Reset to page 1 when search changes
@@ -105,6 +119,7 @@ watch(search, () => {
   currentPage.value = 1
 })
 
+// Fix potential typescript strict mode issue
 function reset() {
   editingId.value = null
   showProductModal.value = false
@@ -134,7 +149,7 @@ async function load() {
     categories.value = categoryData
     suppliers.value = supplierData ?? []
   }
-  catch (e) { error.value = e instanceof Error ? e.message : 'Không thể tải sản phẩm.' }
+  catch (e) { showError(e instanceof Error ? e.message : t('Không thể tải sản phẩm.', 'Unable to load products.')) }
 }
 function edit(p: Product) {
   editingId.value = p.id
@@ -157,7 +172,7 @@ async function save() {
     if (editingId.value) await updateProduct(editingId.value, form)
     else await createProduct(form)
     reset(); await load()
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể lưu sản phẩm.' }
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể lưu sản phẩm.', 'Unable to save product.')) }
 }
 async function addCategory() {
   if (!categoryName.value.trim()) return
@@ -166,11 +181,11 @@ async function addCategory() {
     categoryName.value = ''
     showCategoryModal.value = false
     await load()
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể tạo danh mục.' }
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể tạo danh mục.', 'Unable to create category.')) }
 }
 async function remove(p: Product) {
-  if (!confirm(`Xóa sản phẩm ${p.name}?`)) return
-  try { await deleteProduct(p.id); await load() } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể xóa.' }
+  if (!confirm(t(`Xóa sản phẩm ${p.name}?`, `Delete product ${p.name}?`))) return
+  try { await deleteProduct(p.id); await load() } catch (e) { showError(e instanceof Error ? e.message : t('Không thể xóa.', 'Unable to delete.')) }
 }
 onMounted(load)
 </script>
@@ -179,83 +194,81 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>Sản phẩm</h2>
-        <p>Danh mục, giá nhập, giá bán và tồn kho ban đầu.</p>
+        <h2>{{ t('Sản phẩm', 'Products') }}</h2>
+        <p>{{ t('Danh mục, giá nhập, giá bán và tồn kho ban đầu.', 'Categories, import prices, selling prices and initial inventory.') }}</p>
       </div>
       <div class="page-head-actions">
-        <input v-model="search" placeholder="Tìm sản phẩm..." class="search-input" />
+        <input v-model="search" :placeholder="t('Tìm sản phẩm...', 'Search products...')" class="search-input" />
         
         <div v-if="canManageProducts" class="add-dropdown-container">
           <button type="button" class="primary" @click="toggleAddMenu">
-            <i class="pi pi-plus" /> Thêm mới <i class="pi pi-angle-down" />
+            <i class="pi pi-plus" /> {{ t('Thêm mới', 'Add new') }} <i class="pi pi-angle-down" />
           </button>
           <div v-if="showAddMenu" class="add-dropdown-menu">
-            <a href="#" @click.prevent="openAddProduct">Thêm sản phẩm</a>
-            <a href="#" @click.prevent="openAddCategory">Thêm danh mục</a>
+            <a href="#" @click.prevent="openAddProduct">{{ t('Thêm sản phẩm', 'Add product') }}</a>
+            <a href="#" @click.prevent="openAddCategory">{{ t('Thêm danh mục', 'Add category') }}</a>
           </div>
         </div>
       </div>
     </div>
 
-    <p v-if="error" class="alert error">{{ error }}</p>
-
     <!-- Product modal dialog -->
     <div v-if="showProductModal" class="modal-backdrop" @click="reset" />
-    <aside v-if="showProductModal" class="admin-modal" aria-label="Biểu mẫu sản phẩm">
+    <aside v-if="showProductModal" class="admin-modal" :aria-label="t('Biểu mẫu sản phẩm', 'Product form')">
       <div class="modal-head">
-        <h2>{{ editingId ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm' }}</h2>
+        <h2>{{ editingId ? t('Cập nhật sản phẩm', 'Update Product') : t('Thêm sản phẩm', 'Add Product') }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="save">
         <div class="form-row" v-if="editingId">
-          <label>ID sản phẩm<input :value="editingId" disabled /></label>
-          <label>Tên sản phẩm<input v-model="form.name" required /></label>
+          <label>{{ t('ID sản phẩm', 'Product ID') }}<input :value="editingId" disabled /></label>
+          <label>{{ t('Tên sản phẩm', 'Product Name') }}<input v-model="form.name" required /></label>
         </div>
-        <label v-else>Tên sản phẩm<input v-model="form.name" required /></label>
+        <label v-else>{{ t('Tên sản phẩm', 'Product Name') }}<input v-model="form.name" required /></label>
 
         <div class="form-row">
-          <label>Danh mục
-            <SearchableSelect v-model="form.categoryId" :options="categoryOptions" placeholder="Tìm danh mục..." />
+          <label>{{ t('Danh mục', 'Category') }}
+            <SearchableSelect v-model="form.categoryId" :options="categoryOptions" :placeholder="t('Tìm danh mục...', 'Search categories...')" />
           </label>
-          <label>Nhà cung cấp
-            <SearchableSelect v-model="form.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
+          <label>{{ t('Nhà cung cấp', 'Supplier') }}
+            <SearchableSelect v-model="form.supplierId" :options="supplierOptions" :placeholder="t('Tìm nhà cung cấp...', 'Search suppliers...')" />
           </label>
         </div>
 
         <div class="form-row">
-          <label>Giá nhập (VND)<input v-model.number="form.importPrice" type="number" min="0" /></label>
-          <label>Giá bán hiện tại (VND)<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
+          <label>{{ t('Giá nhập (VND)', 'Import Price (VND)') }}<input v-model.number="form.importPrice" type="number" min="0" /></label>
+          <label>{{ t('Giá bán hiện tại (VND)', 'Current Selling Price (VND)') }}<input v-model.number="form.sellingPrice" type="number" min="0" /></label>
         </div>
 
         <div class="form-row">
-          <label>Giá gốc (để gạch ngang)<input v-model.number="form.originalPrice" type="number" min="0" placeholder="Chỉ nhập khi giảm giá" /></label>
-          <label>Giá khuyến mãi (sale)<input v-model.number="form.salePrice" type="number" min="0" placeholder="Chỉ nhập khi giảm giá" /></label>
+          <label>{{ t('Giá gốc (để gạch ngang)', 'Original Price (for strikethrough)') }}<input v-model.number="form.originalPrice" type="number" min="0" :placeholder="t('Chỉ nhập khi giảm giá', 'Only enter when discounted')" /></label>
+          <label>{{ t('Giá khuyến mãi (sale)', 'Sale Price') }}<input v-model.number="form.salePrice" type="number" min="0" :placeholder="t('Chỉ nhập khi giảm giá', 'Only enter when discounted')" /></label>
         </div>
 
         <div class="form-row">
-          <label>Tồn kho ban đầu<input v-model.number="form.quantity" type="number" min="0" /></label>
-          <label>Ngưỡng cảnh báo<input v-model.number="form.reserveStock" type="number" min="0" /></label>
+          <label>{{ t('Tồn kho ban đầu', 'Initial Stock') }}<input v-model.number="form.quantity" type="number" min="0" /></label>
+          <label>{{ t('Ngưỡng cảnh báo', 'Alert Threshold') }}<input v-model.number="form.reserveStock" type="number" min="0" /></label>
         </div>
 
-        <label>Ảnh URL<input v-model="form.imageUrl" placeholder="https://..." /></label>
+        <label>{{ t('Ảnh URL', 'Image URL') }}<input v-model="form.imageUrl" placeholder="https://..." /></label>
 
         <div class="actions">
-          <button class="primary">Lưu sản phẩm</button>
-          <button type="button" @click="reset">Hủy</button>
+          <button class="primary">{{ t('Lưu sản phẩm', 'Save Product') }}</button>
+          <button type="button" @click="reset">{{ t('Hủy', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
 
     <!-- Category modal dialog -->
     <div v-if="showCategoryModal" class="modal-backdrop" @click="reset" />
-    <aside v-if="showCategoryModal" class="admin-modal" aria-label="Biểu mẫu danh mục">
+    <aside v-if="showCategoryModal" class="admin-modal" :aria-label="t('Biểu mẫu danh mục', 'Category form')">
       <div class="modal-head">
-        <h2>Thêm danh mục mới</h2>
+        <h2>{{ t('Thêm danh mục mới', 'Add New Category') }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="addCategory">
-        <label>Tên danh mục mới<input v-model="categoryName" placeholder="Danh mục mới" required /></label>
-        <div class="actions"><button class="primary">Thêm</button><button type="button" @click="reset">Hủy</button></div>
+        <label>{{ t('Tên danh mục mới', 'New Category Name') }}<input v-model="categoryName" :placeholder="t('Danh mục mới', 'New Category')" required /></label>
+        <div class="actions"><button class="primary">{{ t('Thêm', 'Add') }}</button><button type="button" @click="reset">{{ t('Hủy', 'Cancel') }}</button></div>
       </form>
     </aside>
 
@@ -264,12 +277,12 @@ onMounted(load)
       <table>
         <thead>
           <tr>
-            <th>Sản phẩm</th>
-            <th>Danh mục</th>
-            <th>Nhà cung cấp</th>
-            <th>Giá bán</th>
-            <th>Tồn kho</th>
-            <th>Hành động</th>
+            <th>{{ t('Sản phẩm', 'Product') }}</th>
+            <th>{{ t('Danh mục', 'Category') }}</th>
+            <th>{{ t('Nhà cung cấp', 'Supplier') }}</th>
+            <th>{{ t('Giá bán', 'Price') }}</th>
+            <th>{{ t('Tồn kho', 'Stock') }}</th>
+            <th>{{ t('Hành động', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -284,8 +297,8 @@ onMounted(load)
               </span>
             </td>
             <td class="actions">
-              <button v-if="canManageProducts" @click="edit(p)">Sửa</button>
-              <button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">Xóa</button>
+              <button v-if="canManageProducts" @click="edit(p)">{{ t('Sửa', 'Edit') }}</button>
+              <button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
         </tbody>
@@ -299,8 +312,8 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === 1"
             @click="currentPage = 1"
-            aria-label="Về đầu"
-            title="Về đầu"
+            :aria-label="t('Về đầu', 'To beginning')"
+            :title="t('Về đầu', 'To beginning')"
           >
             <i class="pi pi-chevron-double-left" />
           </button>
@@ -308,16 +321,16 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === 1"
             @click="currentPage--"
-            aria-label="Trang trước"
+            :aria-label="t('Trang trước', 'Previous page')"
           >
             <i class="pi pi-chevron-left" />
           </button>
-          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <span class="page-indicator">{{ t('Trang', 'Page') }} <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
           <button 
             type="button" 
             :disabled="currentPage === totalPages"
             @click="currentPage++"
-            aria-label="Trang sau"
+            :aria-label="t('Trang sau', 'Next page')"
           >
             <i class="pi pi-chevron-right" />
           </button>
@@ -325,8 +338,8 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === totalPages"
             @click="currentPage = totalPages"
-            aria-label="Về cuối"
-            title="Về cuối"
+            :aria-label="t('Về cuối', 'To end')"
+            :title="t('Về cuối', 'To end')"
           >
             <i class="pi pi-chevron-double-right" />
           </button>

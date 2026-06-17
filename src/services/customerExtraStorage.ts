@@ -1,10 +1,11 @@
 const STORAGE_KEY = 'sales-inventory-customer-extras'
-const META_PATTERN = /^\[\[KH:g=(\d+);c=([^;]*);a=([^\]]*)\]\](.*)$/s
+const META_PATTERN = /^\[\[KH:g=(\d+);c=([^;]*);a=([^;\]]*)(?:;t=([^\]]*))?\]\](.*)$/s
 
 export interface CustomerExtras {
   gender?: number | null
   cccd?: string | null
   age?: number | null
+  tier?: string | null
 }
 
 type ExtraStore = Record<string, CustomerExtras>
@@ -43,7 +44,8 @@ export function encodeAddressWithExtras(
   const gender = extras.gender ?? 0
   const cccd = (extras.cccd ?? '').replace(/;/g, '')
   const age = extras.age ?? ''
-  return `[[KH:g=${gender};c=${cccd};a=${age}]]${plain}`
+  const tier = (extras.tier ?? '').replace(/;/g, '')
+  return `[[KH:g=${gender};c=${cccd};a=${age};t=${tier}]]${plain}`
 }
 
 export function decodeAddressWithExtras(address: string | null | undefined): {
@@ -55,11 +57,12 @@ export function decodeAddressWithExtras(address: string | null | undefined): {
   if (!match) return { plainAddress: address, extras: {} }
   const ageRaw = match[3]
   return {
-    plainAddress: match[4] ?? '',
+    plainAddress: match[5] ?? '',
     extras: {
       gender: Number(match[1]),
       cccd: match[2] || null,
       age: ageRaw ? Number(ageRaw) : null,
+      tier: match[4] || null,
     },
   }
 }
@@ -94,11 +97,13 @@ export function normalizeCustomerFormExtras(form: {
   gender?: number | null
   cccd?: string | null
   age?: number | null
+  tier?: string | null
 }): CustomerExtras {
   return {
     gender: form.gender ?? 0,
     cccd: form.cccd?.trim() || null,
     age: form.age && form.age > 0 ? form.age : null,
+    tier: form.tier?.trim() || null,
   }
 }
 
@@ -113,5 +118,6 @@ export function mergeCustomerExtras<T extends { id: number; phone: string; addre
     gender: stored.gender ?? decoded.extras.gender ?? 0,
     cccd: stored.cccd ?? decoded.extras.cccd ?? null,
     age: stored.age ?? decoded.extras.age ?? null,
+    tier: stored.tier ?? decoded.extras.tier ?? null,
   }
 }

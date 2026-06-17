@@ -132,7 +132,9 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'Cancelled',
 ]
 
-export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+import { useLanguage } from './i18n'
+
+export const ORDER_STATUS_LABELS_VI: Record<OrderStatus, string> = {
   Pending: 'Chờ xử lý',
   PendingPayment: 'Chờ thanh toán',
   ProcessingPayment: 'Đang thanh toán',
@@ -146,8 +148,27 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   Cancelled: 'Đã hủy',
 }
 
+export const ORDER_STATUS_LABELS_EN: Record<OrderStatus, string> = {
+  Pending: 'Pending',
+  PendingPayment: 'Pending Payment',
+  ProcessingPayment: 'Processing Payment',
+  Paid: 'Paid',
+  PaymentCancelled: 'Payment Cancelled',
+  PaymentExpired: 'Payment Expired',
+  PaymentFailed: 'Payment Failed',
+  Processing: 'Processing',
+  Shipped: 'Shipped',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled',
+}
+
+// Keep this for backward compatibility or direct imports if any
+export const ORDER_STATUS_LABELS = ORDER_STATUS_LABELS_VI
+
 export function getOrderStatusLabel(status: OrderStatus | string) {
-  return ORDER_STATUS_LABELS[status as OrderStatus] ?? status
+  const { currentLanguage } = useLanguage()
+  const labels = currentLanguage.value === 'en' ? ORDER_STATUS_LABELS_EN : ORDER_STATUS_LABELS_VI
+  return labels[status as OrderStatus] ?? status
 }
 
 /** Chuyển trạng thái hợp lệ theo backend */

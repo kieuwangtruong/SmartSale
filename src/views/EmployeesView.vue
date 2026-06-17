@@ -7,6 +7,20 @@ import {
   type AttendanceRecord,
   type UserDto,
 } from '../services/userApi'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
+
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
 
 const employees = ref<UserDto[]>([])
 const selected = ref<UserDto | null>(null)
@@ -22,9 +36,17 @@ const form = ref({
 })
 
 async function loadEmployees() {
-  employees.value = await getEmployees(search.value)
+  const all = await getEmployees(search.value)
+  // Filter out registered customer accounts from employee attendance
+  employees.value = all.filter((e) => e.role !== 'Customer')
   const firstEmployee = employees.value[0]
-  if (!selected.value && firstEmployee) await selectEmployee(firstEmployee)
+  if (!selected.value && firstEmployee) {
+    await selectEmployee(firstEmployee)
+  } else if (selected.value) {
+    // Refresh selected employee
+    const found = employees.value.find((e) => e.id === selected.value?.id)
+    if (found) await selectEmployee(found)
+  }
 }
 
 async function selectEmployee(employee: UserDto) {
@@ -45,7 +67,7 @@ async function saveAttendance() {
     })
     await selectEmployee(selected.value)
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Không thể lưu chấm công.'
+    showError(exception instanceof Error ? exception.message : t('Không thể lưu chấm công.', 'Failed to save attendance.'))
   }
 }
 
@@ -56,10 +78,10 @@ onMounted(loadEmployees)
   <section class="hr-grid">
     <aside class="panel">
       <div class="heading">
-        <h2>Nhân sự</h2>
-        <input v-model="search" placeholder="Tim ten/email..." @keyup.enter="loadEmployees" />
+        <h2>{{ t('Nhân sự', 'Staff Members') }}</h2>
+        <input v-model="search" :placeholder="t('Tìm tên/email...', 'Search name/email...')" @keyup.enter="loadEmployees" />
       </div>
-      <button type="button" @click="loadEmployees">Tim kiem</button>
+      <button type="button" @click="loadEmployees">{{ t('Tìm kiếm', 'Search') }}</button>
       <div class="employee-list">
         <button
           v-for="employee in employees"
@@ -77,40 +99,39 @@ onMounted(loadEmployees)
     <main class="panel">
       <div class="heading">
         <div>
-          <h2>{{ selected?.fullName || 'Chon nhan su' }}</h2>
+          <h2>{{ selected?.fullName || t('Chọn nhân sự', 'Select Staff') }}</h2>
           <p>{{ selected?.email }}</p>
         </div>
       </div>
 
-      <p v-if="error" class="error">{{ error }}</p>
       <div v-if="selected" class="attendance-form">
         <input v-model="form.workDate" type="date" />
         <input v-model="form.checkIn" type="time" />
         <input v-model="form.checkOut" type="time" />
         <select v-model="form.status">
-          <option value="Present">Present</option>
-          <option value="Absent">Absent</option>
-          <option value="Late">Late</option>
-          <option value="Leave">Leave</option>
+          <option value="Present">{{ t('Có mặt', 'Present') }}</option>
+          <option value="Absent">{{ t('Vắng mặt', 'Absent') }}</option>
+          <option value="Late">{{ t('Đi muộn', 'Late') }}</option>
+          <option value="Leave">{{ t('Nghỉ phép', 'Leave') }}</option>
         </select>
-        <input v-model="form.note" placeholder="Ghi chú" />
-        <button type="button" @click="saveAttendance">Lưu chấm công</button>
+        <input v-model="form.note" :placeholder="t('Ghi chú', 'Note')" />
+        <button type="button" @click="saveAttendance">{{ t('Lưu chấm công', 'Save Attendance') }}</button>
       </div>
 
       <table>
         <thead>
           <tr>
-            <th>Ngay</th>
-            <th>Gio vao</th>
-            <th>Gio ra</th>
-            <th>Trang thai</th>
-            <th>Gio lam</th>
-            <th>Ghi chú</th>
+            <th>{{ t('Ngày', 'Date') }}</th>
+            <th>{{ t('Giờ vào', 'Check In') }}</th>
+            <th>{{ t('Giờ ra', 'Check Out') }}</th>
+            <th>{{ t('Trạng thái', 'Status') }}</th>
+            <th>{{ t('Giờ làm', 'Hours') }}</th>
+            <th>{{ t('Ghi chú', 'Note') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="record in attendance" :key="record.id">
-            <td>{{ new Date(record.workDate).toLocaleDateString('vi-VN') }}</td>
+            <td>{{ new Date(record.workDate).toLocaleDateString(t('vi-VN', 'en-US')) }}</td>
             <td>{{ record.checkIn || '-' }}</td>
             <td>{{ record.checkOut || '-' }}</td>
             <td>{{ record.status }}</td>
@@ -118,7 +139,7 @@ onMounted(loadEmployees)
             <td>{{ record.note || '-' }}</td>
           </tr>
           <tr v-if="!attendance.length">
-            <td colspan="6">Chưa có dữ liệu chấm công.</td>
+            <td colspan="6">{{ t('Chưa có dữ liệu chấm công.', 'No attendance logs found.') }}</td>
           </tr>
         </tbody>
       </table>
@@ -143,4 +164,15 @@ th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
 th { color: #475569; font-size: 12px; text-transform: uppercase; }
 .error { color: #dc2626; margin-bottom: 12px; }
 @media (max-width: 1000px) { .hr-grid, .attendance-form { grid-template-columns: 1fr; } }
+
+.app-dark .panel { background: #1e293b; border: 1px solid #334155; }
+.app-dark h2 { color: #f8fafc; }
+.app-dark p { color: #cbd5e1; }
+.app-dark input, .app-dark select { background: #0f172a; border-color: #334155; color: #f8fafc; }
+.app-dark button { background: #0d9488; }
+.app-dark .employee-list button { background: #0f172a; color: #f8fafc; border-color: #334155; }
+.app-dark .employee-list button.active { background: #115e59; border-color: #0d9488; }
+.app-dark .employee-list span { color: #94a3b8; }
+.app-dark th { color: #94a3b8; }
+.app-dark td { color: #cbd5e1; border-bottom-color: #334155; }
 </style>

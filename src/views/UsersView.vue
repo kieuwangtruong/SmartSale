@@ -9,7 +9,21 @@ import {
   type CreateUserPayload,
   type UserDto,
 } from '../services/userApi'
-import { getRoleLabel, USER_ROLES } from '../services/apiClient'
+import { USER_ROLES, type UserRole } from '../services/apiClient'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
+
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
 
 const users = ref<UserDto[]>([])
 const loading = ref(false)
@@ -57,13 +71,23 @@ const editingUser = computed(() =>
 const isEditingAdmin = computed(() => editingUser.value?.role === 'Admin')
 
 const roleOptions = computed(() =>
-  USER_ROLES.map((role) => ({ label: role.label, value: role.value })),
+  USER_ROLES
+    .filter((r) => r.value !== 'Customer')
+    .map((role) => ({
+      label: role.value === 'Admin'
+        ? t('Quản trị viên', 'Admin')
+        : role.value === 'SalesStaff'
+          ? t('Nhân viên bán hàng', 'Retail Staff')
+          : t('Thủ kho', 'Warehouse Keeper'),
+      value: role.value
+    }))
 )
-const sexOptions = [
-  { label: 'Nam', value: 0 },
-  { label: 'Nữ', value: 1 },
-  { label: 'Khác', value: 2 },
-]
+
+const sexOptions = computed(() => [
+  { label: t('Nam', 'Male'), value: 0 },
+  { label: t('Nữ', 'Female'), value: 1 },
+  { label: t('Khác', 'Other'), value: 2 },
+])
 
 // Status display
 const paginationInfo = computed(() => {
@@ -71,7 +95,7 @@ const paginationInfo = computed(() => {
   if (total === 0) return ''
   const start = (currentPage.value - 1) * itemsPerPage + 1
   const end = Math.min(currentPage.value * itemsPerPage, total)
-  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+  return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
 // Reset to page 1 when search changes
@@ -91,9 +115,15 @@ function reset() {
 async function load() {
   loading.value = true
   error.value = ''
-  try { users.value = await getUsers() } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Không thể tải tài khoản.'
-  } finally { loading.value = false }
+  try {
+    const all = await getUsers()
+    // Exclude customer accounts from internal employee/account management
+    users.value = all.filter((u) => u.role !== 'Customer')
+  } catch (e) {
+    showError(e instanceof Error ? e.message : t('Không thể tải tài khoản.', 'Failed to load accounts.'))
+  } finally {
+    loading.value = false
+  }
 }
 
 function edit(user: UserDto) {
@@ -122,14 +152,27 @@ async function save() {
     }
     reset()
     await load()
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể lưu tài khoản.' }
+  } catch (e) {
+    showError(e instanceof Error ? e.message : t('Không thể lưu tài khoản.', 'Failed to save account.'))
+  }
 }
 
 async function remove(user: UserDto) {
-  if (!confirm(`Xóa tài khoản ${user.fullName}?`)) return
-  try { await deleteUser(user.id); await load() } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Không thể xóa.'
+  if (!confirm(t(`Xóa tài khoản ${user.fullName}?`, `Delete account ${user.fullName}?`))) return
+  try {
+    await deleteUser(user.id)
+    await load()
+  } catch (e) {
+    showError(e instanceof Error ? e.message : t('Không thể xóa.', 'Failed to delete.'))
   }
+}
+
+function translateRole(role: UserRole) {
+  if (role === 'Admin') return t('Quản trị viên', 'Admin')
+  if (role === 'SalesStaff') return t('Nhân viên bán hàng', 'Retail Staff')
+  if (role === 'WarehouseKeeper') return t('Thủ kho', 'Warehouse Keeper')
+  if (role === 'Customer') return t('Khách hàng', 'Customer')
+  return role
 }
 
 onMounted(load)
@@ -139,30 +182,28 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>Quản lý tài khoản</h2>
-        <p>Admin tạo và phân quyền nhân viên.</p>
+        <h2>{{ t('Quản lý tài khoản', 'Account Management') }}</h2>
+        <p>{{ t('Admin tạo và phân quyền nhân viên.', 'Admin creation and role assignment for staff.') }}</p>
       </div>
       <div class="page-head-actions">
-        <input v-model="search" placeholder="Tìm tài khoản..." class="search-input" />
+        <input v-model="search" :placeholder="t('Tìm tài khoản...', 'Search accounts...')" class="search-input" />
         <button type="button" class="primary" @click="showForm = true">
-          <i class="pi pi-plus" /> Tạo tài khoản
+          <i class="pi pi-plus" /> {{ t('Tạo tài khoản', 'Create Account') }}
         </button>
       </div>
     </div>
 
-    <p v-if="error" class="alert error">{{ error }}</p>
-
     <div v-if="showForm" class="modal-backdrop" @click="reset" />
-    <aside v-if="showForm" class="admin-modal" aria-label="Biểu mẫu tài khoản">
+    <aside v-if="showForm" class="admin-modal" :aria-label="t('Biểu mẫu tài khoản', 'Account Form')">
       <div class="modal-head">
-        <h2>{{ editingId ? 'Cập nhật tài khoản' : 'Tạo tài khoản' }}</h2>
+        <h2>{{ editingId ? t('Cập nhật tài khoản', 'Update Account') : t('Tạo tài khoản', 'Create Account') }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="save">
-        <label>Tên đăng nhập<input v-model="form.userName" required /></label>
-        <label>Họ tên<input v-model="form.fullName" required /></label>
-        <label>Email<input v-model="form.email" type="email" required /></label>
-        <label>Mật khẩu
+        <label>{{ t('Tên đăng nhập', 'Username') }}<input v-model="form.userName" required /></label>
+        <label>{{ t('Họ tên', 'Full Name') }}<input v-model="form.fullName" required /></label>
+        <label>{{ t('Email', 'Email') }}<input v-model="form.email" type="email" required /></label>
+        <label>{{ t('Mật khẩu', 'Password') }}
           <input
             v-model="form.passwordHash"
             type="password"
@@ -171,41 +212,41 @@ onMounted(load)
             :placeholder="isEditingAdmin ? '********' : ''"
           />
         </label>
-        <p v-if="isEditingAdmin" class="admin-password-note">Không thể đổi mật khẩu tài khoản Admin.</p>
-        <label>Ngày sinh<input v-model="form.dateOfBirth" type="date" required /></label>
-        <label>Vai trò
-          <SearchableSelect v-model="form.role" :options="roleOptions" placeholder="Chọn vai trò" />
+        <p v-if="isEditingAdmin" class="admin-password-note">{{ t('Không thể đổi mật khẩu tài khoản Admin.', 'Cannot change password of Admin account.') }}</p>
+        <label>{{ t('Ngày sinh', 'Date of Birth') }}<input v-model="form.dateOfBirth" type="date" required /></label>
+        <label>{{ t('Vai trò', 'Role') }}
+          <SearchableSelect v-model="form.role" :options="roleOptions" :placeholder="t('Chọn vai trò', 'Select role')" />
         </label>
-        <label>Giới tính
-          <SearchableSelect v-model="form.sex" :options="sexOptions" placeholder="Chọn giới tính" />
+        <label>{{ t('Giới tính', 'Gender') }}
+          <SearchableSelect v-model="form.sex" :options="sexOptions" :placeholder="t('Chọn giới tính', 'Select gender')" />
         </label>
-        <label>Địa chỉ<input v-model="form.address" /></label>
+        <label>{{ t('Địa chỉ', 'Address') }}<input v-model="form.address" /></label>
         <div class="actions">
-          <button class="primary">Lưu</button>
-          <button type="button" @click="reset">Hủy</button>
+          <button class="primary">{{ t('Lưu', 'Save') }}</button>
+          <button type="button" @click="reset">{{ t('Hủy', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
 
     <article class="panel table-wrap">
-      <p v-if="loading">Đang tải...</p>
+      <p v-if="loading">{{ t('Đang tải...', 'Loading...') }}</p>
       <table v-else>
         <thead>
           <tr>
-            <th>Họ tên</th>
-            <th>Email</th>
-            <th>Vai trò</th>
-            <th>Hành động</th>
+            <th>{{ t('Họ tên', 'Full Name') }}</th>
+            <th>{{ t('Email', 'Email') }}</th>
+            <th>{{ t('Vai trò', 'Role') }}</th>
+            <th>{{ t('Hành động', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="user in visible" :key="user.id">
             <td>{{ user.fullName }}<small>@{{ user.userName }}</small></td>
             <td>{{ user.email }}</td>
-            <td><span class="role-label">{{ getRoleLabel(user.role) }}</span></td>
+            <td><span class="role-label">{{ translateRole(user.role) }}</span></td>
             <td class="actions">
-              <button @click="edit(user)">Sửa</button>
-              <button class="danger" @click="remove(user)">Xóa</button>
+              <button @click="edit(user)">{{ t('Sửa', 'Edit') }}</button>
+              <button class="danger" @click="remove(user)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
         </tbody>
@@ -231,7 +272,7 @@ onMounted(load)
           >
             <i class="pi pi-chevron-left" />
           </button>
-          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <span class="page-indicator">{{ t('Trang', 'Page') }} <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
           <button 
             type="button" 
             :disabled="currentPage === totalPages"

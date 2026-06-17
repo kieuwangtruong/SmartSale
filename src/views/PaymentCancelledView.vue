@@ -3,8 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { getPaymentStatus, getOrderStatusLabel } from '../services/orderApi'
 import { getErrorMessage } from '../services/apiClient'
+import { useLanguage } from '../services/i18n'
 
 const route = useRoute()
+const { t } = useLanguage()
+
 const loading = ref(true)
 const error = ref('')
 const orderId = ref<number | null>(null)
@@ -12,7 +15,7 @@ const orderCode = computed(() => String(route.query.orderCode ?? ''))
 
 async function loadCancellation() {
   if (!orderCode.value) {
-    error.value = 'Không tìm thấy mã thanh toán của đơn hàng.'
+    error.value = t('Không tìm thấy mã thanh toán của đơn hàng.', 'Order payment code not found.')
     loading.value = false
     return
   }
@@ -21,12 +24,12 @@ async function loadCancellation() {
     const payment = await getPaymentStatus(orderCode.value)
     orderId.value = payment.orderId
     if (payment.status === 'Paid') {
-      error.value = 'Đơn hàng này đã được thanh toán và không thể hủy.'
+      error.value = t('Đơn hàng này đã được thanh toán và không thể hủy.', 'This order has already been paid and cannot be cancelled.')
     } else if (payment.status !== 'PaymentCancelled') {
-      error.value = `Trạng thái hiện tại của đơn hàng: ${getOrderStatusLabel(payment.status)}.`
+      error.value = t(`Trạng thái hiện tại của đơn hàng: ${getOrderStatusLabel(payment.status)}.`, `Current status of order: ${getOrderStatusLabel(payment.status)}.`)
     }
   } catch (exception) {
-    error.value = getErrorMessage(exception, 'Không thể kiểm tra trạng thái hủy đơn hàng.')
+    error.value = getErrorMessage(exception, t('Không thể kiểm tra trạng thái hủy đơn hàng.', 'Unable to check order cancellation status.'))
   } finally {
     loading.value = false
   }
@@ -39,23 +42,23 @@ onMounted(loadCancellation)
   <main class="cancel-page">
     <section class="cancel-form">
       <span class="cancel-icon"><i class="pi pi-times-circle" /></span>
-      <h1>HỦY THANH TOÁN</h1>
+      <h1>{{ t('HỦY THANH TOÁN', 'PAYMENT CANCELLED') }}</h1>
       <p class="description">
-        Đơn hàng chưa được thanh toán hãy thanh toán lại.
+        {{ t('Đơn hàng chưa được thanh toán hãy thanh toán lại.', 'The order is unpaid. Please try paying again.') }}
       </p>
 
       <div class="order-information">
         <div>
-          <span>Mã đơn hàng</span>
-          <strong>{{ loading ? 'Đang kiểm tra...' : orderId ? `#${orderId}` : 'Không xác định' }}</strong>
+          <span>{{ t('Mã đơn hàng', 'Order ID') }}</span>
+          <strong>{{ loading ? t('Đang kiểm tra...', 'Checking...') : orderId ? `#${orderId}` : t('Không xác định', 'Unknown') }}</strong>
         </div>
         <div>
-          <span>Mã thanh toán</span>
-          <strong>{{ orderCode || 'Không xác định' }}</strong>
+          <span>{{ t('Mã thanh toán', 'Payment Code') }}</span>
+          <strong>{{ orderCode || t('Không xác định', 'Unknown') }}</strong>
         </div>
         <div>
-          <span>Trạng thái</span>
-          <strong class="cancelled-status">Đã hủy thanh toán</strong>
+          <span>{{ t('Trạng thái', 'Status') }}</span>
+          <strong class="cancelled-status">{{ t('Đã hủy thanh toán', 'Cancelled') }}</strong>
         </div>
       </div>
 
@@ -64,9 +67,9 @@ onMounted(loadCancellation)
       </p>
 
       <div class="cancel-actions">
-        <RouterLink class="secondary-action" to="/">Tiếp tục mua sắm</RouterLink>
+        <RouterLink class="secondary-action" to="/">{{ t('Tiếp tục mua sắm', 'Continue Shopping') }}</RouterLink>
         <RouterLink class="primary-action" to="/?cart=open">
-          Quay lại giỏ hàng
+          {{ t('Quay lại giỏ hàng', 'Return to Cart') }}
         </RouterLink>
       </div>
     </section>

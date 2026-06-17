@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { createSupplier, deleteSupplier, getSuppliers, updateSupplier, type Supplier } from '../services/orderApi'
 import { useAuthStore } from '../stores/authStore'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
 
 const auth = useAuthStore()
 const canManageSuppliers = computed(
@@ -11,6 +13,17 @@ const suppliers = ref<Supplier[]>([])
 const editingId = ref<number | null>(null)
 const error = ref('')
 const form = reactive({ name: '', contactName: '', phone: '', email: '', address: '', notes: '' })
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
 
 const search = ref('')
 const showForm = ref(false)
@@ -43,7 +56,7 @@ const paginationInfo = computed(() => {
   if (total === 0) return ''
   const start = (currentPage.value - 1) * itemsPerPage + 1
   const end = Math.min(currentPage.value * itemsPerPage, total)
-  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+  return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
 // Reset to page 1 when search changes
@@ -61,7 +74,7 @@ async function load() {
   try {
     suppliers.value = await getSuppliers()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Không thể tải nhà cung cấp.'
+    showError(e instanceof Error ? e.message : t('Không thể tải nhà cung cấp.', 'Unable to load suppliers.'))
   }
 }
 
@@ -85,12 +98,12 @@ async function save() {
       await updateSupplier({ ...current, ...form })
     } else await createSupplier(form)
     reset(); await load()
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể lưu nhà cung cấp.' }
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể lưu nhà cung cấp.', 'Unable to save supplier.')) }
 }
 
 async function remove(item: Supplier) {
-  if (!confirm(`Xóa nhà cung cấp ${item.name}?`)) return
-  try { await deleteSupplier(item.id); await load() } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể xóa.' }
+  if (!confirm(t(`Xóa nhà cung cấp ${item.name}?`, `Delete supplier ${item.name}?`))) return
+  try { await deleteSupplier(item.id); await load() } catch (e) { showError(e instanceof Error ? e.message : t('Không thể xóa.', 'Unable to delete.')) }
 }
 
 onMounted(load)
@@ -100,41 +113,39 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>Nhà cung cấp</h2>
-        <p>Danh bạ nhà cung cấp dùng khi lập phiếu nhập kho.</p>
+        <h2>{{ t('Nhà cung cấp', 'Suppliers') }}</h2>
+        <p>{{ t('Danh bạ nhà cung cấp dùng khi lập phiếu nhập kho.', 'Supplier directory for stock receipts.') }}</p>
       </div>
       <div class="page-head-actions">
-        <input v-model="search" placeholder="Tìm nhà cung cấp..." class="search-input" />
+        <input v-model="search" :placeholder="t('Tìm nhà cung cấp...', 'Search suppliers...')" class="search-input" />
         <button
           v-if="canManageSuppliers"
           type="button"
           class="primary"
           @click="showForm = true"
         >
-          <i class="pi pi-plus" /> Thêm nhà cung cấp
+          <i class="pi pi-plus" /> {{ t('Thêm nhà cung cấp', 'Add Supplier') }}
         </button>
       </div>
     </div>
 
-    <p v-if="error" class="alert error">{{ error }}</p>
-
     <!-- Supplier modal form dialog -->
     <div v-if="showForm && canManageSuppliers" class="modal-backdrop" @click="reset" />
-    <aside v-if="showForm && canManageSuppliers" class="admin-modal" aria-label="Biểu mẫu nhà cung cấp">
+    <aside v-if="showForm && canManageSuppliers" class="admin-modal" :aria-label="t('Biểu mẫu nhà cung cấp', 'Supplier form')">
       <div class="modal-head">
-        <h2>{{ editingId ? 'Cập nhật nhà cung cấp' : 'Thêm nhà cung cấp' }}</h2>
+        <h2>{{ editingId ? t('Cập nhật nhà cung cấp', 'Update Supplier') : t('Thêm nhà cung cấp', 'Add Supplier') }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="save">
-        <label>Tên nhà cung cấp<input v-model="form.name" required /></label>
-        <label>Người liên hệ<input v-model="form.contactName" required /></label>
-        <label>Số điện thoại<input v-model="form.phone" required /></label>
-        <label>Email<input v-model="form.email" type="email" /></label>
-        <label>Địa chỉ<input v-model="form.address" /></label>
-        <label>Ghi chú<textarea v-model="form.notes"></textarea></label>
+        <label>{{ t('Tên nhà cung cấp', 'Supplier Name') }}<input v-model="form.name" required /></label>
+        <label>{{ t('Người liên hệ', 'Contact Person') }}<input v-model="form.contactName" required /></label>
+        <label>{{ t('Số điện thoại', 'Phone Number') }}<input v-model="form.phone" required /></label>
+        <label>{{ t('Email', 'Email') }}<input v-model="form.email" type="email" /></label>
+        <label>{{ t('Địa chỉ', 'Address') }}<input v-model="form.address" /></label>
+        <label>{{ t('Ghi chú', 'Notes') }}<textarea v-model="form.notes"></textarea></label>
         <div class="actions">
-          <button class="primary">Lưu</button>
-          <button type="button" @click="reset">Hủy</button>
+          <button class="primary">{{ t('Lưu', 'Save') }}</button>
+          <button type="button" @click="reset">{{ t('Hủy', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
@@ -144,11 +155,11 @@ onMounted(load)
       <table>
         <thead>
           <tr>
-            <th>Nhà cung cấp</th>
-            <th>Người liên hệ</th>
-            <th>Liên lạc</th>
-            <th>Ghi chú</th>
-            <th v-if="canManageSuppliers">Hành động</th>
+            <th>{{ t('Nhà cung cấp', 'Supplier') }}</th>
+            <th>{{ t('Người liên hệ', 'Contact Person') }}</th>
+            <th>{{ t('Liên lạc', 'Contact info') }}</th>
+            <th>{{ t('Ghi chú', 'Notes') }}</th>
+            <th v-if="canManageSuppliers">{{ t('Hành động', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -158,8 +169,8 @@ onMounted(load)
             <td>{{ item.phone }}<small>{{ item.email }}</small></td>
             <td>{{ item.notes }}</td>
             <td v-if="canManageSuppliers" class="actions">
-              <button @click="edit(item)">Sửa</button>
-              <button class="danger" @click="remove(item)">Xóa</button>
+              <button @click="edit(item)">{{ t('Sửa', 'Edit') }}</button>
+              <button class="danger" @click="remove(item)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
         </tbody>
@@ -173,8 +184,8 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === 1"
             @click="currentPage = 1"
-            aria-label="Về đầu"
-            title="Về đầu"
+            :aria-label="t('Về đầu', 'To beginning')"
+            :title="t('Về đầu', 'To beginning')"
           >
             <i class="pi pi-chevron-double-left" />
           </button>
@@ -182,16 +193,16 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === 1"
             @click="currentPage--"
-            aria-label="Trang trước"
+            :aria-label="t('Trang trước', 'Previous page')"
           >
             <i class="pi pi-chevron-left" />
           </button>
-          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <span class="page-indicator">{{ t('Trang', 'Page') }} <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
           <button 
             type="button" 
             :disabled="currentPage === totalPages"
             @click="currentPage++"
-            aria-label="Trang sau"
+            :aria-label="t('Trang sau', 'Next page')"
           >
             <i class="pi pi-chevron-right" />
           </button>
@@ -199,8 +210,8 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === totalPages"
             @click="currentPage = totalPages"
-            aria-label="Về cuối"
-            title="Về cuối"
+            :aria-label="t('Về cuối', 'To end')"
+            :title="t('Về cuối', 'To end')"
           >
             <i class="pi pi-chevron-double-right" />
           </button>

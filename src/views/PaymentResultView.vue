@@ -1,10 +1,13 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { getPaymentStatus, type OrderStatus } from '../services/orderApi'
+import { useLanguage } from '../services/i18n'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useLanguage()
+
 const loading = ref(true)
 const status = ref<OrderStatus | null>(null)
 const error = ref('')
@@ -15,46 +18,46 @@ const content = computed(() => {
   if (current === 'Paid') {
     return {
       icon: 'pi pi-check-circle',
-      title: 'Thanh toán thành công',
-      message: 'Đơn hàng đã được thanh toán và chuyển sang xử lý.',
+      title: t('Thanh toán thành công', 'Payment Successful'),
+      message: t('Đơn hàng đã được thanh toán và chuyển sang xử lý.', 'The order has been paid and is being processed.'),
       tone: 'success',
     }
   }
   if (current === 'PaymentCancelled' || route.name === 'payment-cancelled') {
     return {
       icon: 'pi pi-times-circle',
-      title: 'Thanh toán đã hủy',
-      message: 'Sản phẩm vẫn được giữ trong giỏ hàng để bạn có thể thử lại.',
+      title: t('Thanh toán đã hủy', 'Payment Cancelled'),
+      message: t('Sản phẩm vẫn được giữ trong giỏ hàng để bạn có thể thử lại.', 'Items remain in your cart so you can try again.'),
       tone: 'warning',
     }
   }
   if (current === 'PaymentExpired' || route.name === 'payment-expired') {
     return {
       icon: 'pi pi-clock',
-      title: 'LIÊN KẾT ĐÃ HẾT HẠN',
-      message: 'Liên kết thanh toán chỉ có hiệu lực trong 10 phút.',
+      title: t('LIÊN KẾT ĐÃ HẾT HẠN', 'LINK EXPIRED'),
+      message: t('Liên kết thanh toán chỉ có hiệu lực trong 10 phút.', 'The payment link is only valid for 10 minutes.'),
       tone: 'warning',
     }
   }
   if (current === 'PaymentFailed' || route.name === 'payment-failed') {
     return {
       icon: 'pi pi-exclamation-triangle',
-      title: 'THANH TOÁN THẤT BẠI',
-      message: 'Không thể hoàn tất thanh toán. Sản phẩm vẫn còn trong giỏ hàng.',
+      title: t('THANH TOÁN THẤT BẠI', 'PAYMENT FAILED'),
+      message: t('Không thể hoàn tất thanh toán. Sản phẩm vẫn còn trong giỏ hàng.', 'Could not complete payment. Items are still in your cart.'),
       tone: 'danger',
     }
   }
   return {
     icon: 'pi pi-spin pi-spinner',
-    title: 'ĐANG XÁC NHẬN THANH TOÁN',
-    message: 'Hệ thống đang chờ xác nhận an toàn từ PayOS.',
+    title: t('ĐANG XÁC NHẬN THANH TOÁN', 'CONFIRMING PAYMENT'),
+    message: t('Hệ thống đang chờ xác nhận an toàn từ PayOS.', 'The system is awaiting secure confirmation from PayOS.'),
     tone: 'pending',
   }
 })
 
 async function loadStatus() {
   if (!orderCode.value) {
-    error.value = 'Thiếu mã thanh toán.'
+    error.value = t('Thiếu mã thanh toán.', 'Missing payment code.')
     loading.value = false
     return
   }
@@ -70,7 +73,7 @@ async function loadStatus() {
       await router.replace({ name: 'payment-failed', query: { orderCode: orderCode.value } })
     }
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Không thể kiểm tra thanh toán.'
+    error.value = exception instanceof Error ? exception.message : t('Không thể kiểm tra thanh toán.', 'Unable to verify payment status.')
   } finally {
     loading.value = false
   }
@@ -90,12 +93,12 @@ onMounted(async () => {
   <main class="payment-result">
     <section class="result-card" :class="content.tone">
       <span class="result-icon"><i :class="content.icon" /></span>
-      <h1>{{ loading ? 'Đang kiểm tra thanh toán' : content.title }}</h1>
+      <h1>{{ loading ? t('Đang kiểm tra thanh toán', 'Checking payment status') : content.title }}</h1>
       <p>{{ error || content.message }}</p>
-      <small v-if="orderCode">Mã thanh toán: {{ orderCode }}</small>
+      <small v-if="orderCode">{{ t('Mã thanh toán:', 'Payment Code:') }} {{ orderCode }}</small>
       <div class="result-actions">
-        <RouterLink v-if="status !== 'Paid'" to="/?cart=open">Quay lại giỏ hàng</RouterLink>
-        <RouterLink v-else to="/">Tiếp tục mua sắm</RouterLink>
+        <RouterLink v-if="status !== 'Paid'" to="/?cart=open">{{ t('Quay lại giỏ hàng', 'Return to Cart') }}</RouterLink>
+        <RouterLink v-else to="/">{{ t('Tiếp tục mua sắm', 'Continue Shopping') }}</RouterLink>
       </div>
     </section>
   </main>

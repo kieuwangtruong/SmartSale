@@ -20,20 +20,31 @@ import {
   type Order,
   type OrderStatus,
 } from '../services/orderApi'
-import { filterVisibleOrders } from '../services/orderHiddenStorage'
 import { getProducts, type Product } from '../services/productApi'
+import { filterVisibleOrders } from '../services/orderHiddenStorage'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
 
 const auth = useAuthStore()
 const isAdmin = computed(() => auth.role === 'Admin')
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
 
 const orders = ref<Order[]>([])
 const products = ref<Product[]>([])
 const customers = ref<Customer[]>([])
 const loading = ref(false)
-const pageError = ref('')
-const orderError = ref('')
-const customerError = ref('')
 const filter = ref<'All' | OrderStatus>('All')
+
 const form = reactive({
   customerId: null as number | null,
   discountAmount: 0,
@@ -60,7 +71,7 @@ const itemsPerPage = 10
 const statusDraft = reactive<Record<number, OrderStatus>>({})
 
 const customerOptions = computed(() => [
-  { label: 'Khách lẻ', value: null as number | null },
+  { label: t('Khách lẻ', 'Walk-in Customer'), value: null as number | null },
   ...customers.value.map((c) => ({
     label: `${c.fullName} - ${c.phone}`,
     value: c.id,
@@ -69,14 +80,14 @@ const customerOptions = computed(() => [
 
 const productOptions = computed(() =>
   products.value.map((p) => ({
-    label: `${p.name} (${formatCurrency(p.sellingPrice)}) — Còn ${p.quantity}`,
+    label: `${p.name} (${formatCurrency(p.sellingPrice)}) — ${t('Còn', 'Remaining')} ${p.quantity}`,
     value: p.id,
     disabled: p.quantity <= 0,
   })),
 )
 
 const statusFilterOptions = computed(() => [
-  { label: 'Tất cả trạng thái', value: 'All' as const },
+  { label: t('Tất cả trạng thái', 'All Statuses'), value: 'All' as const },
   ...ORDER_STATUSES.map((s) => ({ label: getOrderStatusLabel(s), value: s })),
 ])
 
@@ -96,7 +107,7 @@ const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
   if (!q) return list
   return list.filter((o) =>
-    (o.customerName || 'Khách lẻ').toLowerCase().includes(q) ||
+    (o.customerName || t('Khách lẻ', 'Walk-in')).toLowerCase().includes(q) ||
     String(o.id).includes(q) ||
     o.orderItems.some((item) => item.productName.toLowerCase().includes(q)),
   )
@@ -114,7 +125,7 @@ const paginationInfo = computed(() => {
   if (total === 0) return ''
   const start = (currentPage.value - 1) * itemsPerPage + 1
   const end = Math.min(currentPage.value * itemsPerPage, total)
-  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+  return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
 watch([search, filter], () => {
@@ -127,7 +138,6 @@ function getProductPrice(productId: number) {
 
 function resetCustomerForm() {
   showCustomerForm.value = false
-  customerError.value = ''
   Object.assign(customerForm, {
     fullName: '', phone: '', email: '', address: '', gender: 0, cccd: '', age: null,
   })
@@ -135,7 +145,6 @@ function resetCustomerForm() {
 
 function reset() {
   showForm.value = false
-  orderError.value = ''
   resetCustomerForm()
   Object.assign(form, {
     customerId: null, discountAmount: 0, amountPaid: 0, items: [{ productId: 0, quantity: 1 }],
@@ -150,7 +159,6 @@ function syncStatusDrafts(list: Order[] = orders.value) {
 
 async function load() {
   loading.value = true
-  pageError.value = ''
   try {
     ;[orders.value, products.value, customers.value] = await Promise.all([
       getOrders(), getProducts(), getCustomers(),
@@ -158,7 +166,7 @@ async function load() {
     orders.value = filterVisibleOrders(orders.value)
     syncStatusDrafts()
   } catch (e) {
-    pageError.value = getErrorMessage(e, 'Không thể tải dữ liệu.')
+    showError(getErrorMessage(e, t('Không thể tải dữ liệu.', 'Unable to load data.')))
   } finally {
     loading.value = false
   }
@@ -173,7 +181,6 @@ function removeItem(index: number) {
 }
 
 async function submitCustomer() {
-  customerError.value = ''
   try {
     const extras = normalizeCustomerFormExtras(customerForm)
     const created = await createCustomer({ ...customerForm, ...extras })
@@ -181,14 +188,14 @@ async function submitCustomer() {
     resetCustomerForm()
     customers.value = await getCustomers()
   } catch (e) {
-    customerError.value = getErrorMessage(e, 'Không thể tạo khách hàng.')
+    showError(getErrorMessage(e, t('Không thể tạo khách hàng.', 'Unable to create customer.')))
   }
 }
 
 async function submit() {
   const items = form.items.filter((item) => item.productId > 0 && item.quantity > 0)
   if (!auth.user || !items.length) {
-    orderError.value = 'Vui lòng chọn ít nhất một sản phẩm.'
+    showError(t('Vui lòng chọn ít nhất một sản phẩm.', 'Please select at least one product.'))
     return
   }
   try {
@@ -202,7 +209,7 @@ async function submit() {
     reset()
     await load()
   } catch (e) {
-    orderError.value = getErrorMessage(e, 'Không thể tạo đơn.')
+    showError(getErrorMessage(e, t('Không thể tạo đơn.', 'Unable to create order.')))
   }
 }
 
@@ -232,25 +239,23 @@ async function changeStatus(order: Order, status: OrderStatus | null) {
     resetStatusDraft(order)
     return
   }
-  pageError.value = ''
   try {
     await updateOrderStatus(order.id, status)
     await load()
   } catch (e) {
     resetStatusDraft(order)
-    pageError.value = getErrorMessage(e, 'Không thể cập nhật trạng thái.')
+    showError(getErrorMessage(e, t('Không thể cập nhật trạng thái.', 'Unable to update status.')))
   }
 }
 
 async function remove(order: Order) {
-  if (!confirm(`Xóa đơn #${order.id} (${getOrderStatusLabel(order.status)})?`)) return
+  if (!confirm(t(`Xóa đơn #${order.id} (${getOrderStatusLabel(order.status)})?`, `Delete order #${order.id} (${getOrderStatusLabel(order.status)})?`))) return
 
-  pageError.value = ''
   try {
     await deleteOrderAnyStatus(order.id, order.status)
     await load()
   } catch (e) {
-    pageError.value = getErrorMessage(e, 'Không thể xóa đơn.')
+    showError(getErrorMessage(e, t('Không thể xóa đơn.', 'Unable to delete order.')))
   }
 }
 
@@ -261,118 +266,114 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>Đơn bán hàng</h2>
-        <p>Tạo đơn, giữ tồn kho và theo dõi công nợ.</p>
+        <h2>{{ t('Đơn bán hàng', 'Sales Orders') }}</h2>
+        <p>{{ t('Tạo đơn, giữ tồn kho và theo dõi công nợ.', 'Create orders, reserve inventory, and track credit/debt.') }}</p>
       </div>
       <div class="page-head-actions">
         <SearchableSelect
           v-model="filter"
           :options="statusFilterOptions"
-          placeholder="Lọc trạng thái"
+          :placeholder="t('Lọc trạng thái', 'Filter status')"
           class="filter-select-wrap"
         />
-        <input v-model="search" placeholder="Tìm đơn, khách hàng..." class="search-input" />
+        <input v-model="search" :placeholder="t('Tìm đơn, khách hàng...', 'Search orders, customers...')" class="search-input" />
         <button type="button" class="primary" @click="showForm = true">
-          <i class="pi pi-plus" /> Tạo đơn mới
+          <i class="pi pi-plus" /> {{ t('Tạo đơn mới', 'Create Order') }}
         </button>
       </div>
     </div>
 
-    <p v-if="pageError" class="alert error">{{ pageError }}</p>
-
     <div v-if="showForm" class="modal-backdrop" @click="reset" />
-    <aside v-if="showForm" class="admin-modal" aria-label="Tạo đơn bán hàng">
+    <aside v-if="showForm" class="admin-modal" :aria-label="t('Tạo đơn bán hàng', 'Create sales order')">
       <div class="modal-head">
-        <h2>Tạo đơn hàng mới</h2>
+        <h2>{{ t('Tạo đơn hàng mới', 'Create New Order') }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="submit">
-        <p v-if="orderError" class="alert error" style="margin-bottom: 15px;">{{ orderError }}</p>
         <div class="customer-row">
-          <label>Khách hàng
+          <label>{{ t('Khách hàng', 'Customer') }}
             <SearchableSelect
               v-model="form.customerId"
               :options="customerOptions"
-              placeholder="Chọn khách hàng"
+              :placeholder="t('Chọn khách hàng', 'Select customer')"
             />
           </label>
           <button type="button" class="secondary add-customer-btn" @click="showCustomerForm = true">
-            <i class="pi pi-user-plus" /> Thêm KH
+            <i class="pi pi-user-plus" /> {{ t('Thêm KH', 'Add Customer') }}
           </button>
         </div>
-        <label>Giảm giá<input v-model.number="form.discountAmount" type="number" min="0" /></label>
-        <label>Đã thanh toán<input v-model.number="form.amountPaid" type="number" min="0" /></label>
+        <label>{{ t('Giảm giá', 'Discount') }}<input v-model.number="form.discountAmount" type="number" min="0" /></label>
+        <label>{{ t('Đã thanh toán', 'Amount Paid') }}<input v-model.number="form.amountPaid" type="number" min="0" /></label>
 
-        <div class="form-section-title">Danh sách sản phẩm</div>
+        <div class="form-section-title">{{ t('Danh sách sản phẩm', 'Product List') }}</div>
         <div v-for="(item, index) in form.items" :key="index" class="item-row">
           <SearchableSelect
             v-model="item.productId"
-            :options="[{ label: 'Chọn sản phẩm', value: 0 }, ...productOptions]"
-            placeholder="Tìm sản phẩm..."
+            :options="[{ label: t('Chọn sản phẩm', 'Select product'), value: 0 }, ...productOptions]"
+            :placeholder="t('Tìm sản phẩm...', 'Search products...')"
           />
           <input v-model.number="item.quantity" type="number" min="1" placeholder="SL" />
           <span class="line-price">{{ formatCurrency(getProductPrice(item.productId) * item.quantity) }}</span>
           <button type="button" class="danger" @click="removeItem(index)"><i class="pi pi-trash" /></button>
         </div>
-        <button type="button" class="add-row-btn" @click="addItem"><i class="pi pi-plus" /> Thêm sản phẩm</button>
+        <button type="button" class="add-row-btn" @click="addItem"><i class="pi pi-plus" /> {{ t('Thêm sản phẩm', 'Add Product') }}</button>
 
         <div class="order-total-preview">
-          <span>Tổng dự kiến</span>
+          <span>{{ t('Tổng dự kiến', 'Estimated Total') }}</span>
           <strong>{{ formatCurrency(orderTotalPreview) }}</strong>
         </div>
 
         <div class="actions">
-          <button class="primary">Tạo đơn</button>
-          <button type="button" @click="reset">Hủy</button>
+          <button class="primary">{{ t('Tạo đơn', 'Create Order') }}</button>
+          <button type="button" @click="reset">{{ t('Hủy', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
 
     <div v-if="showCustomerForm" class="modal-backdrop customer-modal-backdrop" @click="resetCustomerForm" />
-    <aside v-if="showCustomerForm" class="admin-modal customer-modal" aria-label="Thêm khách hàng">
+    <aside v-if="showCustomerForm" class="admin-modal customer-modal" :aria-label="t('Thêm khách hàng', 'Add customer')">
       <div class="modal-head">
-        <h2>Thêm khách hàng mới</h2>
+        <h2>{{ t('Thêm khách hàng mới', 'Add New Customer') }}</h2>
         <button type="button" @click="resetCustomerForm"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="submitCustomer">
-        <p v-if="customerError" class="alert error" style="margin-bottom: 15px;">{{ customerError }}</p>
-        <label>Họ tên<input v-model="customerForm.fullName" required /></label>
-        <label>Số điện thoại<input v-model="customerForm.phone" required /></label>
-        <label>Email<input v-model="customerForm.email" type="email" /></label>
-        <label>Địa chỉ<input v-model="customerForm.address" /></label>
-        <label>Giới tính
+        <label>{{ t('Họ tên', 'Full Name') }}<input v-model="customerForm.fullName" required /></label>
+        <label>{{ t('Số điện thoại', 'Phone Number') }}<input v-model="customerForm.phone" required /></label>
+        <label>{{ t('Email', 'Email') }}<input v-model="customerForm.email" type="email" /></label>
+        <label>{{ t('Địa chỉ', 'Address') }}<input v-model="customerForm.address" /></label>
+        <label>{{ t('Giới tính', 'Gender') }}
           <select v-model.number="customerForm.gender">
-            <option :value="0">Nam</option>
-            <option :value="1">Nữ</option>
-            <option :value="2">Khác</option>
+            <option :value="0">{{ t('Nam', 'Male') }}</option>
+            <option :value="1">{{ t('Nữ', 'Female') }}</option>
+            <option :value="2">{{ t('Khác', 'Other') }}</option>
           </select>
         </label>
-        <label>CCCD<input v-model="customerForm.cccd" /></label>
-        <label>Tuổi<input v-model.number="customerForm.age" type="number" min="1" max="120" /></label>
+        <label>{{ t('CCCD', 'Citizen ID') }}<input v-model="customerForm.cccd" /></label>
+        <label>{{ t('Tuổi', 'Age') }}<input v-model.number="customerForm.age" type="number" min="1" max="120" /></label>
         <div class="actions">
-          <button class="primary">Lưu & chọn</button>
-          <button type="button" @click="resetCustomerForm">Hủy</button>
+          <button class="primary">{{ t('Lưu & chọn', 'Save & Select') }}</button>
+          <button type="button" @click="resetCustomerForm">{{ t('Hủy', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
 
     <article class="panel table-wrap">
-      <p v-if="loading">Đang tải...</p>
+      <p v-if="loading">{{ t('Đang tải...', 'Loading...') }}</p>
       <table v-else>
         <thead>
           <tr>
-            <th>Đơn</th>
-            <th>Khách hàng</th>
-            <th>Tổng tiền</th>
-            <th>Công nợ</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
+            <th>{{ t('Đơn', 'Order') }}</th>
+            <th>{{ t('Khách hàng', 'Customer') }}</th>
+            <th>{{ t('Tổng tiền', 'Total Amount') }}</th>
+            <th>{{ t('Công nợ', 'Debt') }}</th>
+            <th>{{ t('Trạng thái', 'Status') }}</th>
+            <th>{{ t('Hành động', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in visible" :key="order.id">
             <td>#{{ order.id }}<small>{{ order.orderItems.map((i) => `${i.productName} x${i.quantity}`).join(', ') }}</small></td>
-            <td>{{ order.customerName || 'Khách lẻ' }}</td>
+            <td>{{ order.customerName || t('Khách lẻ', 'Walk-in') }}</td>
             <td>{{ formatCurrency(order.total) }}</td>
             <td>{{ formatCurrency(order.debtAmount) }}</td>
             <td>
@@ -381,14 +382,14 @@ onMounted(load)
                 :key="`status-${order.id}-${statusSelectKey[order.id] ?? 0}`"
                 :model-value="statusDraft[order.id] ?? order.status"
                 :options="getEditableStatusOptions(order)"
-                placeholder="Trạng thái"
+                :placeholder="t('Trạng thái', 'Status')"
                 class="status-select-wrap"
                 @update:model-value="changeStatus(order, $event as OrderStatus)"
               />
               <span v-else :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span>
             </td>
             <td>
-              <button v-if="isAdmin" class="danger" @click="remove(order)">Xóa</button>
+              <button v-if="isAdmin" class="danger" @click="remove(order)">{{ t('Xóa', 'Delete') }}</button>
               <span v-else class="muted-action">—</span>
             </td>
           </tr>
@@ -398,11 +399,11 @@ onMounted(load)
       <div v-if="!loading && totalPages > 1" class="pagination-footer">
         <span class="pagination-info">{{ paginationInfo }}</span>
         <div class="pagination-controls">
-          <button type="button" :disabled="currentPage === 1" @click="currentPage = 1" aria-label="Về đầu"><i class="pi pi-chevron-double-left" /></button>
-          <button type="button" :disabled="currentPage === 1" @click="currentPage--" aria-label="Trang trước"><i class="pi pi-chevron-left" /></button>
-          <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
-          <button type="button" :disabled="currentPage === totalPages" @click="currentPage++" aria-label="Trang sau"><i class="pi pi-chevron-right" /></button>
-          <button type="button" :disabled="currentPage === totalPages" @click="currentPage = totalPages" aria-label="Về cuối"><i class="pi pi-chevron-double-right" /></button>
+          <button type="button" :disabled="currentPage === 1" @click="currentPage = 1" :aria-label="t('Về đầu', 'To beginning')" :title="t('Về đầu', 'To beginning')"><i class="pi pi-chevron-double-left" /></button>
+          <button type="button" :disabled="currentPage === 1" @click="currentPage--" :aria-label="t('Trang trước', 'Previous page')"><i class="pi pi-chevron-left" /></button>
+          <span class="page-indicator">{{ t('Trang', 'Page') }} <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+          <button type="button" :disabled="currentPage === totalPages" @click="currentPage++" :aria-label="t('Trang sau', 'Next page')"><i class="pi pi-chevron-right" /></button>
+          <button type="button" :disabled="currentPage === totalPages" @click="currentPage = totalPages" :aria-label="t('Về cuối', 'To end')" :title="t('Về cuối', 'To end')"><i class="pi pi-chevron-double-right" /></button>
         </div>
       </div>
     </article>

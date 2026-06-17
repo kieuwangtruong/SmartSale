@@ -1,4 +1,6 @@
-const ORDER_STATUS_LABELS: Record<string, string> = {
+import { useLanguage } from './i18n'
+
+const ORDER_STATUS_LABELS_VI: Record<string, string> = {
   Pending: 'Chờ xử lý',
   PendingPayment: 'Chờ thanh toán',
   ProcessingPayment: 'Đang thanh toán',
@@ -12,7 +14,21 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   Cancelled: 'Đã hủy',
 }
 
-const EXACT_MESSAGES: Record<string, string> = {
+const ORDER_STATUS_LABELS_EN: Record<string, string> = {
+  Pending: 'Pending',
+  PendingPayment: 'Pending Payment',
+  ProcessingPayment: 'Processing Payment',
+  Paid: 'Paid',
+  PaymentCancelled: 'Payment Cancelled',
+  PaymentExpired: 'Payment Expired',
+  PaymentFailed: 'Payment Failed',
+  Processing: 'Processing',
+  Shipped: 'Shipped',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled',
+}
+
+const EXACT_MESSAGES_VI: Record<string, string> = {
   'Unauthorized': 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   'Forbidden': 'Bạn không có quyền thực hiện thao tác này.',
   'Not Found': 'Không tìm thấy dữ liệu.',
@@ -20,56 +36,68 @@ const EXACT_MESSAGES: Record<string, string> = {
   'Internal Server Error': 'Lỗi máy chủ. Vui lòng thử lại sau.',
 }
 
-const PARTIAL_PATTERNS: Array<{ test: RegExp; format: (match: RegExpMatchArray) => string }> = [
-  {
-    test: /cannot change status from ['"]?(\w+)['"]? to ['"]?(\w+)['"]?/i,
-    format: (m) =>
-      `Không thể chuyển trạng thái từ "${labelStatus(m[1]!)}" sang "${labelStatus(m[2]!)}".`,
-  },
-  {
-    test: /không thể chuyển trạng thái từ ['"]?(\w+)['"]? sang ['"]?(\w+)['"]?/i,
-    format: (m) =>
-      `Không thể chuyển trạng thái từ "${labelStatus(m[1]!)}" sang "${labelStatus(m[2]!)}".`,
-  },
-  {
-    test: /chỉ có thể xóa đơn hàng ở trạng thái (\w+)/i,
-    format: (m) => `Chỉ có thể xóa đơn hàng ở trạng thái "${labelStatus(m[1]!)}".`,
-  },
-  {
-    test: /only.*delete.*(?:orders?|order).*status ['"]?(\w+)['"]?/i,
-    format: (m) => `Chỉ có thể xóa đơn hàng ở trạng thái "${labelStatus(m[1]!)}".`,
-  },
-  {
-    test: /order.*not found/i,
-    format: () => 'Không tìm thấy đơn hàng.',
-  },
-  {
-    test: /invalid status/i,
-    format: () => 'Trạng thái đơn hàng không hợp lệ.',
-  },
-]
-
-function labelStatus(status?: string) {
-  if (!status) return status ?? ''
-  return ORDER_STATUS_LABELS[status] ?? status
-}
-
-function replaceStatusTokens(message: string) {
-  let result = message
-  for (const [code, label] of Object.entries(ORDER_STATUS_LABELS)) {
-    result = result.replace(new RegExp(`'${code}'`, 'g'), `"${label}"`)
-    result = result.replace(new RegExp(`"${code}"`, 'g'), `"${label}"`)
-    result = result.replace(new RegExp(`\\b${code}\\b`, 'g'), label)
-  }
-  return result
+const EXACT_MESSAGES_EN: Record<string, string> = {
+  'Unauthorized': 'Session expired. Please log in again.',
+  'Forbidden': 'You do not have permission to perform this action.',
+  'Not Found': 'Data not found.',
+  'Bad Request': 'Invalid request.',
+  'Internal Server Error': 'Server error. Please try again later.',
 }
 
 export function translateApiMessage(message: string): string {
+  const { currentLanguage } = useLanguage()
+  const isEn = currentLanguage.value === 'en'
   const trimmed = message.trim()
   if (!trimmed) return trimmed
 
-  const exact = EXACT_MESSAGES[trimmed]
+  const exact = isEn ? EXACT_MESSAGES_EN[trimmed] : EXACT_MESSAGES_VI[trimmed]
   if (exact) return exact
+
+  const orderStatusLabels = isEn ? ORDER_STATUS_LABELS_EN : ORDER_STATUS_LABELS_VI
+
+  const labelStatus = (status?: string) => {
+    if (!status) return status ?? ''
+    return orderStatusLabels[status] ?? status
+  }
+
+  const PARTIAL_PATTERNS = [
+    {
+      test: /cannot change status from ['"]?(\w+)['"]? to ['"]?(\w+)['"]?/i,
+      format: (m: RegExpMatchArray) =>
+        isEn
+          ? `Cannot change status from "${labelStatus(m[1])}" to "${labelStatus(m[2])}".`
+          : `Không thể chuyển trạng thái từ "${labelStatus(m[1])}" sang "${labelStatus(m[2])}".`,
+    },
+    {
+      test: /không thể chuyển trạng thái từ ['"]?(\w+)['"]? sang ['"]?(\w+)['"]?/i,
+      format: (m: RegExpMatchArray) =>
+        isEn
+          ? `Cannot change status from "${labelStatus(m[1])}" to "${labelStatus(m[2])}".`
+          : `Không thể chuyển trạng thái từ "${labelStatus(m[1])}" sang "${labelStatus(m[2])}".`,
+    },
+    {
+      test: /chỉ có thể xóa đơn hàng ở trạng thái (\w+)/i,
+      format: (m: RegExpMatchArray) =>
+        isEn
+          ? `Only orders in "${labelStatus(m[1])}" status can be deleted.`
+          : `Chỉ có thể xóa đơn hàng ở trạng thái "${labelStatus(m[1])}".`,
+    },
+    {
+      test: /only.*delete.*(?:orders?|order).*status ['"]?(\w+)['"]?/i,
+      format: (m: RegExpMatchArray) =>
+        isEn
+          ? `Only orders in "${labelStatus(m[1])}" status can be deleted.`
+          : `Chỉ có thể xóa đơn hàng ở trạng thái "${labelStatus(m[1])}".`,
+    },
+    {
+      test: /order.*not found/i,
+      format: () => (isEn ? 'Order not found.' : 'Không tìm thấy đơn hàng.'),
+    },
+    {
+      test: /invalid status/i,
+      format: () => (isEn ? 'Invalid order status.' : 'Trạng thái đơn hàng không hợp lệ.'),
+    },
+  ]
 
   for (const { test, format } of PARTIAL_PATTERNS) {
     const match = trimmed.match(test)
@@ -78,10 +106,16 @@ export function translateApiMessage(message: string): string {
 
   if (/^HTTP \d+$/.test(trimmed)) {
     const code = trimmed.replace('HTTP ', '')
-    return `Lỗi kết nối máy chủ (mã ${code}).`
+    return isEn ? `Server connection error (code ${code}).` : `Lỗi kết nối máy chủ (mã ${code}).`
   }
 
-  return replaceStatusTokens(trimmed)
+  let result = trimmed
+  for (const [code, label] of Object.entries(orderStatusLabels)) {
+    result = result.replace(new RegExp(`'${code}'`, 'g'), `"${label}"`)
+    result = result.replace(new RegExp(`"${code}"`, 'g'), `"${label}"`)
+    result = result.replace(new RegExp(`\\b${code}\\b`, 'g'), label)
+  }
+  return result
 }
 
 export function getErrorMessage(error: unknown, fallback: string): string {
@@ -90,3 +124,4 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
+

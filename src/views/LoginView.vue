@@ -7,6 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { homeForRole } from '../router'
 import type { UserRole } from '../services/apiClient'
+import { useLanguage } from '../services/i18n'
 
 const email = ref('')
 const password = ref('')
@@ -15,6 +16,7 @@ const error = ref('')
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const { t } = useLanguage()
 
 const activeRole = ref<UserRole>('Admin')
 const isRoleLocked = computed(() => !!route.meta.loginRole)
@@ -29,55 +31,55 @@ watch(
   { immediate: true },
 )
 
-const rolesList = [
+const rolesList = computed(() => [
   { 
     role: 'Admin' as UserRole, 
-    label: 'Quản trị viên', 
+    label: t('Quản trị viên', 'Administrator'), 
     icon: 'pi pi-shield',
     defaultEmail: '',
     defaultPassword: ''
   },
   { 
     role: 'SalesStaff' as UserRole, 
-    label: 'Nhân viên bán lẻ', 
+    label: t('Nhân viên bán lẻ', 'Retail Staff'), 
     icon: 'pi pi-users',
     defaultEmail: '',
     defaultPassword: ''
   },
   { 
     role: 'WarehouseKeeper' as UserRole, 
-    label: 'Thủ kho quản lý', 
+    label: t('Thủ kho quản lý', 'Warehouse Keeper'), 
     icon: 'pi pi-box',
     defaultEmail: '',
     defaultPassword: ''
   }
-]
+])
 
 const roleBranding = computed(() => {
   if (activeRole.value === 'Admin') {
     return {
-      title: 'Quản lý Hệ thống & Báo cáo',
-      desc: 'Giám sát hoạt động kinh doanh toàn diện, xem doanh thu bán lẻ thời gian thực và quản lý nhân sự hiệu quả.',
+      title: t('Quản lý Hệ thống & Báo cáo', 'System Management & Reports'),
+      desc: t('Giám sát hoạt động kinh doanh toàn diện, xem doanh thu bán lẻ thời gian thực và quản lý nhân sự hiệu quả.', 'Comprehensive business activity monitoring, real-time retail revenue tracking, and efficient staff management.'),
       image: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800'
     }
   }
   if (activeRole.value === 'WarehouseKeeper') {
     return {
-      title: 'Quản lý Kho & Nhập hàng',
-      desc: 'Đồng bộ hóa tồn kho tự động, cập nhật danh mục sản phẩm và phê duyệt các phiếu nhập kho.',
+      title: t('Quản lý Kho & Nhập hàng', 'Warehouse & Inventory Management'),
+      desc: t('Đồng bộ hóa tồn kho tự động, cập nhật danh mục sản phẩm và phê duyệt các phiếu nhập kho.', 'Automatic inventory synchronization, product catalog updates, and warehouse replenishment approvals.'),
       image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800'
     }
   }
   return {
-    title: 'Xử lý Đơn hàng & Bán hàng',
-    desc: 'Thiết lập đơn hàng tức thì cho khách hàng, quản lý công nợ và thống kê lịch sử bán lẻ chi tiết.',
+    title: t('Xử lý Đơn hàng & Bán hàng', 'Orders & Retail Sales Processing'),
+    desc: t('Thiết lập đơn hàng tức thì cho khách hàng, quản lý công nợ và thống kê lịch sử bán lẻ chi tiết.', 'Instant order creation for customers, credit/debt management, and detailed retail transaction logs.'),
     image: 'https://static.topcv.vn/cms/nhan-vien-ban-hang-la-gi-topcv-1164b8fce1e09aa.jpg'
   }
 })
 
 function changeRole(role: UserRole) {
   activeRole.value = role
-  const found = rolesList.find((r) => r.role === role)
+  const found = rolesList.value.find((r) => r.role === role)
   if (found) {
     email.value = found.defaultEmail
     password.value = found.defaultPassword
@@ -90,7 +92,7 @@ function changeRole(role: UserRole) {
 
 async function submit() {
   if (!email.value.trim() || !password.value) {
-    error.value = 'Vui lòng nhập email và mật khẩu.'
+    error.value = t('Vui lòng nhập email và mật khẩu.', 'Please enter your email and password.')
     return
   }
 
@@ -100,22 +102,22 @@ async function submit() {
     const user = await auth.login(email.value.trim(), password.value)
     if (user.role === 'Customer') {
       await auth.logout()
-      error.value = 'Tài khoản khách hàng vui lòng đăng nhập ở trang bán hàng.'
+      error.value = t('Tài khoản khách hàng vui lòng đăng nhập ở trang bán hàng.', 'Customer accounts must log in on the storefront page.')
       return
     }
 
     if (user.role !== activeRole.value) {
       await auth.logout()
-      const currentRoleObj = rolesList.find((r) => r.role === activeRole.value)
+      const currentRoleObj = rolesList.value.find((r) => r.role === activeRole.value)
       const roleLabel = currentRoleObj ? currentRoleObj.label : activeRole.value
-      error.value = `Tài khoản này không có quyền đăng nhập với vai trò ${roleLabel}.`
+      error.value = t(`Tài khoản này không có quyền đăng nhập với vai trò ${roleLabel}.`, `This account does not have permission to log in as ${roleLabel}.`)
       return
     }
 
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
     await router.replace(redirect || homeForRole(user.role))
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Không thể đăng nhập.'
+    error.value = exception instanceof Error ? exception.message : t('Không thể đăng nhập.', 'Login failed.')
   } finally {
     loading.value = false
   }
@@ -144,7 +146,7 @@ async function submit() {
             <strong>Smart Sale</strong>
           </div>
 
-          <h2>Đăng nhập hệ thống</h2>
+          <h2>{{ t('Đăng nhập hệ thống', 'System Login') }}</h2>
 
           <div class="role-selector">
             <button 
@@ -162,17 +164,17 @@ async function submit() {
 
           <form @submit.prevent="submit">
             <div class="input-group">
-              <label for="email">Email</label>
+              <label for="email">{{ t('Email', 'Email Address') }}</label>
               <InputText id="email" v-model="email" type="email" autocomplete="email" placeholder="admin@company.com" fluid />
             </div>
             
             <div class="input-group">
-              <label for="password">Mật khẩu</label>
+              <label for="password">{{ t('Mật khẩu', 'Password') }}</label>
               <Password
                 id="password"
                 v-model="password"
                 autocomplete="current-password"
-                placeholder="Nhập mật khẩu"
+                :placeholder="t('Nhập mật khẩu', 'Enter password')"
                 :feedback="false"
                 toggle-mask
                 fluid
@@ -181,10 +183,10 @@ async function submit() {
             
             <p v-if="error" class="error-msg"><i class="pi pi-exclamation-circle" /> {{ error }}</p>
             
-            <Button type="submit" label="Đăng nhập" icon="pi pi-sign-in" :loading="loading" fluid />
+            <Button type="submit" :label="t('Đăng nhập', 'Log In')" icon="pi pi-sign-in" :loading="loading" fluid />
           </form>
 
-          <RouterLink class="store-link" to="/">← Quay lại trang bán hàng</RouterLink>
+          <RouterLink class="store-link" to="/">{{ t('← Quay lại trang bán hàng', '← Back to Storefront') }}</RouterLink>
         </div>
       </section>
     </div>

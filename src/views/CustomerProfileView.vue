@@ -3,12 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/authStore'
 import { formatCurrency, getMyPurchases, getOrderStatusLabel, type Order } from '../services/orderApi'
 import { getMyProfile, type UserDto } from '../services/userApi'
+import { useLanguage } from '../services/i18n'
 
 const auth = useAuthStore()
 const profile = ref<UserDto | null>(auth.user)
 const orders = ref<Order[]>([])
 const loading = ref(true)
 const error = ref('')
+const { t } = useLanguage()
 
 const paidOrders = computed(() =>
   orders.value.filter((order) => ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status)),
@@ -22,7 +24,7 @@ async function load() {
     profile.value = me
     orders.value = history
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Không thể tải hồ sơ khách hàng.'
+    error.value = exception instanceof Error ? exception.message : t('Không thể tải hồ sơ khách hàng.', 'Unable to load customer profile.')
   } finally {
     loading.value = false
   }
@@ -35,44 +37,44 @@ onMounted(load)
   <section class="page-card">
     <div class="page-heading">
       <div>
-        <span class="eyebrow">CUSTOMER</span>
-        <h2>Hồ sơ và hạng thành viên</h2>
+        <span class="eyebrow">{{ t('KHÁCH HÀNG', 'CUSTOMER') }}</span>
+        <h2>{{ t('Hồ sơ và hạng thành viên', 'Profile & Membership Tier') }}</h2>
       </div>
-      <button type="button" @click="load">Làm mới</button>
+      <button type="button" @click="load">{{ t('Làm mới', 'Refresh') }}</button>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <p v-else-if="loading">Đang tải dữ liệu...</p>
+    <p v-else-if="loading">{{ t('Đang tải dữ liệu...', 'Loading data...') }}</p>
 
     <div v-else class="profile-grid">
       <article class="metric-card">
-        <small>Khách hàng</small>
+        <small>{{ t('Khách hàng', 'Customer') }}</small>
         <strong>{{ profile?.fullName }}</strong>
         <span>{{ profile?.email }}</span>
       </article>
       <article class="metric-card">
-        <small>Hạng thành viên</small>
-        <strong>{{ profile?.customerTierLabel || 'Thành viên thường' }}</strong>
-        <span>{{ profile?.paidOrderCount ?? paidOrders.length }} don da thanh toan</span>
+        <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
+        <strong>{{ profile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
+        <span>{{ profile?.paidOrderCount ?? paidOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
       </article>
       <article class="metric-card">
-        <small>Tổng lịch sử mua</small>
+        <small>{{ t('Tổng lịch sử mua', 'Total Purchase History') }}</small>
         <strong>{{ orders.length }}</strong>
-        <span>Chi tinh hang dua tren don da thanh toan</span>
+        <span>{{ t('Chỉ tính hạng dựa trên đơn đã thanh toán', 'Only counting rank based on paid orders') }}</span>
       </article>
     </div>
 
     <div class="table-card">
-      <h3>Lịch sử đơn hàng</h3>
+      <h3>{{ t('Lịch sử đơn hàng', 'Order History') }}</h3>
       <table>
         <thead>
           <tr>
-            <th>Ma don</th>
-            <th>Ngay tao</th>
-            <th>Trang thai</th>
-            <th>Sản phẩm</th>
-            <th>Tổng tiền</th>
-            <th>Giam gia</th>
+            <th>{{ t('Mã đơn', 'Order ID') }}</th>
+            <th>{{ t('Ngày tạo', 'Created Date') }}</th>
+            <th>{{ t('Trạng thái', 'Status') }}</th>
+            <th>{{ t('Sản phẩm', 'Products') }}</th>
+            <th>{{ t('Tổng tiền', 'Total Amount') }}</th>
+            <th>{{ t('Giảm giá', 'Discount') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +87,7 @@ onMounted(load)
             <td>{{ formatCurrency(order.discountAmount) }}</td>
           </tr>
           <tr v-if="!orders.length">
-            <td colspan="6">Chưa có đơn hàng.</td>
+            <td colspan="6">{{ t('Chưa có đơn hàng.', 'No orders yet.') }}</td>
           </tr>
         </tbody>
       </table>

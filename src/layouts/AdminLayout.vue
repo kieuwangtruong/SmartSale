@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
@@ -6,30 +6,39 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import { getRoleLabel } from '../services/apiClient'
 import { useAuthStore } from '../stores/authStore'
+import { useLanguage } from '../services/i18n'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
+const { t, currentLanguage, setLanguage } = useLanguage()
 
-const allNavigation = [
-  { to: '/dashboard', label: 'Tổng quan', icon: 'pi pi-chart-bar', roles: ['Admin'] },
-  { to: '/orders', label: 'Đơn hàng', icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
-  { to: '/customers', label: 'Khách hàng', icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
-  { to: '/suppliers', label: 'Nhà cung cấp', icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/products', label: 'Sản phẩm', icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/inventory', label: 'Kho hàng', icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/users', label: 'Nhân sự', icon: 'pi pi-user-edit', roles: ['Admin'] },
-  { to: '/employees', label: 'Chấm công', icon: 'pi pi-calendar-clock', roles: ['Admin'] },
-  { to: '/customer', label: 'Hồ sơ của tôi', icon: 'pi pi-id-card', roles: ['Customer'] },
-]
+const allNavigation = computed(() => [
+  { to: '/dashboard', label: t('Tổng quan', 'Dashboard'), icon: 'pi pi-chart-bar', roles: ['Admin'] },
+  { to: '/orders', label: t('Đơn hàng', 'Orders'), icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
+  { to: '/customers', label: t('Khách hàng', 'Customers'), icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
+  { to: '/suppliers', label: t('Nhà cung cấp', 'Suppliers'), icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
+  { to: '/products', label: t('Sản phẩm', 'Products'), icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
+  { to: '/inventory', label: t('Kho hàng', 'Inventory'), icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
+  { to: '/users', label: t('Nhân sự', 'HR Users'), icon: 'pi pi-user-edit', roles: ['Admin'] },
+  { to: '/employees', label: t('Chấm công', 'Attendance'), icon: 'pi pi-calendar-clock', roles: ['Admin'] },
+  { to: '/customer', label: t('Hồ sơ của tôi', 'My Profile'), icon: 'pi pi-id-card', roles: ['Customer'] },
+])
 const navigation = computed(() =>
-  allNavigation.filter((item) => auth.role && item.roles.includes(auth.role)),
+  allNavigation.value.filter((item) => auth.role && item.roles.includes(auth.role)),
 )
 const currentPage = computed(
-  () => navigation.value.find((item) => item.to === route.path)?.label ?? 'Quản lý',
+  () => navigation.value.find((item) => item.to === route.path)?.label ?? t('Quản lý', 'Management'),
 )
-const roleLabel = computed(() => getRoleLabel(auth.role))
+const roleLabel = computed(() => {
+  const role = auth.role
+  if (role === 'Admin') return t('Quản trị viên', 'Admin')
+  if (role === 'SalesStaff') return t('Nhân viên bán lẻ', 'Retail Staff')
+  if (role === 'WarehouseKeeper') return t('Thủ kho quản lý', 'Warehouse Keeper')
+  if (role === 'Customer') return t('Khách hàng', 'Customer')
+  return role || ''
+})
 
 async function handleLogout() {
   await auth.logout()
@@ -71,17 +80,17 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
       v-if="sidebarOpen"
       class="sidebar-backdrop"
       type="button"
-      aria-label="Đóng menu"
+      :aria-label="t('Đóng menu', 'Close Menu')"
       @click="sidebarOpen = false"
     />
 
     <aside class="admin-sidebar" :class="{ open: sidebarOpen }">
       <RouterLink class="admin-brand" to="/">
         <span class="admin-brand-mark"><i class="pi pi-shopping-bag" /></span>
-        <span><strong>SalesFlow</strong><small>Inventory System</small></span>
+        <span><strong>SalesFlow</strong><small>{{ t('Hệ thống bán hàng', 'Sales & Inventory') }}</small></span>
       </RouterLink>
 
-      <p class="nav-caption">MENU QUẢN LÝ</p>
+      <p class="nav-caption">{{ t('MENU QUẢN LÝ', 'MANAGEMENT MENU') }}</p>
       <nav class="admin-navigation">
         <RouterLink
           v-for="item in navigation"
@@ -102,7 +111,7 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
           severity="danger"
           text
           rounded
-          aria-label="Đăng xuất"
+          :aria-label="t('Đăng xuất', 'Logout')"
           @click="handleLogout"
         />
       </div>
@@ -117,10 +126,10 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
             severity="secondary"
             text
             rounded
-            aria-label="Mở menu"
+            :aria-label="t('Mở menu', 'Open Menu')"
             @click="sidebarOpen = true"
           />
-          <div><small>HỆ THỐNG QUẢN LÝ</small><h1>{{ currentPage }}</h1></div>
+          <div><small>{{ t('HỆ THỐNG QUẢN LÝ', 'MANAGEMENT SYSTEM') }}</small><h1>{{ currentPage }}</h1></div>
         </div>
         <div class="topbar-actions">
           <Button
@@ -128,10 +137,19 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
             severity="secondary"
             text
             rounded
-            aria-label="Đổi giao diện"
+            :aria-label="t('Đổi giao diện', 'Toggle Dark Mode')"
             @click="toggleDarkMode"
           />
-          <RouterLink class="store-shortcut" to="/"><i class="pi pi-external-link" /> Cửa hàng</RouterLink>
+          <Button
+            icon="pi pi-globe"
+            :label="currentLanguage === 'vi' ? 'EN' : 'VI'"
+            severity="secondary"
+            text
+            rounded
+            :aria-label="t('Đổi ngôn ngữ', 'Switch Language')"
+            @click="setLanguage(currentLanguage === 'vi' ? 'en' : 'vi')"
+          />
+          <RouterLink class="store-shortcut" to="/"><i class="pi pi-external-link" /> {{ t('Cửa hàng', 'Storefront') }}</RouterLink>
           <span class="role-chip"><i class="pi pi-shield" /> {{ roleLabel }}</span>
         </div>
       </header>

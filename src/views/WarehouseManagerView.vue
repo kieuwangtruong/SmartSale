@@ -14,6 +14,8 @@ import {
   type Product,
   type StockReceipt,
 } from '../services/productApi'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
 
 const products = ref<Product[]>([])
 const suppliers = ref<Supplier[]>([])
@@ -21,6 +23,18 @@ const receipts = ref<StockReceipt[]>([])
 const lowStock = ref<Array<{ productId: number; productName: string; quantity: number; reserveStock: number }>>([])
 const error = ref('')
 const inventoryDraft = reactive<Record<number, { quantity: number; reserveStock: number }>>({})
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
+
 const receipt = reactive({
   supplierId: 0,
   invoiceNumber: '',
@@ -39,12 +53,12 @@ const itemsPerPage = 10
 const inventoryValue = computed(() => products.value.reduce((sum, p) => sum + p.importPrice * p.quantity, 0))
 
 const supplierOptions = computed(() => [
-  { label: 'Chọn nhà cung cấp', value: 0 },
+  { label: t('Chọn nhà cung cấp', 'Select supplier'), value: 0 },
   ...suppliers.value.map((s) => ({ label: s.name, value: s.id })),
 ])
 
 const productOptions = computed(() => [
-  { label: 'Chọn sản phẩm', value: 0 },
+  { label: t('Chọn sản phẩm', 'Select product'), value: 0 },
   ...products.value.map((p) => ({ label: p.name, value: p.id })),
 ])
 
@@ -71,7 +85,7 @@ const paginationInfo = computed(() => {
   if (total === 0) return ''
   const start = (currentPage.value - 1) * itemsPerPage + 1
   const end = Math.min(currentPage.value * itemsPerPage, total)
-  return `Hiển thị ${start}-${end} trong tổng số ${total} mục`
+  return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
 // Reset to page 1 when search changes
@@ -99,7 +113,7 @@ async function load() {
     for (const p of products.value) {
       inventoryDraft[p.id] = { quantity: p.quantity, reserveStock: p.reserveStock }
     }
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể tải dữ liệu kho.' }
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể tải dữ liệu kho.', 'Unable to load warehouse data.')) }
 }
 
 async function saveInventory(product: Product) {
@@ -109,16 +123,17 @@ async function saveInventory(product: Product) {
     await updateInventory(product.id, product.quantity, draft.reserveStock)
     await load()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Không thể cập nhật ngưỡng tồn.'
+    showError(e instanceof Error ? e.message : t('Không thể cập nhật ngưỡng tồn.', 'Unable to update stock threshold.'))
   }
 }
 
+// Helper methods for receipt items list
 function addReceiptItem() { receipt.items.push({ productId: 0, quantity: 1, importPrice: 0 }) }
 function removeReceiptItem(index: number) { if (receipt.items.length > 1) receipt.items.splice(index, 1) }
 
 async function submitReceipt() {
   const items = receipt.items.filter((x) => x.productId && x.quantity > 0)
-  if (!receipt.supplierId || !items.length) { error.value = 'Chọn nhà cung cấp và sản phẩm nhập.'; return }
+  if (!receipt.supplierId || !items.length) { showError(t('Chọn nhà cung cấp và sản phẩm nhập.', 'Please select supplier and products to import.')); return }
   try {
     await createStockReceipt({
       supplierId: receipt.supplierId,
@@ -129,20 +144,20 @@ async function submitReceipt() {
     })
     resetReceipt()
     await load()
-  } catch (e) { error.value = e instanceof Error ? e.message : 'Không thể tạo phiếu nhập.' }
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể tạo phiếu nhập.', 'Unable to create import receipt.')) }
 }
 
 async function confirmReceipt(item: StockReceipt) {
   try { await confirmStockReceipt(item.id); await load() }
-  catch (e) { error.value = e instanceof Error ? e.message : 'Không thể xác nhận phiếu.' }
+  catch (e) { showError(e instanceof Error ? e.message : t('Không thể xác nhận phiếu.', 'Unable to confirm receipt.')) }
 }
 async function submitReceiptForApproval(item: StockReceipt) {
   try { await submitStockReceipt(item.id); await load() }
-  catch (e) { error.value = e instanceof Error ? e.message : 'Không thể gửi duyệt phiếu.' }
+  catch (e) { showError(e instanceof Error ? e.message : t('Không thể gửi duyệt phiếu.', 'Unable to submit receipt for approval.')) }
 }
 async function cancelReceipt(item: StockReceipt) {
   try { await cancelStockReceipt(item.id); await load() }
-  catch (e) { error.value = e instanceof Error ? e.message : 'Không thể hủy phiếu.' }
+  catch (e) { showError(e instanceof Error ? e.message : t('Không thể hủy phiếu.', 'Unable to cancel receipt.')) }
 }
 onMounted(load)
 </script>
@@ -151,66 +166,64 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>Kho hàng</h2>
-        <p>Điều chỉnh tồn, cảnh báo và nhập hàng từ nhà cung cấp.</p>
+        <h2>{{ t('Kho hàng', 'Warehouse') }}</h2>
+        <p>{{ t('Điều chỉnh tồn, cảnh báo và nhập hàng từ nhà cung cấp.', 'Adjust stock, warnings and imports from suppliers.') }}</p>
       </div>
       <div class="page-head-actions">
-        <input v-model="search" placeholder="Tìm sản phẩm tồn kho..." class="search-input" />
+        <input v-model="search" :placeholder="t('Tìm sản phẩm tồn kho...', 'Search inventory products...')" class="search-input" />
         <button type="button" class="primary" @click="showReceiptForm = true">
-          <i class="pi pi-plus" /> Tạo phiếu nhập
+          <i class="pi pi-plus" /> {{ t('Tạo phiếu nhập', 'Create Import Receipt') }}
         </button>
       </div>
     </div>
-
-    <p v-if="error" class="alert error">{{ error }}</p>
     <div class="stats">
-      <article><span>Sản phẩm</span><strong>{{ products.length }}</strong></article>
-      <article><span>Sắp hết hàng</span><strong>{{ lowStock.length }}</strong></article>
-      <article><span>Giá trị nhập kho</span><strong>{{ formatCurrency(inventoryValue) }}</strong></article>
-      <article><span>Phiếu nhập</span><strong>{{ receipts.length }}</strong></article>
+      <article><span>{{ t('Sản phẩm', 'Products') }}</span><strong>{{ products.length }}</strong></article>
+      <article><span>{{ t('Sắp hết hàng', 'Low Stock') }}</span><strong>{{ lowStock.length }}</strong></article>
+      <article><span>{{ t('Giá trị nhập kho', 'Import Value') }}</span><strong>{{ formatCurrency(inventoryValue) }}</strong></article>
+      <article><span>{{ t('Phiếu nhập', 'Import Receipts') }}</span><strong>{{ receipts.length }}</strong></article>
     </div>
 
     <!-- Create Stock Receipt Modal -->
     <div v-if="showReceiptForm" class="modal-backdrop" @click="resetReceipt" />
-    <aside v-if="showReceiptForm" class="admin-modal" aria-label="Tạo phiếu nhập kho">
+    <aside v-if="showReceiptForm" class="admin-modal" :aria-label="t('Tạo phiếu nhập kho', 'Create import receipt')">
       <div class="modal-head">
-        <h2>Tạo phiếu nhập kho mới</h2>
+        <h2>{{ t('Tạo phiếu nhập kho mới', 'Create New Import Receipt') }}</h2>
         <button type="button" @click="resetReceipt"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="submitReceipt">
-        <label>Nhà cung cấp
-          <SearchableSelect v-model="receipt.supplierId" :options="supplierOptions" placeholder="Tìm nhà cung cấp..." />
+        <label>{{ t('Nhà cung cấp', 'Supplier') }}
+          <SearchableSelect v-model="receipt.supplierId" :options="supplierOptions" :placeholder="t('Tìm nhà cung cấp...', 'Search suppliers...')" />
         </label>
-        <label>Mã hóa đơn<input v-model="receipt.invoiceNumber" /></label>
-        <label>Ngày nhập<input v-model="receipt.importDate" type="date" /></label>
-        <label>Ghi chú<input v-model="receipt.note" /></label>
+        <label>{{ t('Mã hóa đơn', 'Invoice Number') }}<input v-model="receipt.invoiceNumber" /></label>
+        <label>{{ t('Ngày nhập', 'Import Date') }}<input v-model="receipt.importDate" type="date" /></label>
+        <label>{{ t('Ghi chú', 'Note') }}<input v-model="receipt.note" /></label>
         
-        <div class="form-section-title">Danh sách mặt hàng nhập</div>
+        <div class="form-section-title">{{ t('Danh sách mặt hàng nhập', 'Items to Import') }}</div>
         <div v-for="(item, index) in receipt.items" :key="index" class="receipt-item">
-          <SearchableSelect v-model="item.productId" :options="productOptions" placeholder="Tìm sản phẩm..." />
+          <SearchableSelect v-model="item.productId" :options="productOptions" :placeholder="t('Tìm sản phẩm...', 'Search products...')" />
           <input v-model.number="item.quantity" type="number" min="1" placeholder="SL" />
-          <input v-model.number="item.importPrice" type="number" min="0" placeholder="Giá nhập" />
+          <input v-model.number="item.importPrice" type="number" min="0" :placeholder="t('Giá nhập', 'Import price')" />
           <button type="button" class="danger" @click="removeReceiptItem(index)"><i class="pi pi-trash" /></button>
         </div>
-        <button type="button" class="add-row-btn" @click="addReceiptItem"><i class="pi pi-plus" /> Thêm mặt hàng</button>
+        <button type="button" class="add-row-btn" @click="addReceiptItem"><i class="pi pi-plus" /> {{ t('Thêm mặt hàng', 'Add Item') }}</button>
 
         <div class="actions">
-          <button class="primary">Tạo phiếu</button>
-          <button type="button" @click="resetReceipt">Hủy</button>
+          <button class="primary">{{ t('Tạo phiếu', 'Create Receipt') }}</button>
+          <button type="button" @click="resetReceipt">{{ t('Hủy', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
 
     <div class="full-width-tables-container">
       <article class="panel table-wrap">
-        <h3>Tồn kho</h3>
+        <h3>{{ t('Tồn kho', 'Inventory') }}</h3>
         <table>
           <thead>
             <tr>
-              <th>Sản phẩm</th>
-              <th style="width: 140px;">Tồn</th>
-              <th style="width: 140px;">Ngưỡng</th>
-              <th style="width: 100px;">Hành động</th>
+              <th>{{ t('Sản phẩm', 'Product') }}</th>
+              <th style="width: 140px;">{{ t('Tồn', 'Stock') }}</th>
+              <th style="width: 140px;">{{ t('Ngưỡng', 'Threshold') }}</th>
+              <th style="width: 100px;">{{ t('Hành động', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -218,7 +231,7 @@ onMounted(load)
               <td>{{ p.name }}<small>ID: #{{ p.id }}</small></td>
               <td><span v-if="inventoryDraft[p.id]" class="stock-readonly">{{ p.quantity }}</span></td>
               <td><input v-if="inventoryDraft[p.id]" v-model.number="inventoryDraft[p.id]!.reserveStock" type="number" min="0" class="table-number-input" /></td>
-              <td><button class="primary table-save-btn" @click="saveInventory(p)">Lưu ngưỡng</button></td>
+              <td><button class="primary table-save-btn" @click="saveInventory(p)">{{ t('Lưu ngưỡng', 'Save Threshold') }}</button></td>
             </tr>
           </tbody>
         </table>
@@ -231,8 +244,8 @@ onMounted(load)
               type="button" 
               :disabled="currentPage === 1"
               @click="currentPage = 1"
-              aria-label="Về đầu"
-              title="Về đầu"
+              :aria-label="t('Về đầu', 'To beginning')"
+              :title="t('Về đầu', 'To beginning')"
             >
               <i class="pi pi-chevron-double-left" />
             </button>
@@ -240,16 +253,16 @@ onMounted(load)
               type="button" 
               :disabled="currentPage === 1"
               @click="currentPage--"
-              aria-label="Trang trước"
+              :aria-label="t('Trang trước', 'Previous page')"
             >
               <i class="pi pi-chevron-left" />
             </button>
-            <span class="page-indicator">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+            <span class="page-indicator">{{ t('Trang', 'Page') }} <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
             <button 
               type="button" 
               :disabled="currentPage === totalPages"
               @click="currentPage++"
-              aria-label="Trang sau"
+              :aria-label="t('Trang sau', 'Next page')"
             >
               <i class="pi pi-chevron-right" />
             </button>
@@ -257,8 +270,8 @@ onMounted(load)
               type="button" 
               :disabled="currentPage === totalPages"
               @click="currentPage = totalPages"
-              aria-label="Về cuối"
-              title="Về cuối"
+              :aria-label="t('Về cuối', 'To end')"
+              :title="t('Về cuối', 'To end')"
             >
               <i class="pi pi-chevron-double-right" />
             </button>
@@ -267,15 +280,15 @@ onMounted(load)
       </article>
 
       <article class="panel table-wrap" style="margin-top: 24px;">
-        <h3>Phiếu nhập kho</h3>
+        <h3>{{ t('Phiếu nhập kho', 'Import Receipts') }}</h3>
         <table>
           <thead>
             <tr>
-              <th>Mã</th>
-              <th>Nhà cung cấp</th>
-              <th>Chi tiết</th>
-              <th>Trạng thái</th>
-              <th>Hành động</th>
+              <th>{{ t('Mã', 'ID') }}</th>
+              <th>{{ t('Nhà cung cấp', 'Supplier') }}</th>
+              <th>{{ t('Chi tiết', 'Details') }}</th>
+              <th>{{ t('Trạng thái', 'Status') }}</th>
+              <th>{{ t('Hành động', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -285,9 +298,9 @@ onMounted(load)
               <td>{{ item.items.map((x) => `${x.productName} x${x.quantity}`).join(', ') }}</td>
               <td>{{ item.status }}</td>
               <td class="actions">
-                <button v-if="item.status === 'Draft'" class="primary" @click="submitReceiptForApproval(item)">Gửi duyệt</button>
-                <button v-if="item.status === 'PendingApproval'" class="primary" @click="confirmReceipt(item)">Duyệt</button>
-                <button v-if="item.status === 'PendingApproval'" class="danger" @click="cancelReceipt(item)">Từ chối</button>
+                <button v-if="item.status === 'Draft'" class="primary" @click="submitReceiptForApproval(item)">{{ t('Gửi duyệt', 'Submit') }}</button>
+                <button v-if="item.status === 'PendingApproval'" class="primary" @click="confirmReceipt(item)">{{ t('Duyệt', 'Approve') }}</button>
+                <button v-if="item.status === 'PendingApproval'" class="danger" @click="cancelReceipt(item)">{{ t('Từ chối', 'Reject') }}</button>
               </td>
             </tr>
           </tbody>

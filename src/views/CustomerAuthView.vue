@@ -3,12 +3,15 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerCustomer } from '../services/userApi'
 import { useAuthStore } from '../stores/authStore'
+import { useLanguage } from '../services/i18n'
 
 const router = useRouter()
 const auth = useAuthStore()
 const mode = ref<'login' | 'register'>('login')
 const loading = ref(false)
 const error = ref('')
+const { t } = useLanguage()
+
 const form = reactive({
   userName: '',
   fullName: '',
@@ -29,12 +32,12 @@ async function submit() {
     const user = await auth.login(form.email, form.password)
     if (user.role !== 'Customer') {
       await auth.logout()
-      error.value = 'Tài khoản nhân viên vui lòng đăng nhập ở cổng /admin.'
+      error.value = t('Tài khoản nhân viên vui lòng đăng nhập ở cổng /admin.', 'Employee accounts must log in at the /admin portal.')
       return
     }
     await router.replace('/')
   } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : 'Không thể xử lý tài khoản.'
+    error.value = exception instanceof Error ? exception.message : t('Không thể xử lý tài khoản.', 'Failed to process account.')
   } finally {
     loading.value = false
   }
@@ -48,8 +51,8 @@ async function submit() {
       <section class="image-panel" :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.75)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800')` }">
         <div class="image-panel-content">
           <span class="eyebrow">Smart Sale Store</span>
-          <h1>Chào mừng Quý khách</h1>
-          <p>Đăng nhập hoặc đăng ký tài khoản thành viên để bắt đầu hành trình mua sắm thông minh và tích lũy ưu đãi hấp dẫn.</p>
+          <h1>{{ t('Chào mừng Quý khách', 'Welcome Valued Customer') }}</h1>
+          <p>{{ t('Đăng nhập hoặc đăng ký tài khoản thành viên để bắt đầu hành trình mua sắm thông minh và tích lũy ưu đãi hấp dẫn.', 'Sign in or register a member account to start shopping smart and accumulate attractive rewards.') }}</p>
           <div class="brand-footer">
             <small>© 2026 Smart Sale Store. All rights reserved.</small>
           </div>
@@ -64,18 +67,18 @@ async function submit() {
             <strong>Smart Sale</strong>
           </div>
 
-          <h2>{{ mode === 'login' ? 'Đăng nhập khách hàng' : 'Đăng ký thành viên' }}</h2>
-          <p class="subtitle">Xem tích lũy điểm và theo dõi đơn hàng của bạn</p>
+          <h2>{{ mode === 'login' ? t('Đăng nhập khách hàng', 'Customer Login') : t('Đăng ký thành viên', 'Member Registration') }}</h2>
+          <p class="subtitle">{{ t('Xem tích lũy điểm và theo dõi đơn hàng của bạn', 'Track points, tiers, and manage your orders') }}</p>
 
           <form @submit.prevent="submit">
             <div v-if="mode === 'register'" class="input-group">
-              <label for="userName">Tên đăng nhập</label>
-              <input id="userName" v-model="form.userName" required placeholder="Nhập tên đăng nhập" class="custom-input" />
+              <label for="userName">{{ t('Tên đăng nhập', 'Username') }}</label>
+              <input id="userName" v-model="form.userName" required :placeholder="t('Nhập tên đăng nhập', 'Enter username')" class="custom-input" />
             </div>
             
             <div v-if="mode === 'register'" class="input-group">
-              <label for="fullName">Họ tên</label>
-              <input id="fullName" v-model="form.fullName" required placeholder="Nhập họ và tên" class="custom-input" />
+              <label for="fullName">{{ t('Họ tên', 'Full Name') }}</label>
+              <input id="fullName" v-model="form.fullName" required :placeholder="t('Nhập họ và tên', 'Enter full name')" class="custom-input" />
             </div>
 
             <div class="input-group">
@@ -84,41 +87,41 @@ async function submit() {
             </div>
             
             <div class="input-group">
-              <label for="password">Mật khẩu</label>
-              <input id="password" v-model="form.password" required type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" class="custom-input" />
+              <label for="password">{{ t('Mật khẩu', 'Password') }}</label>
+              <input id="password" v-model="form.password" required type="password" autocomplete="current-password" :placeholder="t('Nhập mật khẩu', 'Enter password')" class="custom-input" />
             </div>
 
             <div v-if="mode === 'register'" class="input-group">
-              <label for="dateOfBirth">Ngày sinh</label>
+              <label for="dateOfBirth">{{ t('Ngày sinh', 'Date of Birth') }}</label>
               <input id="dateOfBirth" v-model="form.dateOfBirth" type="date" class="custom-input" />
             </div>
 
             <div v-if="mode === 'register'" class="input-group">
-              <label for="sex">Giới tính</label>
+              <label for="sex">{{ t('Giới tính', 'Gender') }}</label>
               <select id="sex" v-model.number="form.sex" class="custom-input">
-                <option :value="0">Nam</option>
-                <option :value="1">Nữ</option>
-                <option :value="2">Khác</option>
+                <option :value="0">{{ t('Nam', 'Male') }}</option>
+                <option :value="1">{{ t('Nữ', 'Female') }}</option>
+                <option :value="2">{{ t('Khác', 'Other') }}</option>
               </select>
             </div>
 
             <div v-if="mode === 'register'" class="input-group">
-              <label for="address">Địa chỉ</label>
-              <input id="address" v-model="form.address" placeholder="Nhập địa chỉ" class="custom-input" />
+              <label for="address">{{ t('Địa chỉ', 'Address') }}</label>
+              <input id="address" v-model="form.address" :placeholder="t('Nhập địa chỉ', 'Enter address')" class="custom-input" />
             </div>
 
             <p v-if="error" class="error-msg"><i class="pi pi-exclamation-circle" /> {{ error }}</p>
             
             <button :disabled="loading" type="submit" class="submit-btn">
-              {{ loading ? 'Đang xử lý...' : (mode === 'login' ? 'Đăng nhập' : 'Đăng ký') }}
+              {{ loading ? t('Đang xử lý...', 'Processing...') : (mode === 'login' ? t('Đăng nhập', 'Log In') : t('Đăng ký', 'Register')) }}
             </button>
           </form>
 
           <button class="link-button" type="button" @click="mode = mode === 'login' ? 'register' : 'login'">
-            {{ mode === 'login' ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập' }}
+            {{ mode === 'login' ? t('Chưa có tài khoản? Đăng ký ngay', 'No account yet? Register here') : t('Đã có tài khoản? Đăng nhập', 'Already have an account? Log in') }}
           </button>
           
-          <RouterLink class="store-link" to="/">← Quay lại trang bán hàng</RouterLink>
+          <RouterLink class="store-link" to="/">{{ t('← Quay lại trang bán hàng', '← Back to Storefront') }}</RouterLink>
         </div>
       </section>
     </div>

@@ -5,6 +5,12 @@ import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel,
 import { getProducts, type Product } from "../services/productApi";
 import { getMyProfile, type UserDto } from "../services/userApi";
 import { useAuthStore } from "../stores/authStore";
+import { useLanguage } from "../services/i18n";
+
+const { t, currentLanguage, setLanguage } = useLanguage();
+function toggleLang() {
+  setLanguage(currentLanguage.value === 'vi' ? 'en' : 'vi');
+}
 
 interface CartLine {
   product: Product;
@@ -138,7 +144,7 @@ async function loadProducts() {
     error.value =
       exception instanceof Error
         ? exception.message
-        : "Không thể tải danh sách sản phẩm.";
+        : t("Không thể tải danh sách sản phẩm.", "Unable to load products.");
   } finally {
     loading.value = false;
   }
@@ -162,7 +168,7 @@ async function loadCustomerPanel() {
     customerPanelLoaded.value = true;
   } catch (exception) {
     customerPanelError.value =
-      exception instanceof Error ? exception.message : "Không thể tải thông tin tài khoản.";
+      exception instanceof Error ? exception.message : t("Không thể tải thông tin tài khoản.", "Unable to load account information.");
   } finally {
     customerPanelLoading.value = false;
   }
@@ -304,7 +310,7 @@ const updateStorewideCountdown = () => {
   const target = getPromoTargetDate();
   const diff = target.getTime() - Date.now();
   if (diff <= 0) {
-    storewideCountdownText.value = "Đã kết thúc";
+    storewideCountdownText.value = t("Đã kết thúc", "Ended");
     return;
   }
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
@@ -312,7 +318,7 @@ const updateStorewideCountdown = () => {
   const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
   const seconds = Math.floor((diff % (60 * 1000)) / 1000);
 
-  const dStr = days > 0 ? `${days} ngày ` : "";
+  const dStr = days > 0 ? `${days} days ` : "";
   const hStr = String(hours).padStart(2, "0");
   const mStr = String(minutes).padStart(2, "0");
   const sStr = String(seconds).padStart(2, "0");
@@ -390,7 +396,7 @@ async function submitOrder() {
     
     window.location.assign(payment.checkoutUrl);
   } catch (e) {
-    checkoutError.value = e instanceof Error ? e.message : "Không thể tạo liên kết thanh toán.";
+    checkoutError.value = e instanceof Error ? e.message : t("Không thể tạo liên kết thanh toán.", "Unable to create payment link.");
   } finally {
     checkoutLoading.value = false;
   }
@@ -436,31 +442,52 @@ const featuredProducts = computed(() => {
 });
 
 const activeSlide = ref(0);
-const slides = [
+const slides = computed(() => [
   {
     image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
-    title: "Văn phòng phẩm cao cấp",
-    subtitle: "Nâng tầm hiệu suất làm việc với bộ sưu tập sổ tay và bút ký tinh tế.",
-    category: "Văn phòng"
+    title: t("Văn phòng phẩm cao cấp", "Premium Stationery"),
+    subtitle: t("Nâng tầm hiệu suất làm việc với bộ sưu tập sổ tay và bút ký tinh tế.", "Elevate your workspace performance with premium notebooks and fine pens."),
+    category: t("Văn phòng", "Office")
   },
   {
     image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1200",
-    title: "Phụ kiện thông minh",
-    subtitle: "Thiết bị công nghệ chính xác, đồng bộ hóa phong cách sống hiện đại.",
-    category: "Phụ kiện"
+    title: t("Phụ kiện thông minh", "Smart Accessories"),
+    subtitle: t("Thiết bị công nghệ chính xác, đồng bộ hóa phong cách sống hiện đại.", "High precision tech devices, synchronizing with your modern lifestyle."),
+    category: t("Phụ kiện", "Accessories")
   },
   {
     image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=1200",
-    title: "Gia dụng tinh tế",
-    subtitle: "Không gian sống ấm cúng với các thiết bị gia dụng tối giản, hiện đại.",
-    category: "Gia dụng"
+    title: t("Gia dụng tinh tế", "Minimalist Home Appliances"),
+    subtitle: t("Không gian sống ấm cúng với các thiết bị gia dụng tối giản, hiện đại.", "Warm cozy living spaces with minimalist, modern home appliances."),
+    category: t("Gia dụng", "Home")
   }
-];
+]);
+
+const activePromoSlide = ref(0);
+const promoProducts = computed(() => {
+  return products.value.filter((p) => p.salePrice && p.salePrice < p.originalPrice).slice(0, 4);
+});
+
+let promoSlideInterval: any = null;
+function startPromoSlideTimer() {
+  if (promoSlideInterval) return;
+  promoSlideInterval = setInterval(() => {
+    if (promoProducts.value.length > 0) {
+      activePromoSlide.value = (activePromoSlide.value + 1) % promoProducts.value.length;
+    }
+  }, 5000);
+}
+function stopPromoSlideTimer() {
+  if (promoSlideInterval) {
+    clearInterval(promoSlideInterval);
+    promoSlideInterval = null;
+  }
+}
 
 let slideInterval: any = null;
 function startSlideTimer() {
   slideInterval = setInterval(() => {
-    activeSlide.value = (activeSlide.value + 1) % slides.length;
+    activeSlide.value = (activeSlide.value + 1) % slides.value.length;
   }, 4000);
 }
 function stopSlideTimer() {
@@ -477,36 +504,36 @@ watch([search, category, sort, showAllProducts], () => {
 const categoryBanner = computed(() => {
   if (showAllProducts.value) {
     return {
-      title: "Tất cả sản phẩm",
-      desc: "Khám phá toàn bộ danh mục sản phẩm chất lượng cao của chúng tôi.",
+      title: t("Tất cả sản phẩm", "All Products"),
+      desc: t("Khám phá toàn bộ danh mục sản phẩm chất lượng cao của chúng tôi.", "Discover our complete range of high-quality products."),
       image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200"
     };
   }
   const cat = category.value;
   if (cat === "Gia dụng" || cat.toLowerCase().includes("gia dụng")) {
     return {
-      title: "Thiết bị Gia dụng",
-      desc: "Thiết bị tiện nghi, hiện đại kiến tạo không gian sống lý tưởng.",
+      title: t("Thiết bị Gia dụng", "Home Appliances"),
+      desc: t("Thiết bị tiện nghi, hiện đại kiến tạo không gian sống lý tưởng.", "Comfortable, modern appliances creating the ideal living space."),
       image: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&q=80&w=1200"
     };
   }
   if (cat === "Phụ kiện" || cat.toLowerCase().includes("phụ kiện")) {
     return {
-      title: "Phụ kiện công nghệ",
-      desc: "Đồng hành cùng phong cách sống hiện đại và năng động.",
+      title: t("Phụ kiện công nghệ", "Tech Accessories"),
+      desc: t("Đồng hành cùng phong cách sống hiện đại và năng động.", "Companion to modern and active lifestyles."),
       image: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80&w=1200"
     };
   }
   if (cat === "Văn phòng" || cat.toLowerCase().includes("văn phòng")) {
     return {
-      title: "Văn phòng phẩm",
-      desc: "Khơi nguồn cảm hứng làm việc chuyên nghiệp mỗi ngày.",
+      title: t("Văn phòng phẩm", "Office Stationery"),
+      desc: t("Khơi nguồn cảm hứng làm việc chuyên nghiệp mỗi ngày.", "Inspiring professional work every day."),
       image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200"
     };
   }
   return {
-    title: cat || "Cửa hàng bán lẻ",
-    desc: `Bộ sưu tập sản phẩm ${cat || 'chất lượng cao'}.`,
+    title: cat || t("Cửa hàng bán lẻ", "Retail Store"),
+    desc: t("Bộ sưu tập sản phẩm ", "Collection of ") + (cat || t("chất lượng cao", "high quality")) + ".",
     image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1200"
   };
 });
@@ -531,6 +558,7 @@ onMounted(() => {
   showCart.value = route.query.cart === "open";
   loadProducts();
   startSlideTimer();
+  startPromoSlideTimer();
 
   // Start storewide countdown timer
   updateStorewideCountdown();
@@ -545,6 +573,7 @@ watch(
 
 onUnmounted(() => {
   stopSlideTimer();
+  stopPromoSlideTimer();
   if (storewideTimerId) clearInterval(storewideTimerId);
   if (productTimerId) clearInterval(productTimerId);
 });
@@ -553,8 +582,8 @@ onUnmounted(() => {
 <template>
   <div class="store">
     <div class="announcement">
-      <span><i class="pi pi-sparkles" /> Giá bán và tồn kho được đồng bộ trực tiếp</span>
-      <RouterLink to="/login/staff">Dành cho nhân viên <i class="pi pi-arrow-up-right" /></RouterLink>
+      <span><i class="pi pi-sparkles" /> {{ t('Giá bán và tồn kho được đồng bộ trực tiếp', 'Real-time stock and price synchronization active') }}</span>
+      <RouterLink to="/login/staff">{{ t('Dành cho nhân viên', 'Staff Login') }} <i class="pi pi-arrow-up-right" /></RouterLink>
     </div>
 
     <header class="store-header">
@@ -564,8 +593,8 @@ onUnmounted(() => {
       </RouterLink>
 
       <nav class="main-nav">
-        <a href="#" :class="{ active: !category && !showAllProducts }" @click.prevent="category = ''; showAllProducts = false;">Trang chủ</a>
-        <a href="#" :class="{ active: !category && showAllProducts }" @click.prevent="category = ''; showAllProducts = true;">Tất cả sản phẩm</a>
+        <a href="#" :class="{ active: !category && !showAllProducts }" @click.prevent="category = ''; showAllProducts = false;">{{ t('Trang chủ', 'Home') }}</a>
+        <a href="#" :class="{ active: !category && showAllProducts }" @click.prevent="category = ''; showAllProducts = true;">{{ t('Tất cả sản phẩm', 'All Products') }}</a>
         <a 
           v-for="cat in categories" 
           :key="cat" 
@@ -578,9 +607,14 @@ onUnmounted(() => {
       </nav>
 
       <div class="header-right">
-        <RouterLink v-if="!isCustomerLoggedIn" class="customer-link" to="/customer-login">
+        <!-- Language Switcher -->
+        <button class="lang-toggle-btn" type="button" @click="toggleLang" :title="t('Đổi ngôn ngữ', 'Switch Language')">
+          <i class="pi pi-globe" />
+          <span>{{ currentLanguage === 'vi' ? 'EN' : 'VI' }}</span>
+        </button>
+
+        <RouterLink v-if="!isCustomerLoggedIn" class="customer-link icon-only" to="/customer-login" :title="t('Tài khoản', 'Account')">
           <i class="pi pi-user" />
-          <span>Tài khoản</span>
         </RouterLink>
         <div v-else class="customer-menu">
           <button class="customer-avatar" type="button" @click="toggleCustomerPanel">
@@ -595,23 +629,23 @@ onUnmounted(() => {
               </div>
             </div>
             <p v-if="customerPanelError" class="customer-panel-error">{{ customerPanelError }}</p>
-            <p v-else-if="customerPanelLoading" class="customer-panel-muted">Đang tải thông tin...</p>
+            <p v-else-if="customerPanelLoading" class="customer-panel-muted">{{ t('Đang tải thông tin...', 'Loading profile info...') }}</p>
             <template v-else>
               <div class="customer-tier-card">
-                <small>Hạng thành viên</small>
-                <strong>{{ customerProfile?.customerTierLabel || 'Thành viên thường' }}</strong>
-                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} đơn đã thanh toán</span>
+                <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
+                <strong>{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
+                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
               </div>
               <div class="customer-info">
-                <p><b>Tài khoản:</b> {{ customerProfile?.userName || auth.user?.userName }}</p>
-                <p><b>Địa chỉ:</b> {{ customerProfile?.address || auth.user?.address || 'Chưa cập nhật' }}</p>
+                <p><b>{{ t('Tài khoản:', 'Username:') }}</b> {{ customerProfile?.userName || auth.user?.userName }}</p>
+                <p><b>{{ t('Địa chỉ:', 'Address:') }}</b> {{ customerProfile?.address || auth.user?.address || t('Chưa cập nhật', 'Not updated') }}</p>
               </div>
               <div class="customer-history">
                 <div class="customer-history-title">
-                  <strong>Lịch sử đơn hàng</strong>
-                  <button type="button" @click="loadCustomerPanel">Làm mới</button>
+                  <strong>{{ t('Lịch sử đơn hàng', 'Order History') }}</strong>
+                  <button type="button" @click="loadCustomerPanel">{{ t('Làm mới', 'Refresh') }}</button>
                 </div>
-                <div v-if="!customerOrders.length" class="customer-panel-muted">Chưa có đơn hàng.</div>
+                <div v-if="!customerOrders.length" class="customer-panel-muted">{{ t('Chưa có đơn hàng.', 'No orders yet.') }}</div>
                 <article v-for="order in customerOrders.slice(0, 5)" :key="order.id" class="customer-order-line">
                   <div>
                     <strong>#{{ order.id }} - <span :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span></strong>
@@ -622,16 +656,16 @@ onUnmounted(() => {
               </div>
             </template>
             <button class="logout-customer" type="button" @click="logoutCustomer">
-              <i class="pi pi-sign-out" /> Đăng xuất
+              <i class="pi pi-sign-out" /> {{ t('Đăng xuất', 'Logout') }}
             </button>
           </aside>
         </div>
-        <button class="theme-toggle" type="button" @click="toggleDarkMode" aria-label="Đổi giao diện">
+        <button class="theme-toggle" type="button" @click="toggleDarkMode" :aria-label="t('Đổi giao diện', 'Switch theme')">
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
         <button class="cart-button" :class="{ 'cart-pop': animateCart }" type="button" @click="showCart = true">
           <i class="pi pi-shopping-bag" />
-          <span>Giỏ hàng</span>
+          <span>{{ t('Giỏ hàng', 'Cart') }}</span>
           <b>{{ cartCount }}</b>
         </button>
       </div>
@@ -640,13 +674,13 @@ onUnmounted(() => {
     <main>
       <section v-if="!category && !showAllProducts" class="hero">
         <div class="hero-copy">
-          <span class="eyebrow">BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN</span>
-          <h1>Mua sắm tinh gọn.<br /><em class="fs-6">Chọn lựa thông minh.</em></h1>
+          <span class="eyebrow">{{ t('BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN', 'CURATED COLLECTION') }}</span>
+          <h1>{{ t('Mua sắm tinh gọn.', 'Minimalist Shopping.') }}<br /><em class="fs-6">{{ t('Chọn lựa thông minh.', 'Smart Choices.') }}</em></h1>
           <div class="hero-actions">
             <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
-              Xem sản phẩm <i class="pi pi-arrow-right" />
+              {{ t('Xem sản phẩm', 'Explore Products') }} <i class="pi pi-arrow-right" />
             </a>
-            <span><i class="pi pi-check-circle" /> {{ availableProducts }} sản phẩm sẵn hàng</span>
+            <span><i class="pi pi-check-circle" /> {{ availableProducts }} {{ t('sản phẩm sẵn hàng', 'products in stock') }}</span>
           </div>
         </div>
 
@@ -656,17 +690,17 @@ onUnmounted(() => {
           <div class="hero-orbit orbit-two"></div>
           <div class="hero-product">
             <span class="hero-icon"><i class="pi pi-box" /></span>
-            <small>DANH MỤC HIỆN CÓ</small>
+            <small>{{ t('DANH MỤC HIỆN CÓ', 'CATEGORIES IN STORE') }}</small>
             <strong>{{ products.length }}</strong>
-            <p>Sản phẩm được quản lý tập trung</p>
+            <p>{{ t('Sản phẩm được quản lý tập trung', 'Centrally managed products') }}</p>
           </div>
           <div class="floating-card top-card">
             <i class="pi pi-sync" />
-            <span><strong>Real-time</strong><small>Đồng bộ tồn kho</small></span>
+            <span><strong>{{ t('Real-time', 'Real-time') }}</strong><small>{{ t('Đồng bộ tồn kho', 'Stock synchronized') }}</small></span>
           </div>
           <div class="floating-card bottom-card">
             <i class="pi pi-shield" />
-            <span><strong>Minh bạch</strong><small>Giá và mã sản phẩm</small></span>
+            <span><strong>{{ t('Minh bạch', 'Transparent') }}</strong><small>{{ t('Giá và mã sản phẩm', 'Price and product ID') }}</small></span>
           </div>
         </div>
       </section>
@@ -685,7 +719,7 @@ onUnmounted(() => {
               <h2>{{ slide.title }}</h2>
               <p>{{ slide.subtitle }}</p>
               <button class="slide-btn" type="button" @click="category = slide.category; showAllProducts = false;">
-                Khám phá ngay <i class="pi pi-arrow-right" />
+                {{ t('Khám phá ngay', 'Explore now') }} <i class="pi pi-arrow-right" />
               </button>
             </div>
           </div>
@@ -708,8 +742,8 @@ onUnmounted(() => {
           :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.5)), url(https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&q=80&w=600)` }"
         >
           <div class="card-inner">
-            <h3>Thiết bị Gia dụng</h3>
-            <p>Kiến tạo không gian sống tiện nghi, tối giản.</p>
+            <h3>{{ t('Thiết bị Gia dụng', 'Home Appliances') }}</h3>
+            <p>{{ t('Kiến tạo không gian sống tiện nghi, tối giản.', 'Creating comfortable, minimalist living spaces.') }}</p>
           </div>
         </article>
         <article 
@@ -718,8 +752,8 @@ onUnmounted(() => {
           :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.5)), url(https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80&w=600)` }"
         >
           <div class="card-inner">
-            <h3>Phụ kiện thông minh</h3>
-            <p>Đồng hồ, túi xách, kính mắt và trang sức đẳng cấp.</p>
+            <h3>{{ t('Phụ kiện thông minh', 'Smart Accessories') }}</h3>
+            <p>{{ t('Đồng hồ, túi xách, kính mắt và trang sức đẳng cấp.', 'Elegant watches, bags, glasses and premium accessories.') }}</p>
           </div>
         </article>
         <article 
@@ -728,8 +762,8 @@ onUnmounted(() => {
           :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.5)), url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600)` }"
         >
           <div class="card-inner">
-            <h3>Văn phòng phẩm</h3>
-            <p>Nguồn cảm hứng cho ngày làm việc chuyên nghiệp.</p>
+            <h3>{{ t('Văn phòng phẩm', 'Office Stationery') }}</h3>
+            <p>{{ t('Nguồn cảm hứng cho ngày làm việc chuyên nghiệp.', 'Inspiration for a professional workday.') }}</p>
           </div>
         </article>
       </section>
@@ -741,20 +775,49 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <!-- Promo Campaign Flash Sale Banner with Countdown Timer -->
-      <section class="promo-flash-banner" @click="showOnlySales = true; showAllProducts = true; category = '';">
-        <div class="promo-flash-content">
-          <div class="promo-flash-text">
-            <span class="promo-badge"><i class="pi pi-bolt" /> GIẢM SỐC 50%</span>
-            <h2>SIÊU KHUYẾN MÃI MÙA HÈ - ĐỒNG GIÁ SĂN SALE</h2>
-            <p>Cơ hội tốt nhất để sở hữu những sản phẩm cao cấp với giá ưu đãi cực hấp dẫn toàn sàn!</p>
-          </div>
-          <div class="promo-flash-timer-wrapper">
-            <span>Thời gian còn lại:</span>
-            <div class="countdown-clock">
-              <strong>{{ storewideCountdownText }}</strong>
+      <!-- Promo Campaign Flash Sale Banner Slider with Countdown Timer -->
+      <section class="promo-flash-banner-slider">
+        <div class="promo-track">
+          <div 
+            v-for="(product, index) in (promoProducts.length ? promoProducts : [null])" 
+            :key="product ? product.id : 'default'"
+            class="promo-slide"
+            :class="{ active: activePromoSlide === index }"
+            :style="product && product.imageUrl ? { backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.75)), url(${product.imageUrl})` } : {}"
+            @click="product ? openProductDetail(product) : (showOnlySales = true, showAllProducts = true, category = '')"
+          >
+            <div class="promo-flash-content">
+              <div class="promo-flash-text">
+                <span class="promo-badge">
+                  <i class="pi pi-bolt" /> 
+                  {{ (product && product.salePrice && product.originalPrice) ? t(`GIẢM SỐC ${Math.round((1 - product.salePrice / product.originalPrice) * 100)}%`, `HOT DEAL -${Math.round((1 - product.salePrice / product.originalPrice) * 100)}%`) : t('GIẢM SỐC 50%', '50% FLASH SALE') }}
+                </span>
+                <h2>
+                  {{ product ? t(`SIÊU CAMPAIGN: ${product.name.toUpperCase()}`, `MEGA CAMPAIGN: ${product.name.toUpperCase()}`) : t('SIÊU KHUYẾN MÃI MÙA HÈ - ĐỒNG GIÁ SĂN SALE', 'SUMMER FLASHSALE - HOT SAVINGS') }}
+                </h2>
+                <p>
+                  {{ (product && product.salePrice) ? t(`Sở hữu ngay ${product.name} với giá ưu đãi cực sốc chỉ còn ${formatCurrency(product.salePrice)}. Số lượng có hạn!`, `Own ${product.name} now for only ${formatCurrency(product.salePrice)}. Limited stock!`) : t('Cơ hội tốt nhất để sở hữu những sản phẩm cao cấp với giá ưu đãi cực hấp dẫn toàn sàn!', 'Best opportunity to claim top products at a fraction of their original prices!') }}
+                </p>
+              </div>
+              <div class="promo-flash-timer-wrapper" @click.stop>
+                <span>{{ t('Thời gian còn lại:', 'Time remaining:') }}</span>
+                <div class="countdown-clock">
+                  <strong>{{ storewideCountdownText }}</strong>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+        
+        <!-- Slide indicators (dots) -->
+        <div v-if="promoProducts.length > 1" class="promo-dots">
+          <span 
+            v-for="(product, index) in promoProducts" 
+            :key="index"
+            class="promo-dot" 
+            :class="{ active: activePromoSlide === index }"
+            @click.stop="activePromoSlide = index"
+          />
         </div>
       </section>
 
@@ -762,9 +825,9 @@ onUnmounted(() => {
         <div v-if="!category && !showAllProducts">
           <div class="section-heading">
             <div>
-              <span class="eyebrow">SẢN PHẨM KHUYÊN DÙNG</span>
-              <h2>Sản phẩm nổi bật</h2>
-              <p>Những sản phẩm được khách hàng lựa chọn nhiều nhất.</p>
+              <span class="eyebrow">{{ t('SẢN PHẨM KHUYÊN DÙNG', 'RECOMMENDED FOR YOU') }}</span>
+              <h2>{{ t('Sản phẩm nổi bật', 'Featured Products') }}</h2>
+              <p>{{ t('Những sản phẩm được khách hàng lựa chọn nhiều nhất.', 'The most selected items by our customers.') }}</p>
             </div>
           </div>
           
@@ -783,9 +846,9 @@ onUnmounted(() => {
                   -{{ Math.round((1 - product.salePrice / product.originalPrice) * 100) }}%
                 </div>
                 <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
-                  <div class="ribbon low-stock">Sắp hết</div>
+                  <div class="ribbon low-stock">{{ t('Sắp hết', 'Low Stock') }}</div>
                 </div>
-                <span v-if="product.quantity <= 0" class="stock-badge sold-out">Hết hàng</span>
+                <span v-if="product.quantity <= 0" class="stock-badge sold-out">{{ t('Hết hàng', 'Out of stock') }}</span>
                 <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
                 <div v-else class="image-placeholder">
                   <i class="pi pi-box" />
@@ -794,7 +857,7 @@ onUnmounted(() => {
               </div>
               <div class="product-content">
                 <div class="product-labels">
-                  <span>{{ product.categoryName || "Sản phẩm" }}</span>
+                  <span>{{ product.categoryName || t('Sản phẩm', 'Product') }}</span>
                   <small>ID #{{ product.id }}</small>
                 </div>
                 <h3>{{ product.name }}</h3>
@@ -804,13 +867,13 @@ onUnmounted(() => {
                     <strong :class="{ sale: product.salePrice && product.salePrice < product.originalPrice }">{{ formatCurrency(product.sellingPrice) }}</strong>
                     <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
                       <i class="pi pi-check-circle" />
-                      {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
+                      {{ product.quantity <= product.reserveStock ? t(`Sắp hết (Còn ${product.quantity})`, `Low stock (${product.quantity} left)`) : t(`Còn hàng (${product.quantity})`, `In stock (${product.quantity})`) }}
                     </small>
-                    <small v-else class="unavailable">Tạm hết hàng</small>
+                    <small v-else class="unavailable">{{ t('Tạm hết hàng', 'Out of stock') }}</small>
                   </div>
                   <button type="button" :disabled="product.quantity <= 0" @click.stop="quickAddToCart(product)">
                     <i class="pi pi-shopping-bag" />
-                    <span>Thêm</span>
+                    <span>{{ t('Thêm', 'Add') }}</span>
                   </button>
                 </div>
               </div>
@@ -821,28 +884,28 @@ onUnmounted(() => {
         <div v-else>
           <div class="section-heading">
             <div>
-              <span class="eyebrow">DANH MỤC SẢN PHẨM</span>
-              <h2>{{ category || 'Tất cả sản phẩm' }}</h2>
-              <p>{{ visibleProducts.length }} sản phẩm phù hợp</p>
+              <span class="eyebrow">{{ t('DANH MỤC SẢN PHẨM', 'PRODUCT CATALOG') }}</span>
+              <h2>{{ category || t('Tất cả sản phẩm', 'All Products') }}</h2>
+              <p>{{ visibleProducts.length }} {{ t('sản phẩm phù hợp', 'matching products') }}</p>
             </div>
             <div class="search-box">
               <i class="pi pi-search" />
-              <input v-model="search" type="search" placeholder="Tìm tên, mã hoặc danh mục..." />
+              <input v-model="search" type="search" :placeholder="t('Tìm tên, mã hoặc danh mục...', 'Search name, code or category...')" />
             </div>
           </div>
 
           <div class="catalog-toolbar">
             <div class="active-filters">
-              <span class="filter-tag" v-if="search">Tìm kiếm: "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="search = ''" /></span>
-              <span class="filter-tag sales-tag" v-if="showOnlySales" style="background: #fef2f2; color: #be123c; border-color: #fca5a5;">Khuyến mãi: "Ưu đãi 50%" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="showOnlySales = false" /></span>
+              <span class="filter-tag" v-if="search">{{ t('Tìm kiếm:', 'Search:') }} "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="search = ''" /></span>
+              <span class="filter-tag sales-tag" v-if="showOnlySales" style="background: #fef2f2; color: #be123c; border-color: #fca5a5;">{{ t('Khuyến mãi: "Ưu đãi 50%"', 'Promotion: "50% Off"') }} <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="showOnlySales = false" /></span>
             </div>
             <label class="sort-control">
-              <span>Sắp xếp</span>
+              <span>{{ t('Sắp xếp', 'Sort by') }}</span>
               <select v-model="sort">
-                <option value="featured">Nổi bật</option>
-                <option value="price-asc">Giá thấp đến cao</option>
-                <option value="price-desc">Giá cao đến thấp</option>
-                <option value="name">Tên A-Z</option>
+                <option value="featured">{{ t('Nổi bật', 'Featured') }}</option>
+                <option value="price-asc">{{ t('Giá thấp đến cao', 'Price: Low to High') }}</option>
+                <option value="price-desc">{{ t('Giá cao đến thấp', 'Price: High to Low') }}</option>
+                <option value="name">{{ t('Tên A-Z', 'Name A-Z') }}</option>
               </select>
             </label>
           </div>
@@ -850,10 +913,10 @@ onUnmounted(() => {
           <div v-if="error" class="state-card error-state">
             <span><i class="pi pi-wifi" /></span>
             <div>
-              <strong>Chưa thể kết nối Product service</strong>
+              <strong>{{ t('Chưa thể kết nối Product service', 'Could not connect to Product service') }}</strong>
               <p>{{ error }}</p>
             </div>
-            <button type="button" @click="loadProducts">Thử lại</button>
+            <button type="button" @click="loadProducts">{{ t('Thử lại', 'Retry') }}</button>
           </div>
 
           <div v-else-if="loading" class="product-grid">
@@ -868,10 +931,10 @@ onUnmounted(() => {
           <div v-else-if="!visibleProducts.length" class="state-card empty-state">
             <span><i class="pi pi-search" /></span>
             <div>
-              <strong>Không tìm thấy sản phẩm</strong>
-              <p>Hãy thử từ khóa hoặc danh mục khác.</p>
+              <strong>{{ t('Không tìm thấy sản phẩm', 'No products found') }}</strong>
+              <p>{{ t('Hãy thử từ khóa hoặc danh mục khác.', 'Please try different keywords or categories.') }}</p>
             </div>
-            <button type="button" @click="clearFilters">Xóa bộ lọc</button>
+            <button type="button" @click="clearFilters">{{ t('Xóa bộ lọc', 'Clear filters') }}</button>
           </div>
 
           <div v-else>
@@ -882,9 +945,9 @@ onUnmounted(() => {
                     -{{ Math.round((1 - product.salePrice / product.originalPrice) * 100) }}%
                   </div>
                   <div class="ribbon-wrapper" v-if="product.quantity > 0 && product.quantity <= product.reserveStock">
-                    <div class="ribbon low-stock">Sắp hết</div>
+                    <div class="ribbon low-stock">{{ t('Sắp hết', 'Low Stock') }}</div>
                   </div>
-                  <span v-if="product.quantity <= 0" class="stock-badge sold-out">Hết hàng</span>
+                  <span v-if="product.quantity <= 0" class="stock-badge sold-out">{{ t('Hết hàng', 'Out of stock') }}</span>
                   <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
                   <div v-else class="image-placeholder">
                     <i class="pi pi-box" />
@@ -893,7 +956,7 @@ onUnmounted(() => {
                 </div>
                 <div class="product-content">
                   <div class="product-labels">
-                    <span>{{ product.categoryName || "Sản phẩm" }}</span>
+                    <span>{{ product.categoryName || t('Sản phẩm', 'Product') }}</span>
                     <small>ID #{{ product.id }}</small>
                   </div>
                   <h3>{{ product.name }}</h3>
@@ -903,13 +966,13 @@ onUnmounted(() => {
                       <strong :class="{ sale: product.salePrice && product.salePrice < product.originalPrice }">{{ formatCurrency(product.sellingPrice) }}</strong>
                       <small v-if="product.quantity > 0" :class="product.quantity <= product.reserveStock ? 'low-stock-text' : 'in-stock-text'">
                         <i class="pi pi-check-circle" />
-                        {{ product.quantity <= product.reserveStock ? `Sắp hết (Còn ${product.quantity})` : `Còn hàng (${product.quantity})` }}
+                        {{ product.quantity <= product.reserveStock ? t(`Sắp hết (Còn ${product.quantity})`, `Low stock (${product.quantity} left)`) : t(`Còn hàng (${product.quantity})`, `In stock (${product.quantity})`) }}
                       </small>
-                      <small v-else class="unavailable">Tạm hết hàng</small>
+                      <small v-else class="unavailable">{{ t('Tạm hết hàng', 'Out of stock') }}</small>
                     </div>
                     <button type="button" :disabled="product.quantity <= 0" @click.stop="quickAddToCart(product)">
                       <i class="pi pi-shopping-bag" />
-                      <span>Thêm</span>
+                      <span>{{ t('Thêm', 'Add') }}</span>
                     </button>
                   </div>
                 </div>
@@ -917,11 +980,11 @@ onUnmounted(() => {
             </div>
 
             <div class="pagination-container" v-if="totalPages > 1">
-              <button class="pag-btn" :disabled="currentPage === 1" @click="currentPage--" aria-label="Trang trước">
+              <button class="pag-btn" :disabled="currentPage === 1" @click="currentPage--" :aria-label="t('Trang trước', 'Previous Page')">
                 <i class="pi pi-chevron-left" />
               </button>
-              <span class="pag-info">Trang <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
-              <button class="pag-btn" :disabled="currentPage === totalPages" @click="currentPage++" aria-label="Trang sau">
+              <span class="pag-info">{{ t('Trang', 'Page') }} <strong>{{ currentPage }}</strong> / {{ totalPages }}</span>
+              <button class="pag-btn" :disabled="currentPage === totalPages" @click="currentPage++" :aria-label="t('Trang sau', 'Next Page')">
                 <i class="pi pi-chevron-right" />
               </button>
             </div>
@@ -934,7 +997,7 @@ onUnmounted(() => {
     <div v-if="selectedProduct" class="product-detail-overlay" @click.self="closeProductDetail" />
     <div v-if="selectedProduct" class="product-detail-modal" aria-modal="true" role="dialog">
       <!-- Close button -->
-      <button type="button" class="detail-close-btn" aria-label="Đóng" @click="closeProductDetail">
+      <button type="button" class="detail-close-btn" :aria-label="t('Đóng', 'Close')" @click="closeProductDetail">
         <i class="pi pi-times" />
       </button>
 
@@ -972,26 +1035,26 @@ onUnmounted(() => {
         <!-- Right column: Product Info & Actions -->
         <div class="detail-info">
           <div class="detail-header">
-            <span class="detail-category">{{ selectedProduct.categoryName || "Sản phẩm" }}</span>
+            <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
             <h1 class="detail-title">{{ selectedProduct.name }}</h1>
             
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
-              <span class="product-id">Mã ID: <strong>#{{ selectedProduct.id }}</strong></span>
+              <span class="product-id">{{ t('Mã ID:', 'Product ID:') }} <strong>#{{ selectedProduct.id }}</strong></span>
               <div v-if="selectedProduct.quantity > 0" class="stock-status in-stock">
                 <i class="pi pi-check-circle" />
-                <span>{{ selectedProduct.quantity <= selectedProduct.reserveStock ? `Sắp hết (Còn ${selectedProduct.quantity})` : `Còn hàng (${selectedProduct.quantity} sản phẩm)` }}</span>
+                <span>{{ selectedProduct.quantity <= selectedProduct.reserveStock ? t(`Sắp hết (Còn ${selectedProduct.quantity})`, `Low stock (${selectedProduct.quantity} left)`) : t(`Còn hàng (${selectedProduct.quantity} sản phẩm)`, `In stock (${selectedProduct.quantity} products)`) }}</span>
               </div>
-              <div v-else class="stock-status out-of-stock">
+              <div class="stock-status out-of-stock" v-else>
                 <i class="pi pi-times-circle" />
-                <span>Hết hàng</span>
+                <span>{{ t('Hết hàng', 'Out of stock') }}</span>
               </div>
             </div>
           </div>
 
           <!-- Price -->
           <div class="detail-price">
-            <span class="price-label">Giá bán</span>
+            <span class="price-label">{{ t('Giá bán', 'Price') }}</span>
             <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
               <del style="color: var(--muted); font-size: 16px;" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
                 {{ formatCurrency(selectedProduct.originalPrice) }}
@@ -1000,24 +1063,24 @@ onUnmounted(() => {
                 {{ formatCurrency(selectedProduct.sellingPrice) }}
               </strong>
               <span class="detail-discount-percent-badge" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
-                Giảm {{ Math.round((1 - selectedProduct.salePrice / selectedProduct.originalPrice) * 100) }}%
+                {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedProduct.salePrice / selectedProduct.originalPrice) * 100) }}%
               </span>
             </div>
           </div>
           
           <!-- Detailed Countdown Deal for product -->
           <div class="detail-deal-countdown" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
-            <i class="pi pi-bolt" /> <span>Ưu đãi Flash Deal kết thúc sau:</span>
+            <i class="pi pi-bolt" /> <span>{{ t('Ưu đãi Flash Deal kết thúc sau:', 'Flash Deal expires in:') }}</span>
             <strong>{{ productCountdownText }}</strong>
           </div>
 
           <!-- Quantity Picker -->
           <div class="quantity-picker">
-            <label for="qty">Số lượng</label>
+            <label for="qty">{{ t('Số lượng', 'Quantity') }}</label>
             <div class="qty-controls">
               <button 
                 type="button" 
-                aria-label="Giảm số lượng"
+                :aria-label="t('Giảm số lượng', 'Decrease quantity')"
                 @click="productDetailQuantity = Math.max(1, productDetailQuantity - 1)"
               >
                 <i class="pi pi-minus" />
@@ -1031,7 +1094,7 @@ onUnmounted(() => {
               />
               <button 
                 type="button"
-                aria-label="Tăng số lượng"
+                :aria-label="t('Tăng số lượng', 'Increase quantity')"
                 @click="productDetailQuantity = Math.min(selectedProduct.quantity, productDetailQuantity + 1)"
               >
                 <i class="pi pi-plus" />
@@ -1048,7 +1111,7 @@ onUnmounted(() => {
               @click="addToCartFromDetail"
             >
               <i class="pi pi-shopping-bag" />
-              <span>Thêm vào giỏ hàng</span>
+              <span>{{ t('Thêm vào giỏ hàng', 'Add to Cart') }}</span>
             </button>
             <button 
               type="button" 
@@ -1056,29 +1119,29 @@ onUnmounted(() => {
               @click="closeProductDetail"
             >
               <i class="pi pi-arrow-left" />
-              <span>Quay lại cửa hàng</span>
+              <span>{{ t('Quay lại cửa hàng', 'Back to Store') }}</span>
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <aside class="cart-panel" :class="{ open: showCart }" aria-label="Giỏ hàng">
+    <aside class="cart-panel" :class="{ open: showCart }" :aria-label="t('Giỏ hàng', 'Cart')">
       <div class="cart-head">
         <div>
-          <span>GIỎ HÀNG CỦA BẠN</span>
-          <h2>{{ cartCount }} sản phẩm</h2>
+          <span>{{ t('GIỎ HÀNG CỦA BẠN', 'YOUR CART') }}</span>
+          <h2>{{ cartCount }} {{ t('sản phẩm', 'products') }}</h2>
         </div>
-        <button type="button" aria-label="Đóng" @click="showCart = false">
+        <button type="button" :aria-label="t('Đóng', 'Close')" @click="showCart = false">
           <i class="pi pi-times" />
         </button>
       </div>
 
       <div v-if="!cart.length" class="empty-cart">
         <span><i class="pi pi-shopping-bag" /></span>
-        <h3>Giỏ hàng đang trống</h3>
-        <p>Khám phá danh mục và thêm sản phẩm bạn quan tâm.</p>
-        <button type="button" @click="showCart = false">Xem sản phẩm</button>
+        <h3>{{ t('Giỏ hàng đang trống', 'Your cart is empty') }}</h3>
+        <p>{{ t('Khám phá danh mục và thêm sản phẩm bạn quan tâm.', 'Explore our catalog and add items that interest you.') }}</p>
+        <button type="button" @click="showCart = false">{{ t('Xem sản phẩm', 'Browse Products') }}</button>
       </div>
 
       <div v-else class="cart-body">
@@ -1092,7 +1155,7 @@ onUnmounted(() => {
             <strong>{{ line.product.name }}</strong>
             <span>{{ formatCurrency(line.product.sellingPrice) }}</span>
             <div class="quantity-control">
-              <button type="button" aria-label="Giảm số lượng" @click="changeQuantity(line, line.quantity - 1)">
+              <button type="button" :aria-label="t('Giảm số lượng', 'Decrease quantity')" @click="changeQuantity(line, line.quantity - 1)">
                 <i class="pi pi-minus" />
               </button>
               <input
@@ -1102,12 +1165,12 @@ onUnmounted(() => {
                 :max="line.product.quantity"
                 @input="changeQuantity(line, Number(($event.target as HTMLInputElement).value))"
               />
-              <button type="button" aria-label="Tăng số lượng" @click="changeQuantity(line, line.quantity + 1)">
+              <button type="button" :aria-label="t('Tăng số lượng', 'Increase quantity')" @click="changeQuantity(line, line.quantity + 1)">
                 <i class="pi pi-plus" />
               </button>
             </div>
           </div>
-          <button class="remove-line" type="button" aria-label="Xóa sản phẩm" @click="removeLine(line.product.id)">
+          <button class="remove-line" type="button" :aria-label="t('Xóa sản phẩm', 'Remove item')" @click="removeLine(line.product.id)">
             <i class="pi pi-trash" />
           </button>
         </div>
@@ -1115,45 +1178,45 @@ onUnmounted(() => {
 
       <div v-if="cart.length" class="cart-footer">
         <div>
-          <span>Tạm tính</span><strong>{{ formatCurrency(cartTotal) }}</strong>
+          <span>{{ t('Tạm tính', 'Subtotal') }}</span><strong>{{ formatCurrency(cartTotal) }}</strong>
         </div>
-        <p><i class="pi pi-info-circle" /> Nhân viên bán hàng sẽ xác nhận thông tin và tạo đơn.</p>
+        <p><i class="pi pi-info-circle" /> {{ t('Nhân viên bán hàng sẽ xác nhận thông tin và tạo đơn.', 'Sales staff will verify details and issue the order.') }}</p>
         <button type="button" @click="openCheckoutModal">
-          Liên hệ đặt hàng <i class="pi pi-arrow-right" />
+          {{ t('Liên hệ đặt hàng', 'Proceed to Checkout') }} <i class="pi pi-arrow-right" />
         </button>
       </div>
     </aside>
 
     <div v-if="showCheckout" class="modal-backdrop" @click="showCheckout = false" />
-    <aside v-if="showCheckout" class="checkout-modal" aria-label="Thông tin đặt hàng">
+    <aside v-if="showCheckout" class="checkout-modal" :aria-label="t('Thông tin đặt hàng', 'Order Information')">
       <div class="modal-head">
-        <h2>Thông tin đặt hàng</h2>
-        <button type="button" aria-label="Đóng" @click="showCheckout = false">
+        <h2>{{ t('Thông tin đặt hàng', 'Order Information') }}</h2>
+        <button type="button" :aria-label="t('Đóng', 'Close')" @click="showCheckout = false">
           <i class="pi pi-times" />
         </button>
       </div>
       
       <form class="modal-body" @submit.prevent="requestPaymentConfirmation">
-        <p class="modal-summary">Bạn đang đặt mua <strong>{{ cartCount }}</strong> sản phẩm với tổng trị giá <strong>{{ formatCurrency(cartTotal) }}</strong>.</p>
+        <p class="modal-summary" v-html="t('Bạn đang đặt mua <strong>' + cartCount + '</strong> sản phẩm với tổng trị giá <strong>' + formatCurrency(cartTotal) + '</strong>.', 'You are purchasing <strong>' + cartCount + '</strong> items with a total value of <strong>' + formatCurrency(cartTotal) + '</strong>.')"></p>
         
         <label class="form-field">
-          <span>Họ và tên <b class="required">*</b></span>
-          <input v-model="customerForm.fullName" required placeholder="Nhập họ và tên" />
+          <span>{{ t('Họ và tên', 'Full Name') }} <b class="required">*</b></span>
+          <input v-model="customerForm.fullName" required :placeholder="t('Nhập họ và tên', 'Enter full name')" />
         </label>
         
         <label class="form-field">
-          <span>Số điện thoại <b class="required">*</b></span>
-          <input v-model="customerForm.phone" type="tel" required placeholder="Nhập số điện thoại" />
+          <span>{{ t('Số điện thoại', 'Phone Number') }} <b class="required">*</b></span>
+          <input v-model="customerForm.phone" type="tel" required :placeholder="t('Nhập số điện thoại', 'Enter phone number')" />
         </label>
         
         <label class="form-field">
-          <span>Email</span>
-          <input v-model="customerForm.email" type="email" placeholder="Nhập địa chỉ email" />
+          <span>{{ t('Email', 'Email') }}</span>
+          <input v-model="customerForm.email" type="email" :placeholder="t('Nhập địa chỉ email', 'Enter email address')" />
         </label>
         
         <label class="form-field">
-          <span>Địa chỉ giao hàng <b class="required">*</b></span>
-          <textarea v-model="customerForm.address" required placeholder="Số nhà, tên đường, quận/huyện..." />
+          <span>{{ t('Địa chỉ giao hàng', 'Shipping Address') }} <b class="required">*</b></span>
+          <textarea v-model="customerForm.address" required :placeholder="t('Số nhà, tên đường, quận/huyện...', 'House number, street name, district...')" />
         </label>
 
         <div v-if="checkoutError" class="checkout-error">
@@ -1161,7 +1224,7 @@ onUnmounted(() => {
         </div>
         
         <button type="submit" class="submit-btn" :disabled="checkoutLoading">
-          <span>Xác nhận</span>
+          <span>{{ t('Xác nhận', 'Confirm') }}</span>
         </button>
       </form>
     </aside>
@@ -1176,11 +1239,11 @@ onUnmounted(() => {
       class="payment-confirm-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Xác nhận thanh toán"
+      :aria-label="t('Xác nhận thanh toán', 'Confirm Payment')"
     >
       <span class="confirm-icon"><i class="pi pi-question-circle" /></span>
-      <h2>Bạn đã chắc chắn với thông tin này!</h2>
-      <p>Đơn hàng sẽ được tạo và liên kết thanh toán có hiệu lực trong 10 phút.</p>
+      <h2>{{ t('Bạn đã chắc chắn với thông tin này!', 'Are you sure with these details?') }}</h2>
+      <p>{{ t('Đơn hàng sẽ được tạo và liên kết thanh toán có hiệu lực trong 10 phút.', 'The order will be created and payment link will be valid for 10 minutes.') }}</p>
       <div v-if="checkoutError" class="checkout-error">
         <i class="pi pi-exclamation-circle" /> {{ checkoutError }}
       </div>
@@ -1190,7 +1253,7 @@ onUnmounted(() => {
           :disabled="checkoutLoading"
           @click="showPaymentConfirm = false"
         >
-          Hủy
+          {{ t('Hủy', 'Cancel') }}
         </button>
         <button
           type="button"
@@ -1199,7 +1262,7 @@ onUnmounted(() => {
           @click="submitOrder"
         >
           <i v-if="checkoutLoading" class="pi pi-spin pi-spinner" />
-          <span>{{ checkoutLoading ? 'Đang tạo liên kết...' : 'Thanh toán' }}</span>
+          <span>{{ checkoutLoading ? t('Đang tạo liên kết...', 'Generating link...') : t('Thanh toán', 'Pay Now') }}</span>
         </button>
       </div>
     </section>
@@ -1211,41 +1274,41 @@ onUnmounted(() => {
             <span class="brand-mark"><i class="pi pi-shopping-bag" /></span>
             <span class="brand-copy">
               <strong>Smart Sale Store</strong>
-              <small>Hệ thống bán hàng thông minh</small>
+              <small>{{ t('Hệ thống bán hàng thông minh', 'Smart Sales & Inventory System') }}</small>
             </span>
           </RouterLink>
           <div class="social-links">
-            <a href="#" aria-label="Facebook"><i class="pi pi-facebook" /></a>
-            <a href="#" aria-label="Youtube"><i class="pi pi-youtube" /></a>
-            <a href="#" aria-label="Twitter"><i class="pi pi-twitter" /></a>
+            <a href="#" :aria-label="t('Facebook', 'Facebook')"><i class="pi pi-facebook" /></a>
+            <a href="#" :aria-label="t('Youtube', 'Youtube')"><i class="pi pi-youtube" /></a>
+            <a href="#" :aria-label="t('Twitter', 'Twitter')"><i class="pi pi-twitter" /></a>
           </div>
         </div>
         
         <div class="footer-links">
-          <strong>Danh mục mua sắm</strong>
-          <a href="#products">Tất cả sản phẩm</a>
-          <a href="#service">Dịch vụ khách hàng</a>
-          <a href="#footer">Liên hệ hỗ trợ</a>
+          <strong>{{ t('Danh mục mua sắm', 'Shop Categories') }}</strong>
+          <a href="#products">{{ t('Tất cả sản phẩm', 'All Products') }}</a>
+          <a href="#service">{{ t('Dịch vụ khách hàng', 'Customer Service') }}</a>
+          <a href="#footer">{{ t('Liên hệ hỗ trợ', 'Contact Support') }}</a>
         </div>
         
         <div class="footer-links">
-          <strong>Thông tin liên hệ</strong>
-          <span><i class="pi pi-phone" /> Hotline: 1900 6789</span>
+          <strong>{{ t('Thông tin liên hệ', 'Contact Information') }}</strong>
+          <span><i class="pi pi-phone" /> {{ t('Hotline: 1900 6789', 'Hotline: 1900 6789') }}</span>
           <span><i class="pi pi-envelope" /> support@smartsales.com</span>
-          <span><i class="pi pi-map-marker" /> Hà Nội, Việt Nam</span>
+          <span><i class="pi pi-map-marker" /> {{ t('Hà Nội, Việt Nam', 'Hanoi, Vietnam') }}</span>
         </div>
 
         <div class="footer-links">
-          <strong>Hệ thống nội bộ</strong>
+          <strong>{{ t('Hệ thống nội bộ', 'Internal System') }}</strong>
           <RouterLink class="staff-login-btn" to="/login/staff">
-            <i class="pi pi-lock" /> Đăng nhập nhân viên
+            <i class="pi pi-lock" /> {{ t('Đăng nhập nhân viên', 'Staff Login') }}
           </RouterLink>
-          <span class="status-indicator"><i class="pi pi-server" /> Kết nối API Service</span>
+          <span class="status-indicator"><i class="pi pi-server" /> {{ t('Kết nối API Service', 'API Service Connected') }}</span>
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2026 Smart Sale Store. Bảo lưu mọi quyền.</span>
-        <span class="system-status"><i class="pi pi-circle-fill" /> Hệ thống trực tuyến</span>
+        <span>{{ t('© 2026 Smart Sale Store. Bảo lưu mọi quyền.', '© 2026 Smart Sale Store. All rights reserved.') }}</span>
+        <span class="system-status"><i class="pi pi-circle-fill" /> {{ t('Hệ thống trực tuyến', 'System Online') }}</span>
       </div>
     </footer>
   </div>
@@ -3788,32 +3851,62 @@ footer {
   color: var(--teal);
 }
 
-/* Promo Flash Banner Styles */
-.promo-flash-banner {
+/* Promo Flash Banner Slider Styles */
+.promo-flash-banner-slider {
   margin: 30px 0;
-  padding: 24px;
-  background: linear-gradient(135deg, #be123c, #881337);
   border-radius: 18px;
-  color: white;
-  cursor: pointer;
-  box-shadow: 0 15px 35px rgba(190, 18, 60, 0.25);
-  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  height: 180px;
+  transition: all 0.3s ease;
 }
-.promo-flash-banner::before {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-.promo-flash-banner:hover {
+.promo-flash-banner-slider:hover {
   transform: translateY(-3px);
-  box-shadow: 0 20px 45px rgba(190, 18, 60, 0.35);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+}
+.promo-track {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.promo-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, #be123c, #881337);
+  background-size: cover;
+  background-position: center;
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.8s ease-in-out;
+  cursor: pointer;
+}
+.promo-slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.promo-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 32px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+.promo-dot {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.promo-dot.active {
+  background: white;
+  width: 28px;
 }
 .promo-flash-content {
   display: flex;
@@ -3823,6 +3916,7 @@ footer {
   flex-wrap: wrap;
   position: relative;
   z-index: 2;
+  width: 100%;
 }
 .promo-flash-text {
   flex: 1;
@@ -3931,13 +4025,50 @@ footer {
 }
 
 /* Dark mode banner adjustment */
-.app-dark .promo-flash-banner {
+.app-dark .promo-slide {
   background: linear-gradient(135deg, #9f1239, #4c0519);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
 }
 .app-dark .promo-badge {
   background: #4c0519;
   color: #fca5a5;
 }
 
+/* Header Lang switch styles */
+.lang-toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 8px 12px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lang-toggle-btn:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+.app-dark .lang-toggle-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+.app-dark .lang-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.customer-link.icon-only {
+  padding: 8px;
+  min-width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+}
+.customer-link.icon-only i {
+  margin-right: 0;
+  font-size: 1.25rem;
+}
 </style>

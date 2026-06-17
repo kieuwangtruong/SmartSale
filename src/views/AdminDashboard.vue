@@ -7,6 +7,8 @@ import DataTable from 'primevue/datatable'
 import Select from 'primevue/select'
 import { formatCurrency, getOrders, type Order } from '../services/orderApi'
 import { getLowStock, getProducts, getStockReceipts, type Product, type StockReceipt } from '../services/productApi'
+import { useLanguage } from '../services/i18n'
+import { useToast } from 'primevue/usetoast'
 
 import {
   getDashboardReport,
@@ -19,7 +21,18 @@ const report = ref<DashboardReport | null>(null)
 const chart = ref<RevenueChart | null>(null)
 const groupBy = ref<'day' | 'month'>('day')
 const loading = ref(true)
-const error = ref('')
+const { t } = useLanguage()
+const toast = useToast()
+
+function showError(msg: string) {
+  toast.add({
+    severity: 'error',
+    summary: t('Lỗi', 'Error'),
+    detail: msg,
+    life: 5000,
+  })
+}
+
 const warehouseStats = ref({
   productCount: 0,
   totalStock: 0,
@@ -30,10 +43,10 @@ const warehouseStats = ref({
   importQuantityTotal: 0,
 })
 
-const groupOptions = [
-  { label: 'Theo ngày', value: 'day' },
-  { label: 'Theo tháng', value: 'month' },
-]
+const groupOptions = computed(() => [
+  { label: t('Theo ngày', 'By day'), value: 'day' },
+  { label: t('Theo tháng', 'By month'), value: 'month' },
+])
 const chartColors = ['#4f46e5', '#0f766e', '#0284c7', '#d97706', '#db2777', '#64748b']
 const revenueSegments = computed(() => {
   const labels = chart.value?.labels ?? []
@@ -55,7 +68,7 @@ const revenueSegments = computed(() => {
   return [
     ...leading,
     {
-      label: 'Khác',
+      label: t('Khác', 'Others'),
       revenue: remaining.reduce((sum, item) => sum + item.revenue, 0),
       orders: remaining.reduce((sum, item) => sum + item.orders, 0),
     },
@@ -83,7 +96,7 @@ const chartData = computed(() => ({
   labels: revenueSegments.value.map((item) => item.label),
   datasets: [
     {
-      label: 'Doanh thu',
+      label: t('Doanh thu', 'Revenue'),
       data: revenueSegments.value.map((item) => item.revenue),
       backgroundColor: revenueSegments.value.map(
         (_, index) => chartColors[index % chartColors.length],
@@ -115,6 +128,7 @@ const chartOptions = {
   },
 }
 
+// Stats helper
 function calculateImportStats(receipts: StockReceipt[]) {
   const startOfMonth = new Date()
   startOfMonth.setDate(1)
@@ -227,7 +241,7 @@ function calculateReport(allOrders: Order[]): DashboardReport {
       if (!productMap[item.productId]) {
         productMap[item.productId] = {
           productId: item.productId,
-          productName: item.productName || `Sản phẩm #${item.productId}`,
+          productName: item.productName || `${t('Sản phẩm', 'Product')} #${item.productId}`,
           quantitySold: 0,
           revenue: 0
         }
@@ -237,7 +251,7 @@ function calculateReport(allOrders: Order[]): DashboardReport {
       pm.revenue += item.subTotal
     }
     
-    const custName = order.customerName || 'Khách lẻ'
+    const custName = order.customerName || t('Khách lẻ', 'Walk-in')
     const key = order.customerId ? String(order.customerId) : custName
     if (!customerMap[key]) {
       customerMap[key] = {
@@ -271,6 +285,7 @@ function calculateReport(allOrders: Order[]): DashboardReport {
   }
 }
 
+// Local chart aggregator
 function calculateChart(allOrders: Order[], groupByMode: 'day' | 'month'): RevenueChart {
   const activeOrders = allOrders.filter(o => o.status !== 'Cancelled')
   
@@ -324,7 +339,6 @@ function calculateChart(allOrders: Order[], groupByMode: 'day' | 'month'): Reven
 
 async function load() {
   loading.value = true
-  error.value = ''
   try {
     const [apiReport, apiChart] = await Promise.all([
       getDashboardReport(),
@@ -349,7 +363,7 @@ async function load() {
       chart.value = calculateChart(allOrders, groupBy.value)
       await loadWarehouseStats(allOrders)
     } catch (fallbackException) {
-      error.value = fallbackException instanceof Error ? fallbackException.message : 'Không thể tải báo cáo.'
+      showError(fallbackException instanceof Error ? fallbackException.message : t('Không thể tải báo cáo.', 'Unable to load reports.'))
     }
   } finally {
     loading.value = false
@@ -363,8 +377,8 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>Báo cáo kinh doanh</h2>
-        <p>Dữ liệu tổng hợp từ sự kiện đơn hàng.</p>
+        <h2>{{ t('Báo cáo kinh doanh', 'Business Reports') }}</h2>
+        <p>{{ t('Dữ liệu tổng hợp từ sự kiện đơn hàng.', 'Aggregated data from sales orders.') }}</p>
       </div>
       <Select
         v-model="groupBy"
@@ -375,32 +389,31 @@ onMounted(load)
       />
     </div>
 
-    <p v-if="error" class="alert error">{{ error }}</p>
-    <p v-if="loading" class="empty">Đang tải báo cáo...</p>
+    <p v-if="loading" class="empty">{{ t('Đang tải báo cáo...', 'Loading report...') }}</p>
 
     <template v-else-if="report">
       <div class="stats">
-        <article><i class="pi pi-wallet stat-icon purple"></i><span>Doanh thu hôm nay</span><strong>{{ formatCurrency(report.revenueToday) }}</strong></article>
-        <article><i class="pi pi-calendar stat-icon blue"></i><span>Doanh thu tuần</span><strong>{{ formatCurrency(report.revenueThisWeek) }}</strong></article>
-        <article><i class="pi pi-chart-line stat-icon green"></i><span>Doanh thu tháng</span><strong>{{ formatCurrency(report.revenueThisMonth) }}</strong></article>
-        <article><i class="pi pi-shopping-cart stat-icon orange"></i><span>Số đơn hàng</span><strong>{{ report.orderCount }}</strong></article>
+        <article><i class="pi pi-wallet stat-icon purple"></i><span>{{ t('Doanh thu hôm nay', 'Revenue Today') }}</span><strong>{{ formatCurrency(report.revenueToday) }}</strong></article>
+        <article><i class="pi pi-calendar stat-icon blue"></i><span>{{ t('Doanh thu tuần', 'Revenue This Week') }}</span><strong>{{ formatCurrency(report.revenueThisWeek) }}</strong></article>
+        <article><i class="pi pi-chart-line stat-icon green"></i><span>{{ t('Doanh thu tháng', 'Revenue This Month') }}</span><strong>{{ formatCurrency(report.revenueThisMonth) }}</strong></article>
+        <article><i class="pi pi-shopping-cart stat-icon orange"></i><span>{{ t('Số đơn hàng', 'Orders Count') }}</span><strong>{{ report.orderCount }}</strong></article>
       </div>
 
       <div class="stats warehouse-stats">
-        <article><i class="pi pi-box stat-icon teal"></i><span>Sản phẩm</span><strong>{{ warehouseStats.productCount }}</strong></article>
-        <article><i class="pi pi-database stat-icon indigo"></i><span>Tổng tồn kho</span><strong>{{ warehouseStats.totalStock }}</strong></article>
-        <article><i class="pi pi-exclamation-triangle stat-icon red"></i><span>Sắp hết hàng</span><strong>{{ warehouseStats.lowStockCount }}</strong></article>
-        <article><i class="pi pi-money-bill stat-icon yellow"></i><span>Giá trị tồn kho</span><strong>{{ formatCurrency(warehouseStats.inventoryValue) }}</strong></article>
-        <article><i class="pi pi-shopping-bag stat-icon cyan"></i><span>Bán tháng này</span><strong>{{ warehouseStats.productsSoldThisMonth }}</strong></article>
-        <article><i class="pi pi-download stat-icon purple"></i><span>Nhập tháng này</span><strong>{{ warehouseStats.importQuantityThisMonth }}</strong></article>
-        <article><i class="pi pi-truck stat-icon blue"></i><span>Tổng nhập (NCC)</span><strong>{{ warehouseStats.importQuantityTotal }}</strong></article>
+        <article><i class="pi pi-box stat-icon teal"></i><span>{{ t('Sản phẩm', 'Products') }}</span><strong>{{ warehouseStats.productCount }}</strong></article>
+        <article><i class="pi pi-database stat-icon indigo"></i><span>{{ t('Tổng tồn kho', 'Total Inventory') }}</span><strong>{{ warehouseStats.totalStock }}</strong></article>
+        <article><i class="pi pi-exclamation-triangle stat-icon red"></i><span>{{ t('Sắp hết hàng', 'Low Stock') }}</span><strong>{{ warehouseStats.lowStockCount }}</strong></article>
+        <article><i class="pi pi-money-bill stat-icon yellow"></i><span>{{ t('Giá trị tồn kho', 'Inventory Value') }}</span><strong>{{ formatCurrency(warehouseStats.inventoryValue) }}</strong></article>
+        <article><i class="pi pi-shopping-bag stat-icon cyan"></i><span>{{ t('Bán tháng này', 'Sold This Month') }}</span><strong>{{ warehouseStats.productsSoldThisMonth }}</strong></article>
+        <article><i class="pi pi-download stat-icon purple"></i><span>{{ t('Nhập tháng này', 'Imported This Month') }}</span><strong>{{ warehouseStats.importQuantityThisMonth }}</strong></article>
+        <article><i class="pi pi-truck stat-icon blue"></i><span>{{ t('Tổng nhập (NCC)', 'Total Imports (Suppliers)') }}</span><strong>{{ warehouseStats.importQuantityTotal }}</strong></article>
       </div>
 
       <div class="grid-2">
         <article class="panel">
           <div class="panel-heading">
-            <div><span>PHÂN BỔ DOANH THU</span><h3>Biểu đồ doanh thu</h3></div>
-            <small>{{ groupBy === 'day' ? 'Theo ngày' : 'Theo tháng' }}</small>
+            <div><span>{{ t('PHÂN BỔ DOANH THU', 'REVENUE ALLOCATION') }}</span><h3>{{ t('Biểu đồ doanh thu', 'Revenue Chart') }}</h3></div>
+            <small>{{ groupBy === 'day' ? t('Theo ngày', 'By day') : t('Theo tháng', 'By month') }}</small>
           </div>
 
           <div v-if="revenueSegments.length" class="revenue-chart-layout">
@@ -409,16 +422,16 @@ onMounted(load)
                 <Chart type="doughnut" :data="chartData" :options="chartOptions" />
               </div>
               <div class="donut-below-summary">
-                <small>TỔNG DOANH THU</small>
+                <small>{{ t('TỔNG DOANH THU', 'TOTAL REVENUE') }}</small>
                 <strong>{{ formatCurrency(totalChartRevenue) }}</strong>
-                <span>{{ totalChartOrders }} đơn hàng</span>
+                <span>{{ totalChartOrders }} {{ t('đơn hàng', 'orders') }}</span>
               </div>
             </div>
 
             <div class="revenue-legend">
               <article v-for="item in revenueLegend" :key="item.label">
                 <i :style="{ backgroundColor: item.color }"></i>
-                <div><strong>{{ item.label }}</strong><small>{{ item.orders }} đơn</small></div>
+                <div><strong>{{ item.label }}</strong><small>{{ item.orders }} {{ t('đơn', 'orders') }}</small></div>
                 <span class="legend-percentage">{{ item.percentage }}%</span>
               </article>
             </div>
@@ -426,32 +439,32 @@ onMounted(load)
 
           <div v-else class="chart-empty">
             <i class="pi pi-chart-pie"></i>
-            <span>Chưa có doanh thu trong khoảng thời gian này.</span>
+            <span>{{ t('Chưa có doanh thu trong khoảng thời gian này.', 'No revenue recorded in this period.') }}</span>
           </div>
 
           <div class="chart-summary">
-            <div><span>Tổng số đơn</span><strong>{{ totalChartOrders }}</strong></div>
-            <div><span>Giá trị trung bình/đơn</span><strong>{{ formatCurrency(averageOrderValue) }}</strong></div>
+            <div><span>{{ t('Tổng số đơn', 'Total Orders') }}</span><strong>{{ totalChartOrders }}</strong></div>
+            <div><span>{{ t('Giá trị trung bình/đơn', 'Avg Order Value') }}</span><strong>{{ formatCurrency(averageOrderValue) }}</strong></div>
           </div>
         </article>
 
         <article class="panel">
-          <h3>Top sản phẩm</h3>
+          <h3>{{ t('Top sản phẩm', 'Top Products') }}</h3>
           <DataTable :value="report.topProducts" striped-rows>
-            <Column field="productName" header="Sản phẩm" />
-            <Column field="quantitySold" header="Đã bán" />
-            <Column header="Doanh thu"><template #body="{ data }">{{ formatCurrency(data.revenue) }}</template></Column>
+            <Column field="productName" :header="t('Sản phẩm', 'Product')" />
+            <Column field="quantitySold" :header="t('Đã bán', 'Sold')" />
+            <Column :header="t('Doanh thu', 'Revenue')"><template #body="{ data }">{{ formatCurrency(data.revenue) }}</template></Column>
           </DataTable>
         </article>
       </div>
 
       <article class="panel">
-        <h3>Top khách hàng</h3>
+        <h3>{{ t('Top khách hàng', 'Top Customers') }}</h3>
         <DataTable :value="report.topCustomers" paginator :rows="5" striped-rows>
-          <Column field="customerName" header="Khách hàng" />
-          <Column field="orderCount" header="Số đơn" />
-          <Column header="Doanh thu"><template #body="{ data }">{{ formatCurrency(data.revenue) }}</template></Column>
-          <Column header="Công nợ"><template #body="{ data }"><span :class="{ warning: data.debt > 0 }">{{ formatCurrency(data.debt) }}</span></template></Column>
+          <Column field="customerName" :header="t('Khách hàng', 'Customer')" />
+          <Column field="orderCount" :header="t('Số đơn', 'Orders')" />
+          <Column :header="t('Doanh thu', 'Revenue')"><template #body="{ data }">{{ formatCurrency(data.revenue) }}</template></Column>
+          <Column :header="t('Công nợ', 'Debt')"><template #body="{ data }"><span :class="{ warning: data.debt > 0 }">{{ formatCurrency(data.debt) }}</span></template></Column>
         </DataTable>
       </article>
     </template>
