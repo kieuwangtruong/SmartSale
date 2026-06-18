@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order, type OrderStatus } from "../services/orderApi";
@@ -5529,11 +5529,12 @@ footer {
 /* Tabs inside Orders Modal */
 .modal-order-tabs {
   display: flex;
-  gap: 8px;
+  gap: 30px;
   border-bottom: 1px solid #f1f5f9;
   padding-bottom: 4px;
   overflow-x: auto;
   scrollbar-width: none;
+  justify-content: center;
 }
 .modal-order-tabs::-webkit-scrollbar {
   display: none;
