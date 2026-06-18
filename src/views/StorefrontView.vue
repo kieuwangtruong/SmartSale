@@ -96,6 +96,17 @@ function getEnrichedProductImages(product: Product): string[] {
   return finalImages.slice(0, 4);
 }
 
+function getEnrichedProductImageItems(product: Product) {
+  const productVersion = product.productVersion?.trim()
+    || product.imageItems?.find((item) => item.version?.trim())?.version?.trim()
+    || '';
+
+  return getEnrichedProductImages(product).map((imageUrl) => ({
+    imageUrl,
+    version: productVersion,
+  }));
+}
+
 const enrichedProductDetails = computed(() => {
   if (!selectedProduct.value) return null;
   const p = selectedProduct.value;
@@ -1588,11 +1599,6 @@ onUnmounted(() => {
               :alt="selectedProduct.name"
               class="main-image-img"
             />
-            <div v-else class="image-placeholder-large">
-              <i class="pi pi-box" />
-              <small>ID #{{ selectedProduct.id }}</small>
-            </div>
-            
             <button 
               type="button" 
               class="carousel-nav-btn next-btn" 
@@ -1606,14 +1612,14 @@ onUnmounted(() => {
           <!-- Thumbnails -->
           <div class="thumbnails">
             <button 
-              v-for="(image, idx) in getEnrichedProductImages(selectedProduct)" 
+              v-for="(image, idx) in getEnrichedProductImageItems(selectedProduct)" 
               :key="idx"
               type="button"
               :class="{ active: idx === selectedImageIndex }"
               @click="selectedImageIndex = idx"
               :aria-label="`Image ${idx + 1}`"
             >
-              <img :src="image" :alt="`Product image ${idx + 1}`" />
+              <img :src="image.imageUrl" :alt="`Product image ${idx + 1}`" />
             </button>
           </div>
         </div>
@@ -1622,7 +1628,15 @@ onUnmounted(() => {
         <div class="detail-info">
           <div class="detail-header">
             <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
-            <h1 class="detail-title">{{ selectedProduct.name }}</h1>
+            <div class="detail-title-row">
+              <h1 class="detail-title">{{ selectedProduct.name }}</h1>
+              <span
+                v-if="selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version"
+                class="product-version-badge"
+              >
+                {{ selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version }}
+              </span>
+            </div>
 
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
@@ -2958,6 +2972,7 @@ main {
 }
 
 .main-image {
+  position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 12px;
   background: var(--cream);
@@ -2999,6 +3014,7 @@ main {
 }
 
 .thumbnails button {
+  position: relative;
   aspect-ratio: 1 / 1;
   padding: 0;
   border: 2px solid var(--line);
@@ -3067,6 +3083,37 @@ main {
   line-height: 1.2;
   margin: 0;
   color: var(--ink);
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-title-row .detail-title {
+  margin: 0;
+}
+
+.product-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.18);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.app-dark .product-version-badge {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  border-color: rgba(110, 231, 183, 0.22);
 }
 
 .detail-description {
