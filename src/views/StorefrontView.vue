@@ -1426,7 +1426,7 @@ onUnmounted(() => {
   line-height: 1.05;
 }
 .brand-copy strong {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 20px;
   letter-spacing: -0.02em;
 }
@@ -1631,7 +1631,7 @@ main {
 }
 .hero-product strong {
   margin: 6px 0;
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 62px;
   font-weight: 500;
   line-height: 1;
@@ -1733,7 +1733,7 @@ main {
   margin-bottom: 18px;
 }
 .slide-content h2 {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: clamp(28px, 4vw, 44px);
   font-weight: 700;
   margin: 0 0 12px;
@@ -1820,7 +1820,7 @@ main {
   text-align: left;
 }
 .card-inner h3 {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 700;
   margin: 0 0 6px;
@@ -1850,7 +1850,7 @@ main {
   color: white;
 }
 .category-banner-content h1 {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: clamp(28px, 3.5vw, 42px);
   font-weight: 700;
   margin: 0 0 10px;
@@ -1912,7 +1912,7 @@ main {
 }
 .section-heading h2 {
   margin: 12px 0 5px;
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 42px;
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -2375,7 +2375,7 @@ main {
 }
 
 .detail-title {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 36px;
   font-weight: 700;
   line-height: 1.2;
@@ -2454,7 +2454,7 @@ main {
 }
 
 .price-value {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 32px;
   font-weight: 700;
   color: #582cdb;
@@ -2599,7 +2599,7 @@ main {
   font-size: 20px;
 }
 .state-card strong {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 20px;
 }
 .state-card p {
@@ -2662,7 +2662,7 @@ main {
 }
 .closing-banner h2 {
   margin: 13px 0 0;
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 36px;
   font-weight: 500;
   line-height: 1.08;
@@ -2723,7 +2723,7 @@ main {
 }
 .cart-head h2 {
   margin: 5px 0 0;
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 25px;
   font-weight: 500;
 }
@@ -2767,7 +2767,7 @@ main {
 }
 .empty-cart h3 {
   margin: 0;
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 25px;
   font-weight: 500;
 }
@@ -2827,7 +2827,7 @@ main {
 }
 .cart-info > strong {
   margin: 5px 0;
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 15px;
   font-weight: 500;
 }
@@ -2882,7 +2882,7 @@ main {
   font-size: 12px;
 }
 .cart-footer > div strong {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 24px;
   font-weight: 500;
 }
@@ -3291,7 +3291,7 @@ footer {
   margin-bottom: 20px;
 }
 .modal-head h2 {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 22px;
   margin: 0;
   color: var(--ink);
@@ -3941,7 +3941,7 @@ footer {
   margin-bottom: 12px;
 }
 .promo-flash-text h2 {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 24px;
   font-weight: 800;
   margin: 0 0 6px;
@@ -4076,3 +4076,4 @@ footer {
   font-size: 1.25rem;
 }
 </style>
+

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -293,7 +293,7 @@ async function submit() {
 }
 
 .image-panel-content h1 {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 32px;
   font-weight: 500;
   margin: 10px 0 16px;
@@ -347,7 +347,7 @@ async function submit() {
 }
 
 .logo-area strong {
-  font-family: sans-serif;
+  font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 700;
   color: #0f172a;
@@ -546,3 +546,5 @@ async function submit() {
   }
 }
 </style>
+
+
