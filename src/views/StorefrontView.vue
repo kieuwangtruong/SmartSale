@@ -1019,6 +1019,12 @@ onUnmounted(() => {
               <img :src="image" :alt="`Product image ${idx + 1}`" />
             </button>
           </div>
+
+          <!-- Product Description -->
+          <div v-if="selectedProduct.description" class="detail-description-section">
+            <h2 class="detail-description-title">{{ t('Mô tả sản phẩm', 'Product Description') }}</h2>
+            <p class="detail-description">{{ selectedProduct.description }}</p>
+          </div>
         </div>
 
         <!-- Right column: Product Info & Actions -->
@@ -1026,10 +1032,7 @@ onUnmounted(() => {
           <div class="detail-header">
             <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
             <h1 class="detail-title">{{ selectedProduct.name }}</h1>
-            <p v-if="selectedProduct.description" class="detail-description">
-              {{ selectedProduct.description }}
-            </p>
-            
+
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
               <span class="product-id">{{ t('Mã ID:', 'Product ID:') }} <strong>#{{ selectedProduct.id }}</strong></span>
@@ -2346,6 +2349,20 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.detail-description-section {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.detail-description-title {
+  margin: 0 0 12px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 /* Product Info Section */
