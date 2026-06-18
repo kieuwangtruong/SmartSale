@@ -26,7 +26,6 @@ const employees = ref<UserDto[]>([])
 const selected = ref<UserDto | null>(null)
 const attendance = ref<AttendanceRecord[]>([])
 const search = ref('')
-const error = ref('')
 const form = ref({
   workDate: new Date().toISOString().slice(0, 10),
   checkIn: '08:00',

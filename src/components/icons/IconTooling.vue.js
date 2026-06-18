@@ -2,17 +2,17 @@ const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
-__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)({
-    xmlns: "http://www.w3.org/2000/svg",
-    'xmlns:xlink': "http://www.w3.org/1999/xlink",
-    'aria-hidden': "true",
-    role: "img",
-    ...{ class: "iconify iconify--mdi" },
-    width: "24",
-    height: "24",
-    preserveAspectRatio: "xMidYMid meet",
-    viewBox: "0 0 24 24",
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.svg, __VLS_intrinsics.svg)(({
+	xmlns: 'http://www.w3.org/2000/svg',
+	'xmlns:xlink': 'http://www.w3.org/1999/xlink',
+	'aria-hidden': 'true',
+	role: 'img',
+	class: 'iconify iconify--mdi',
+	width: '24',
+	height: '24',
+	preserveAspectRatio: 'xMidYMid meet',
+	viewBox: '0 0 24 24'
+}));
 /** @type {__VLS_StyleScopedClasses['iconify']} */ ;
 /** @type {__VLS_StyleScopedClasses['iconify--mdi']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.path, __VLS_intrinsics.path)({

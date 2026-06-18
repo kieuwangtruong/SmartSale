@@ -11,7 +11,6 @@ const canManageSuppliers = computed(
 )
 const suppliers = ref<Supplier[]>([])
 const editingId = ref<number | null>(null)
-const error = ref('')
 const form = reactive({ name: '', contactName: '', phone: '', email: '', address: '', notes: '' })
 const { t } = useLanguage()
 const toast = useToast()

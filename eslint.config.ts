@@ -20,6 +20,7 @@ export default defineConfigWithVueTs(
     '**/coverage/**',
     '**/node_modules/**',
     '**/.vite/**',
+    '**/*.vue.js',
   ]),
 
   ...pluginVue.configs['flat/essential'],

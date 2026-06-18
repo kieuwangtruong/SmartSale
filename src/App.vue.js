@@ -17,10 +17,7 @@ function handleAuthChange() {
 }
 onMounted(() => window.addEventListener('auth-changed', handleAuthChange));
 onUnmounted(() => window.removeEventListener('auth-changed', handleAuthChange));
-const __VLS_ctx = {
-    ...{},
-    ...{},
-};
+const __VLS_ctx = (({}));
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;

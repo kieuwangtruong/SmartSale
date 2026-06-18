@@ -11,7 +11,6 @@ import {
   deleteCustomer,
   formatCurrency,
   getCustomers,
-  getGenderLabel,
   GENDER_OPTIONS,
   updateCustomer,
   type Customer,
@@ -34,7 +33,11 @@ function showError(msg: string) {
   })
 }
 
-const customers = ref<any[]>([])
+interface CustomerWithTier extends Customer {
+  tier?: string | null
+}
+
+const customers = ref<CustomerWithTier[]>([])
 const registeredUsers = ref<UserDto[]>([])
 const editingId = ref<number | null>(null)
 const form = reactive({
@@ -153,7 +156,7 @@ async function load() {
   }
 }
 
-function edit(item: any) {
+function edit(item: CustomerWithTier) {
   editingId.value = item.id
   Object.assign(form, {
     fullName: item.fullName,
@@ -197,7 +200,7 @@ async function save() {
   }
 }
 
-async function remove(item: any) {
+async function remove(item: CustomerWithTier) {
   if (!confirm(t(`Xóa khách hàng ${item.fullName}?`, `Delete customer ${item.fullName}?`))) return
   try {
     if (item.id < 0) {
@@ -211,7 +214,7 @@ async function remove(item: any) {
   }
 }
 
-function translateGender(gender: number | undefined) {
+function translateGender(gender?: number | null) {
   if (gender === 1) return t('Nữ', 'Female')
   if (gender === 2) return t('Khác', 'Other')
   return t('Nam', 'Male')

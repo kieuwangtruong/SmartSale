@@ -4,7 +4,6 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
-import { getRoleLabel } from '../services/apiClient'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
 
@@ -60,6 +59,10 @@ function toggleDarkMode() {
     document.documentElement.classList.remove('app-dark')
     localStorage.setItem('theme-dark', 'false')
   }
+}
+
+function toggleLanguage() {
+  setLanguage(currentLanguage.value === 'vi' ? 'en' : 'vi')
 }
 
 onMounted(() => {
@@ -147,7 +150,7 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
             text
             rounded
             :aria-label="t('Đổi ngôn ngữ', 'Switch Language')"
-            @click="setLanguage(currentLanguage === 'vi' ? 'en' : 'vi')"
+            @click="toggleLanguage"
           />
           <RouterLink class="store-shortcut" to="/"><i class="pi pi-external-link" /> {{ t('Cửa hàng', 'Storefront') }}</RouterLink>
           <span class="role-chip"><i class="pi pi-shield" /> {{ roleLabel }}</span>

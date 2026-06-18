@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import { formatCurrency } from '../services/orderApi'
@@ -26,7 +26,6 @@ const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
 const suppliers = ref<Supplier[]>([])
 const search = ref('')
-const error = ref('')
 const editingId = ref<number | null>(null)
 const categoryName = ref('')
 const { t } = useLanguage()

@@ -1,5 +1,5 @@
-﻿import { API_URLS } from './config'
-import { getErrorMessage, translateApiMessage } from './apiMessages'
+import { API_URLS } from './config'
+import { translateApiMessage } from './apiMessages'
 
 export type UserRole = 'SalesStaff' | 'Admin' | 'WarehouseKeeper' | 'Customer'
 

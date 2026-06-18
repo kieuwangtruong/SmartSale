@@ -84,10 +84,7 @@ async function submit() {
         loading.value = false;
     }
 }
-const __VLS_ctx = {
-    ...{},
-    ...{},
-};
+const __VLS_ctx = (({}));
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
@@ -138,94 +135,77 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['form-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['image-panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['form-panel']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.main, __VLS_intrinsics.main)({
-    ...{ class: "login-page" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.main, __VLS_intrinsics.main)(({ class: 'login-page' }));
 /** @type {__VLS_StyleScopedClasses['login-page']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "login-wrapper" },
-    ...{ class: ({ 'is-admin-layout': __VLS_ctx.activeRole === 'Admin' }) },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)((({
+	class: 'login-wrapper',
+	class: { 'is-admin-layout': __VLS_ctx.activeRole === 'Admin' }
+})));
 /** @type {__VLS_StyleScopedClasses['login-wrapper']} */ ;
 /** @type {__VLS_StyleScopedClasses['is-admin-layout']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)({
-    ...{ class: "image-panel" },
-    ...{ style: ({ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.7)), url(${__VLS_ctx.roleBranding.image})` }) },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)((({
+	class: 'image-panel',
+	style: { backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.7)), url(${__VLS_ctx.roleBranding.image})` }
+})));
 /** @type {__VLS_StyleScopedClasses['image-panel']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "image-panel-content" },
-    key: (__VLS_ctx.activeRole),
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({
+	class: 'image-panel-content',
+	key: __VLS_ctx.activeRole
+}));
 /** @type {__VLS_StyleScopedClasses['image-panel-content']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-    ...{ class: "eyebrow" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'eyebrow' }));
 /** @type {__VLS_StyleScopedClasses['eyebrow']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.h1, __VLS_intrinsics.h1)({});
 (__VLS_ctx.roleBranding.title);
 __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({});
 (__VLS_ctx.roleBranding.desc);
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "brand-footer" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'brand-footer' }));
 /** @type {__VLS_StyleScopedClasses['brand-footer']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.small, __VLS_intrinsics.small)({});
-__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)({
-    ...{ class: "form-panel" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)(({ class: 'form-panel' }));
 /** @type {__VLS_StyleScopedClasses['form-panel']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "form-container" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'form-container' }));
 /** @type {__VLS_StyleScopedClasses['form-container']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "logo-area" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'logo-area' }));
 /** @type {__VLS_StyleScopedClasses['logo-area']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-    ...{ class: "brand-logo" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'brand-logo' }));
 /** @type {__VLS_StyleScopedClasses['brand-logo']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-    ...{ class: "pi pi-shopping-bag" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-shopping-bag' }));
 /** @type {__VLS_StyleScopedClasses['pi']} */ ;
 /** @type {__VLS_StyleScopedClasses['pi-shopping-bag']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.h2, __VLS_intrinsics.h2)({});
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "role-selector" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'role-selector' }));
 /** @type {__VLS_StyleScopedClasses['role-selector']} */ ;
 for (const [r] of __VLS_vFor((__VLS_ctx.rolesList))) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                __VLS_ctx.changeRole(r.role);
-                // @ts-ignore
-                [activeRole, activeRole, roleBranding, roleBranding, roleBranding, rolesList, changeRole,];
-            } },
-        key: (r.role),
-        type: "button",
-        ...{ class: "role-btn" },
-        ...{ class: ({ active: __VLS_ctx.activeRole === r.role }) },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(((({
+	onClick: (...[$event]) => {
+		__VLS_ctx.changeRole(r.role);
+		[
+			activeRole,
+			activeRole,
+			roleBranding,
+			roleBranding,
+			roleBranding,
+			rolesList,
+			changeRole
+		];
+	},
+	key: r.role,
+	type: 'button',
+	class: 'role-btn',
+	class: { active: __VLS_ctx.activeRole === r.role }
+}))));
     /** @type {__VLS_StyleScopedClasses['role-btn']} */ ;
     /** @type {__VLS_StyleScopedClasses['active']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: (r.icon) },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: r.icon }));
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
     (r.label);
     // @ts-ignore
     [activeRole,];
 }
-__VLS_asFunctionalElement1(__VLS_intrinsics.form, __VLS_intrinsics.form)({
-    ...{ onSubmit: (__VLS_ctx.submit) },
-});
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "input-group" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.form, __VLS_intrinsics.form)(({ onSubmit: __VLS_ctx.submit }));
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'input-group' }));
 /** @type {__VLS_StyleScopedClasses['input-group']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({
     for: "email",
@@ -250,9 +230,7 @@ const __VLS_2 = __VLS_1({
     placeholder: "admin@company.com",
     fluid: true,
 }, ...__VLS_functionalComponentArgsRest(__VLS_1));
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "input-group" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'input-group' }));
 /** @type {__VLS_StyleScopedClasses['input-group']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({
     for: "password",
@@ -280,13 +258,9 @@ const __VLS_7 = __VLS_6({
     fluid: true,
 }, ...__VLS_functionalComponentArgsRest(__VLS_6));
 if (__VLS_ctx.error) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-        ...{ class: "error-msg" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)(({ class: 'error-msg' }));
     /** @type {__VLS_StyleScopedClasses['error-msg']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: "pi pi-exclamation-circle" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-exclamation-circle' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-exclamation-circle']} */ ;
     (__VLS_ctx.error);
@@ -313,14 +287,14 @@ let __VLS_15;
 /** @ts-ignore @type { | typeof __VLS_components.RouterLink | typeof __VLS_components.RouterLink} */
 RouterLink;
 // @ts-ignore
-const __VLS_16 = __VLS_asFunctionalComponent1(__VLS_15, new __VLS_15({
-    ...{ class: "store-link" },
-    to: "/",
-}));
-const __VLS_17 = __VLS_16({
-    ...{ class: "store-link" },
-    to: "/",
-}, ...__VLS_functionalComponentArgsRest(__VLS_16));
+const __VLS_16 = __VLS_asFunctionalComponent1(__VLS_15, new __VLS_15(({
+	class: 'store-link',
+	to: '/'
+})));
+const __VLS_17 = __VLS_16(({
+	class: 'store-link',
+	to: '/'
+}), ...__VLS_functionalComponentArgsRest(__VLS_16));
 /** @type {__VLS_StyleScopedClasses['store-link']} */ ;
 const { default: __VLS_20 } = __VLS_18.slots;
 // @ts-ignore

@@ -277,10 +277,7 @@ async function load() {
     }
 }
 onMounted(load);
-const __VLS_ctx = {
-    ...{},
-    ...{},
-};
+const __VLS_ctx = (({}));
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
@@ -339,13 +336,9 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['panel-heading']} */ ;
 /** @type {__VLS_StyleScopedClasses['app-dark']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-heading']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)({
-    ...{ class: "page" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)(({ class: 'page' }));
 /** @type {__VLS_StyleScopedClasses['page']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "page-head" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'page-head' }));
 /** @type {__VLS_StyleScopedClasses['page-head']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.h2, __VLS_intrinsics.h2)({});
@@ -354,20 +347,20 @@ let __VLS_0;
 /** @ts-ignore @type { | typeof __VLS_components.Select} */
 Select;
 // @ts-ignore
-const __VLS_1 = __VLS_asFunctionalComponent1(__VLS_0, new __VLS_0({
-    ...{ 'onChange': {} },
-    modelValue: (__VLS_ctx.groupBy),
-    options: (__VLS_ctx.groupOptions),
-    optionLabel: "label",
-    optionValue: "value",
-}));
-const __VLS_2 = __VLS_1({
-    ...{ 'onChange': {} },
-    modelValue: (__VLS_ctx.groupBy),
-    options: (__VLS_ctx.groupOptions),
-    optionLabel: "label",
-    optionValue: "value",
-}, ...__VLS_functionalComponentArgsRest(__VLS_1));
+const __VLS_1 = __VLS_asFunctionalComponent1(__VLS_0, new __VLS_0(({
+	'onChange': {},
+	modelValue: __VLS_ctx.groupBy,
+	options: __VLS_ctx.groupOptions,
+	optionLabel: 'label',
+	optionValue: 'value'
+})));
+const __VLS_2 = __VLS_1(({
+	'onChange': {},
+	modelValue: __VLS_ctx.groupBy,
+	options: __VLS_ctx.groupOptions,
+	optionLabel: 'label',
+	optionValue: 'value'
+}), ...__VLS_functionalComponentArgsRest(__VLS_1));
 let __VLS_5;
 const __VLS_6 = {
     /** @type {typeof __VLS_5.change} */
@@ -376,28 +369,20 @@ const __VLS_6 = {
 var __VLS_3;
 var __VLS_4;
 if (__VLS_ctx.error) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-        ...{ class: "alert error" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)(({ class: 'alert error' }));
     /** @type {__VLS_StyleScopedClasses['alert']} */ ;
     /** @type {__VLS_StyleScopedClasses['error']} */ ;
     (__VLS_ctx.error);
 }
 if (__VLS_ctx.loading) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-        ...{ class: "empty" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)(({ class: 'empty' }));
     /** @type {__VLS_StyleScopedClasses['empty']} */ ;
 }
 else if (__VLS_ctx.report) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "stats" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'stats' }));
     /** @type {__VLS_StyleScopedClasses['stats']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-wallet stat-icon purple" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-wallet stat-icon purple' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-wallet']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -406,9 +391,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.formatCurrency(__VLS_ctx.report.revenueToday));
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-calendar stat-icon blue" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-calendar stat-icon blue' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-calendar']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -417,9 +400,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.formatCurrency(__VLS_ctx.report.revenueThisWeek));
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-chart-line stat-icon green" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-chart-line stat-icon green' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-chart-line']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -428,9 +409,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.formatCurrency(__VLS_ctx.report.revenueThisMonth));
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-shopping-cart stat-icon orange" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-shopping-cart stat-icon orange' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-shopping-cart']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -438,15 +417,11 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.report.orderCount);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "stats warehouse-stats" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'stats warehouse-stats' }));
     /** @type {__VLS_StyleScopedClasses['stats']} */ ;
     /** @type {__VLS_StyleScopedClasses['warehouse-stats']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-box stat-icon teal" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-box stat-icon teal' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-box']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -455,9 +430,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.warehouseStats.productCount);
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-database stat-icon indigo" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-database stat-icon indigo' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-database']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -466,9 +439,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.warehouseStats.totalStock);
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-exclamation-triangle stat-icon red" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-exclamation-triangle stat-icon red' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-exclamation-triangle']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -477,9 +448,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.warehouseStats.lowStockCount);
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-money-bill stat-icon yellow" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-money-bill stat-icon yellow' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-money-bill']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -488,9 +457,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.formatCurrency(__VLS_ctx.warehouseStats.inventoryValue));
     __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({});
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-        ...{ class: "pi pi-shopping-bag stat-icon cyan" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-shopping-bag stat-icon cyan' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-shopping-bag']} */ ;
     /** @type {__VLS_StyleScopedClasses['stat-icon']} */ ;
@@ -498,17 +465,11 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.warehouseStats.productsSoldThisMonth);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "grid-2" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'grid-2' }));
     /** @type {__VLS_StyleScopedClasses['grid-2']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({
-        ...{ class: "panel" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)(({ class: 'panel' }));
     /** @type {__VLS_StyleScopedClasses['panel']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "panel-heading" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'panel-heading' }));
     /** @type {__VLS_StyleScopedClasses['panel-heading']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
@@ -516,17 +477,11 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.small, __VLS_intrinsics.small)({});
     (__VLS_ctx.groupBy === 'day' ? 'Theo ngày' : 'Theo tháng');
     if (__VLS_ctx.revenueSegments.length) {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "revenue-chart-layout" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'revenue-chart-layout' }));
         /** @type {__VLS_StyleScopedClasses['revenue-chart-layout']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "chart-left-block" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'chart-left-block' }));
         /** @type {__VLS_StyleScopedClasses['chart-left-block']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "donut-wrap" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'donut-wrap' }));
         /** @type {__VLS_StyleScopedClasses['donut-wrap']} */ ;
         let __VLS_7;
         /** @ts-ignore @type { | typeof __VLS_components.Chart} */
@@ -542,34 +497,26 @@ else if (__VLS_ctx.report) {
             data: (__VLS_ctx.chartData),
             options: (__VLS_ctx.chartOptions),
         }, ...__VLS_functionalComponentArgsRest(__VLS_8));
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "donut-below-summary" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'donut-below-summary' }));
         /** @type {__VLS_StyleScopedClasses['donut-below-summary']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.small, __VLS_intrinsics.small)({});
         __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
         (__VLS_ctx.formatCurrency(__VLS_ctx.totalChartRevenue));
         __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
         (__VLS_ctx.totalChartOrders);
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "revenue-legend" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'revenue-legend' }));
         /** @type {__VLS_StyleScopedClasses['revenue-legend']} */ ;
         for (const [item] of __VLS_vFor((__VLS_ctx.revenueLegend))) {
             __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({
                 key: (item.label),
             });
-            __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-                ...{ style: ({ backgroundColor: item.color }) },
-            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ style: { backgroundColor: item.color } }));
             __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
             __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
             (item.label);
             __VLS_asFunctionalElement1(__VLS_intrinsics.small, __VLS_intrinsics.small)({});
             (item.orders);
-            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-                ...{ class: "legend-percentage" },
-            });
+            __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'legend-percentage' }));
             /** @type {__VLS_StyleScopedClasses['legend-percentage']} */ ;
             (item.percentage);
             // @ts-ignore
@@ -577,20 +524,14 @@ else if (__VLS_ctx.report) {
         }
     }
     else {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-            ...{ class: "chart-empty" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'chart-empty' }));
         /** @type {__VLS_StyleScopedClasses['chart-empty']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)({
-            ...{ class: "pi pi-chart-pie" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.i, __VLS_intrinsics.i)(({ class: 'pi pi-chart-pie' }));
         /** @type {__VLS_StyleScopedClasses['pi']} */ ;
         /** @type {__VLS_StyleScopedClasses['pi-chart-pie']} */ ;
         __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
     }
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "chart-summary" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'chart-summary' }));
     /** @type {__VLS_StyleScopedClasses['chart-summary']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
@@ -600,9 +541,7 @@ else if (__VLS_ctx.report) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.formatCurrency(__VLS_ctx.averageOrderValue));
-    __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({
-        ...{ class: "panel" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)(({ class: 'panel' }));
     /** @type {__VLS_StyleScopedClasses['panel']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({});
     let __VLS_12;
@@ -666,9 +605,7 @@ else if (__VLS_ctx.report) {
     // @ts-ignore
     [];
     var __VLS_15;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({
-        ...{ class: "panel" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)(({ class: 'panel' }));
     /** @type {__VLS_StyleScopedClasses['panel']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.h3, __VLS_intrinsics.h3)({});
     let __VLS_35;
@@ -747,9 +684,7 @@ else if (__VLS_ctx.report) {
     {
         const { body: __VLS_64 } = __VLS_61.slots;
         const [{ data }] = __VLS_vSlot(__VLS_64);
-        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-            ...{ class: ({ warning: data.debt > 0 }) },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: { warning: data.debt > 0 } }));
         /** @type {__VLS_StyleScopedClasses['warning']} */ ;
         (__VLS_ctx.formatCurrency(data.debt));
         // @ts-ignore

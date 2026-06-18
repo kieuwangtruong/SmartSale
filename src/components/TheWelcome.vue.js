@@ -5,10 +5,7 @@ import EcosystemIcon from './icons/IconEcosystem.vue';
 import CommunityIcon from './icons/IconCommunity.vue';
 import SupportIcon from './icons/IconSupport.vue';
 const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md');
-const __VLS_ctx = {
-    ...{},
-    ...{},
-};
+const __VLS_ctx = (({}));
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
@@ -79,10 +76,10 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.a, __VLS_intrinsics.a)({
     rel: "noopener",
 });
 __VLS_asFunctionalElement1(__VLS_intrinsics.br)({});
-__VLS_asFunctionalElement1(__VLS_intrinsics.a, __VLS_intrinsics.a)({
-    ...{ onClick: (__VLS_ctx.openReadmeInEditor) },
-    href: "javascript:void(0)",
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.a, __VLS_intrinsics.a)(({
+	onClick: __VLS_ctx.openReadmeInEditor,
+	href: 'javascript:void(0)'
+}));
 __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
 // @ts-ignore
 [openReadmeInEditor,];

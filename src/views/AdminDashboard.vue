@@ -202,8 +202,6 @@ async function loadWarehouseStats(allOrders?: Order[]) {
 }
 
 function calculateReport(allOrders: Order[]): DashboardReport {
-  const now = new Date()
-  
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
   

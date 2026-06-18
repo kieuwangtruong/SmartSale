@@ -112,10 +112,7 @@ async function remove(user) {
     }
 }
 onMounted(load);
-const __VLS_ctx = {
-    ...{},
-    ...{},
-};
+const __VLS_ctx = (({}));
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
@@ -135,82 +132,67 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['pagination-controls']} */ ;
 /** @type {__VLS_StyleScopedClasses['app-dark']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-indicator']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)({
-    ...{ class: "page" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)(({ class: 'page' }));
 /** @type {__VLS_StyleScopedClasses['page']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "page-head" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'page-head' }));
 /** @type {__VLS_StyleScopedClasses['page-head']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.h2, __VLS_intrinsics.h2)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({});
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "page-head-actions" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'page-head-actions' }));
 /** @type {__VLS_StyleScopedClasses['page-head-actions']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.input)({
-    placeholder: "Tìm tài khoản...",
-    ...{ class: "search-input" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.input)(({
+	placeholder: 'Tìm tài khoản...',
+	class: 'search-input'
+}));
 (__VLS_ctx.search);
 /** @type {__VLS_StyleScopedClasses['search-input']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-    ...{ onClick: (...[$event]) => {
-            __VLS_ctx.showForm = true;
-            // @ts-ignore
-            [search, showForm,];
-        } },
-    type: "button",
-    ...{ class: "primary" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)((({
+	onClick: (...[$event]) => {
+		__VLS_ctx.showForm = true;
+		[search, showForm];
+	},
+	type: 'button',
+	class: 'primary'
+})));
 /** @type {__VLS_StyleScopedClasses['primary']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-    ...{ class: "pi pi-plus" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-plus' }));
 /** @type {__VLS_StyleScopedClasses['pi']} */ ;
 /** @type {__VLS_StyleScopedClasses['pi-plus']} */ ;
 if (__VLS_ctx.error) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-        ...{ class: "alert error" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)(({ class: 'alert error' }));
     /** @type {__VLS_StyleScopedClasses['alert']} */ ;
     /** @type {__VLS_StyleScopedClasses['error']} */ ;
     (__VLS_ctx.error);
 }
 if (__VLS_ctx.showForm) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div)({
-        ...{ onClick: (__VLS_ctx.reset) },
-        ...{ class: "modal-backdrop" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div)((({
+	onClick: __VLS_ctx.reset,
+	class: 'modal-backdrop'
+})));
     /** @type {__VLS_StyleScopedClasses['modal-backdrop']} */ ;
 }
 if (__VLS_ctx.showForm) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.aside, __VLS_intrinsics.aside)({
-        ...{ class: "admin-modal" },
-        'aria-label': "Biểu mẫu tài khoản",
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.aside, __VLS_intrinsics.aside)(({
+	class: 'admin-modal',
+	'aria-label': 'Biểu mẫu tài khoản'
+}));
     /** @type {__VLS_StyleScopedClasses['admin-modal']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "modal-head" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'modal-head' }));
     /** @type {__VLS_StyleScopedClasses['modal-head']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.h2, __VLS_intrinsics.h2)({});
     (__VLS_ctx.editingId ? 'Cập nhật tài khoản' : 'Tạo tài khoản');
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (__VLS_ctx.reset) },
-        type: "button",
-    });
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: "pi pi-times" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({
+	onClick: __VLS_ctx.reset,
+	type: 'button'
+}));
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-times' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-times']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.form, __VLS_intrinsics.form)({
-        ...{ onSubmit: (__VLS_ctx.save) },
-        ...{ class: "form admin-modal-body" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.form, __VLS_intrinsics.form)((({
+	onSubmit: __VLS_ctx.save,
+	class: 'form admin-modal-body'
+})));
     /** @type {__VLS_StyleScopedClasses['form']} */ ;
     /** @type {__VLS_StyleScopedClasses['admin-modal-body']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({});
@@ -246,9 +228,7 @@ if (__VLS_ctx.showForm) {
         });
     }
     if (__VLS_ctx.isEditingAdmin) {
-        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
-            ...{ class: "admin-password-note" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)(({ class: 'admin-password-note' }));
         /** @type {__VLS_StyleScopedClasses['admin-password-note']} */ ;
     }
     __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({});
@@ -286,22 +266,16 @@ if (__VLS_ctx.showForm) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.label, __VLS_intrinsics.label)({});
     __VLS_asFunctionalElement1(__VLS_intrinsics.input)({});
     (__VLS_ctx.form.address);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "actions" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'actions' }));
     /** @type {__VLS_StyleScopedClasses['actions']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ class: "primary" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({ class: 'primary' }));
     /** @type {__VLS_StyleScopedClasses['primary']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (__VLS_ctx.reset) },
-        type: "button",
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({
+	onClick: __VLS_ctx.reset,
+	type: 'button'
+}));
 }
-__VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({
-    ...{ class: "panel table-wrap" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)(({ class: 'panel table-wrap' }));
 /** @type {__VLS_StyleScopedClasses['panel']} */ ;
 /** @type {__VLS_StyleScopedClasses['table-wrap']} */ ;
 if (__VLS_ctx.loading) {
@@ -327,128 +301,117 @@ else {
         __VLS_asFunctionalElement1(__VLS_intrinsics.td, __VLS_intrinsics.td)({});
         (user.email);
         __VLS_asFunctionalElement1(__VLS_intrinsics.td, __VLS_intrinsics.td)({});
-        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-            ...{ class: "role-label" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'role-label' }));
         /** @type {__VLS_StyleScopedClasses['role-label']} */ ;
         (__VLS_ctx.getRoleLabel(user.role));
-        __VLS_asFunctionalElement1(__VLS_intrinsics.td, __VLS_intrinsics.td)({
-            ...{ class: "actions" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.td, __VLS_intrinsics.td)(({ class: 'actions' }));
         /** @type {__VLS_StyleScopedClasses['actions']} */ ;
-        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!!(__VLS_ctx.loading))
-                        return;
-                    __VLS_ctx.edit(user);
-                    // @ts-ignore
-                    [reset, form, form, loading, visible, getRoleLabel, edit,];
-                } },
-        });
-        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-            ...{ onClick: (...[$event]) => {
-                    if (!!(__VLS_ctx.loading))
-                        return;
-                    __VLS_ctx.remove(user);
-                    // @ts-ignore
-                    [remove,];
-                } },
-            ...{ class: "danger" },
-        });
+        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({ onClick: (...[$event]) => {
+	if (!!__VLS_ctx.loading) return;
+	__VLS_ctx.edit(user);
+	[
+		reset,
+		form,
+		form,
+		loading,
+		visible,
+		getRoleLabel,
+		edit
+	];
+} }));
+        __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)((({
+	onClick: (...[$event]) => {
+		if (!!__VLS_ctx.loading) return;
+		__VLS_ctx.remove(user);
+		[remove];
+	},
+	class: 'danger'
+})));
         /** @type {__VLS_StyleScopedClasses['danger']} */ ;
         // @ts-ignore
         [];
     }
 }
 if (!__VLS_ctx.loading && __VLS_ctx.totalPages > 1) {
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "pagination-footer" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'pagination-footer' }));
     /** @type {__VLS_StyleScopedClasses['pagination-footer']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ class: "pagination-info" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'pagination-info' }));
     /** @type {__VLS_StyleScopedClasses['pagination-info']} */ ;
     (__VLS_ctx.paginationInfo);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "pagination-controls" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'pagination-controls' }));
     /** @type {__VLS_StyleScopedClasses['pagination-controls']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1))
-                    return;
-                __VLS_ctx.currentPage = 1;
-                // @ts-ignore
-                [loading, totalPages, paginationInfo, currentPage,];
-            } },
-        type: "button",
-        disabled: (__VLS_ctx.currentPage === 1),
-        'aria-label': "Về đầu",
-        title: "Về đầu",
-    });
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: "pi pi-chevron-double-left" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({
+	onClick: (...[$event]) => {
+		if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1)) return;
+		__VLS_ctx.currentPage = 1;
+		[
+			loading,
+			totalPages,
+			paginationInfo,
+			currentPage
+		];
+	},
+	type: 'button',
+	disabled: __VLS_ctx.currentPage === 1,
+	'aria-label': 'Về đầu',
+	title: 'Về đầu'
+}));
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-chevron-double-left' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-chevron-double-left']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1))
-                    return;
-                __VLS_ctx.currentPage--;
-                // @ts-ignore
-                [currentPage, currentPage,];
-            } },
-        type: "button",
-        disabled: (__VLS_ctx.currentPage === 1),
-        'aria-label': "Trang trước",
-    });
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: "pi pi-chevron-left" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({
+	onClick: (...[$event]) => {
+		if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1)) return;
+		__VLS_ctx.currentPage--;
+		[currentPage, currentPage];
+	},
+	type: 'button',
+	disabled: __VLS_ctx.currentPage === 1,
+	'aria-label': 'Trang trước'
+}));
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-chevron-left' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-chevron-left']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ class: "page-indicator" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'page-indicator' }));
     /** @type {__VLS_StyleScopedClasses['page-indicator']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
     (__VLS_ctx.currentPage);
     (__VLS_ctx.totalPages);
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1))
-                    return;
-                __VLS_ctx.currentPage++;
-                // @ts-ignore
-                [totalPages, currentPage, currentPage, currentPage,];
-            } },
-        type: "button",
-        disabled: (__VLS_ctx.currentPage === __VLS_ctx.totalPages),
-        'aria-label': "Trang sau",
-    });
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: "pi pi-chevron-right" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({
+	onClick: (...[$event]) => {
+		if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1)) return;
+		__VLS_ctx.currentPage++;
+		[
+			totalPages,
+			currentPage,
+			currentPage,
+			currentPage
+		];
+	},
+	type: 'button',
+	disabled: __VLS_ctx.currentPage === __VLS_ctx.totalPages,
+	'aria-label': 'Trang sau'
+}));
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-chevron-right' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-chevron-right']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)({
-        ...{ onClick: (...[$event]) => {
-                if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1))
-                    return;
-                __VLS_ctx.currentPage = __VLS_ctx.totalPages;
-                // @ts-ignore
-                [totalPages, totalPages, currentPage, currentPage,];
-            } },
-        type: "button",
-        disabled: (__VLS_ctx.currentPage === __VLS_ctx.totalPages),
-        'aria-label': "Về cuối",
-        title: "Về cuối",
-    });
-    __VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-        ...{ class: "pi pi-chevron-double-right" },
-    });
+    __VLS_asFunctionalElement1(__VLS_intrinsics.button, __VLS_intrinsics.button)(({
+	onClick: (...[$event]) => {
+		if (!(!__VLS_ctx.loading && __VLS_ctx.totalPages > 1)) return;
+		__VLS_ctx.currentPage = __VLS_ctx.totalPages;
+		[
+			totalPages,
+			totalPages,
+			currentPage,
+			currentPage
+		];
+	},
+	type: 'button',
+	disabled: __VLS_ctx.currentPage === __VLS_ctx.totalPages,
+	'aria-label': 'Về cuối',
+	title: 'Về cuối'
+}));
+    __VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: 'pi pi-chevron-double-right' }));
     /** @type {__VLS_StyleScopedClasses['pi']} */ ;
     /** @type {__VLS_StyleScopedClasses['pi-chevron-double-right']} */ ;
 }

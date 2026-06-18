@@ -82,10 +82,7 @@ onMounted(async () => {
         await new Promise((resolve) => window.setTimeout(resolve, 1500));
     }
 });
-const __VLS_ctx = {
-    ...{},
-    ...{},
-};
+const __VLS_ctx = (({}));
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
@@ -93,22 +90,16 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['result-icon']} */ ;
 /** @type {__VLS_StyleScopedClasses['result-icon']} */ ;
 /** @type {__VLS_StyleScopedClasses['result-actions']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.main, __VLS_intrinsics.main)({
-    ...{ class: "payment-result" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.main, __VLS_intrinsics.main)(({ class: 'payment-result' }));
 /** @type {__VLS_StyleScopedClasses['payment-result']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)({
-    ...{ class: "result-card" },
-    ...{ class: (__VLS_ctx.content.tone) },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.section, __VLS_intrinsics.section)((({
+	class: 'result-card',
+	class: __VLS_ctx.content.tone
+})));
 /** @type {__VLS_StyleScopedClasses['result-card']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-    ...{ class: "result-icon" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)(({ class: 'result-icon' }));
 /** @type {__VLS_StyleScopedClasses['result-icon']} */ ;
-__VLS_asFunctionalElement1(__VLS_intrinsics.i)({
-    ...{ class: (__VLS_ctx.content.icon) },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.i)(({ class: __VLS_ctx.content.icon }));
 __VLS_asFunctionalElement1(__VLS_intrinsics.h1, __VLS_intrinsics.h1)({});
 (__VLS_ctx.loading ? 'Đang kiểm tra thanh toán' : __VLS_ctx.content.title);
 __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({});
@@ -117,9 +108,7 @@ if (__VLS_ctx.orderCode) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.small, __VLS_intrinsics.small)({});
     (__VLS_ctx.orderCode);
 }
-__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-    ...{ class: "result-actions" },
-});
+__VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)(({ class: 'result-actions' }));
 /** @type {__VLS_StyleScopedClasses['result-actions']} */ ;
 if (__VLS_ctx.status !== 'Paid') {
     let __VLS_0;

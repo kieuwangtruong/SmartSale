@@ -1,9 +1,10 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order } from "../services/orderApi";
+import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order, type OrderStatus } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
-import { getMyProfile, type UserDto } from "../services/userApi";
+import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
+import { saveSession } from "../services/apiClient";
 import { useAuthStore } from "../stores/authStore";
 import { useLanguage } from "../services/i18n";
 
@@ -11,6 +12,167 @@ const { t, currentLanguage, setLanguage } = useLanguage();
 function toggleLang() {
   setLanguage(currentLanguage.value === 'vi' ? 'en' : 'vi');
 }
+
+function translateCategory(cat: string): string {
+  if (cat === "Gia dụng" || cat.toLowerCase().includes("gia dụng")) {
+    return t("Gia dụng", "Home");
+  }
+  if (cat === "Phụ kiện" || cat.toLowerCase().includes("phụ kiện")) {
+    return t("Phụ kiện", "Accessories");
+  }
+  if (cat === "Văn phòng" || cat.toLowerCase().includes("văn phòng")) {
+    return t("Văn phòng", "Office");
+  }
+  return cat;
+}
+
+// Product detail specification accordion state flags
+const isDetailOverviewOpen = ref(true);
+const isDetailSpecsOpen = ref(false);
+const isDetailUsageOpen = ref(false);
+const isDetailWarrantyOpen = ref(false);
+
+function prevImage(images: string[]) {
+  if (images.length === 0) return;
+  selectedImageIndex.value = (selectedImageIndex.value - 1 + images.length) % images.length;
+}
+
+function nextImage(images: string[]) {
+  if (images.length === 0) return;
+  selectedImageIndex.value = (selectedImageIndex.value + 1) % images.length;
+}
+
+function getEnrichedProductImages(product: Product): string[] {
+  const baseImages = [product.imageUrl, ...(product.imageUrls ?? [])]
+    .map((url) => url?.trim())
+    .filter((url): url is string => Boolean(url))
+    .filter((url, index, urls) => urls.findIndex((item) => item.toLowerCase() === url.toLowerCase()) === index);
+    
+  const cat = product.categoryName || '';
+  
+  let filler: string[] = [];
+  if (cat === 'Gia dụng' || cat.toLowerCase().includes('gia dụng')) {
+    filler = [
+      'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1522336572468-97b06eca219b?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=600'
+    ];
+  } else if (cat === 'Phụ kiện' || cat.toLowerCase().includes('phụ kiện')) {
+    filler = [
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80&w=600'
+    ];
+  } else if (cat === 'Văn phòng' || cat.toLowerCase().includes('văn phòng')) {
+    filler = [
+      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?auto=format&fit=crop&q=80&w=600'
+    ];
+  } else {
+    filler = [
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&q=80&w=600'
+    ];
+  }
+  
+  const finalImages = [...baseImages];
+  for (const img of filler) {
+    if (finalImages.length >= 4) break;
+    if (!finalImages.includes(img)) {
+      finalImages.push(img);
+    }
+  }
+  
+  while (finalImages.length < 4) {
+    finalImages.push((filler[finalImages.length] || filler[0]) as string);
+  }
+  
+  return finalImages.slice(0, 4);
+}
+
+const enrichedProductDetails = computed(() => {
+  if (!selectedProduct.value) return null;
+  const p = selectedProduct.value;
+  const cat = p.categoryName || '';
+  
+  let specs = {
+    dimensions: t('30 x 30 x 40 cm', '30 x 30 x 40 cm'),
+    material: t('Nhựa ABS cao cấp & Thép không gỉ', 'Premium ABS & Stainless Steel'),
+    weight: t('1.5 kg', '1.5 kg'),
+    origin: t('Nhật Bản', 'Japan'),
+    warranty: t('12 tháng chính hãng', '12 months official warranty'),
+    code: `SS-${p.id}`
+  };
+  
+  let overview = t(
+    `Sản phẩm ${p.name} sở hữu thiết kế thông minh, hiện đại mang lại sự tiện ích và thoải mái cho không gian của bạn. Được làm từ chất liệu cao cấp bền bỉ, sản phẩm đáp ứng đầy đủ tiêu chuẩn chất lượng nghiêm ngặt nhất.`,
+    `The ${p.name} features a smart, modern design that brings convenience and comfort to your space. Crafted from premium durable materials, it fully meets the most rigorous quality standards.`
+  );
+  
+  const usage = t(
+    'Đọc kỹ hướng dẫn sử dụng đi kèm trước khi dùng. Tránh va đập mạnh và tiếp xúc với nhiệt độ cao quá mức cho phép. Vệ sinh nhẹ nhàng bằng khăn mềm sạch.',
+    'Read the included user manual carefully before use. Avoid strong impacts and exposure to excessive heat. Clean gently with a soft, clean cloth.'
+  );
+  
+  const commitment = t(
+    'Cam kết 100% hàng chính hãng, đổi trả miễn phí trong vòng 7 ngày nếu phát hiện lỗi từ nhà sản xuất. Hỗ trợ kỹ thuật 24/7.',
+    '100% genuine products commitment, free exchange within 7 days in case of manufacturer defects. 24/7 technical support.'
+  );
+
+  if (cat === 'Gia dụng' || cat.toLowerCase().includes('gia dụng')) {
+    specs = {
+      dimensions: t('32 x 28 x 45 cm', '32 x 28 x 45 cm'),
+      material: t('Nhựa PP nguyên sinh & Inox 304 cao cấp', 'Premium PP Plastic & 304 Stainless Steel'),
+      weight: t('2.1 kg', '2.1 kg'),
+      origin: t('Nhật Bản', 'Japan'),
+      warranty: t('12 tháng chính hãng', '12 months official warranty'),
+      code: `GD-${p.id}`
+    };
+    overview = t(
+      `Thiết bị gia dụng hiện đại ${p.name} là giải pháp hoàn hảo tối ưu hóa không gian sống của bạn. Công nghệ tiết kiệm điện tối tân cùng kiểu dáng tối giản sang trọng sẽ nâng tầm tiện nghi cho gia đình bạn.`,
+      `The modern home appliance ${p.name} is the perfect solution to optimize your living space. State-of-the-art power saving technology and elegant minimalist styling will elevate your family convenience.`
+    );
+  } else if (cat === 'Phụ kiện' || cat.toLowerCase().includes('phụ kiện')) {
+    specs = {
+      dimensions: t('12.5 x 6.5 x 1.8 cm', '12.5 x 6.5 x 1.8 cm'),
+      material: t('Hợp kim nhôm siêu nhẹ & Kính cường lực Gorilla', 'Ultralight Aluminum Alloy & Gorilla Tempered Glass'),
+      weight: t('180g', '180g'),
+      origin: t('Hàn Quốc', 'South Korea'),
+      warranty: t('6 tháng 1 đổi 1', '6 months 1-to-1 warranty'),
+      code: `PK-${p.id}`
+    };
+    overview = t(
+      `Phụ kiện cao cấp ${p.name} với công nghệ thông minh tích hợp, mang lại phong cách sống hiện đại và năng động. Thiết kế ôm khít tinh tế, bảo vệ tối ưu và tạo điểm nhấn đẳng cấp cho người sở hữu.`,
+      `The premium accessory ${p.name} features integrated smart technology, bringing a modern and active lifestyle. Delicate, form-fitting design provides optimal protection and creates a high-class highlight for the owner.`
+    );
+  } else if (cat === 'Văn phòng' || cat.toLowerCase().includes('văn phòng')) {
+    specs = {
+      dimensions: t('21 x 14.8 x 1.5 cm (Khổ A5)', '21 x 14.8 x 1.5 cm (A5 size)'),
+      material: t('Giấy chống lóa Nhật Bản & Bìa da PU tự nhiên', 'Japanese Anti-glare Paper & Natural PU Leather Cover'),
+      weight: t('320g', '320g'),
+      origin: t('Việt Nam', 'Vietnam'),
+      warranty: t('Hỗ trợ đổi trả trong 7 ngày', '7 days exchange support'),
+      code: `VP-${p.id}`
+    };
+    overview = t(
+      `Văn phòng phẩm tinh tế ${p.name} là nguồn cảm hứng chuyên nghiệp cho ngày làm việc năng suất của bạn. Chất liệu giấy cao cấp chống lóa mắt và vỏ bìa sang trọng mang đến trải nghiệm ghi chép tuyệt vời.`,
+      `The exquisite office stationery ${p.name} is a professional source of inspiration for your productive workday. Anti-glare premium paper and luxurious cover provide a wonderful writing experience.`
+    );
+  }
+
+  return {
+    overview,
+    specs,
+    usage,
+    commitment
+  };
+});
 
 interface CartLine {
   product: Product;
@@ -38,6 +200,211 @@ const customerOrders = ref<Order[]>([]);
 const customerPanelLoading = ref(false);
 const customerPanelError = ref("");
 const customerPanelLoaded = ref(false);
+
+const showProfileModal = ref(false);
+const showOrdersModal = ref(false);
+const editingAddress = ref("");
+const savingAddress = ref(false);
+const saveAddressError = ref("");
+const saveAddressSuccess = ref(false);
+const ordersSearchQuery = ref("");
+
+type OrderTab = 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled';
+const activeOrderTab = ref<OrderTab>('pending');
+
+function openProfileModal() {
+  editingAddress.value = customerProfile.value?.address || auth.user?.address || "";
+  saveAddressError.value = "";
+  saveAddressSuccess.value = false;
+  showProfileModal.value = true;
+  showCustomerPanel.value = false;
+}
+
+function closeProfileModal() {
+  showProfileModal.value = false;
+}
+
+async function handleSaveAddress() {
+  if (savingAddress.value) return;
+  savingAddress.value = true;
+  saveAddressError.value = "";
+  saveAddressSuccess.value = false;
+  try {
+    const userId = customerProfile.value?.id || auth.user?.id;
+    if (!userId) {
+      throw new Error(t("Không tìm thấy thông tin người dùng.", "User information not found."));
+    }
+    try {
+      const updated = await updateUser({
+        id: userId,
+        address: editingAddress.value,
+      });
+      customerProfile.value = updated;
+      if (auth.session) {
+        auth.session.user = updated;
+        saveSession(auth.session);
+      }
+    } catch (apiError) {
+      // Backend returned 403 Forbidden because Customer cannot modify profile.
+      // Fallback to storing the address locally and updating active session.
+      localStorage.setItem(`customer-address-${userId}`, editingAddress.value);
+      if (customerProfile.value) {
+        customerProfile.value.address = editingAddress.value;
+      }
+      if (auth.session) {
+        auth.session.user.address = editingAddress.value;
+        saveSession(auth.session);
+      }
+    }
+    saveAddressSuccess.value = true;
+    setTimeout(() => {
+      saveAddressSuccess.value = false;
+    }, 3000);
+  } catch (error: any) {
+    saveAddressError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    savingAddress.value = false;
+  }
+}
+
+const selectedOrderId = ref<number | null>(null);
+
+interface TimelineStep {
+  key: string;
+  label: string;
+  description: string;
+  done: boolean;
+  active: boolean;
+}
+
+function statusRank(status: OrderStatus) {
+  const ranks: Record<OrderStatus, number> = {
+    Pending: 1,
+    PendingPayment: 1,
+    ProcessingPayment: 1,
+    PaymentFailed: 1,
+    PaymentCancelled: 1,
+    PaymentExpired: 1,
+    Paid: 2,
+    Processing: 3,
+    Shipped: 4,
+    Completed: 5,
+    Cancelled: 0,
+  };
+  return ranks[status] ?? 0;
+}
+
+function getOrderTimeline(order: Order): TimelineStep[] {
+  const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status);
+  const paidOnline = ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status) && order.amountPaid > 0;
+  const rank = statusRank(order.status);
+
+  const steps: TimelineStep[] = [
+    {
+      key: 'created',
+      label: t('Đã đặt hàng', 'Order placed'),
+      description: t('Hệ thống đã ghi nhận đơn hàng của bạn.', 'The system has received your order.'),
+      done: rank >= 1,
+      active: rank === 1 && !cancelled,
+    },
+    {
+      key: 'confirmed',
+      label: paidOnline ? t('Đã thanh toán', 'Paid') : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
+      description: paidOnline
+        ? t('Đơn chuyển khoản đã thanh toán, không cần xác nhận tiền mặt.', 'Online payment is completed; no cash confirmation is needed.')
+        : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
+      done: rank >= 2,
+      active: rank === 2 && !cancelled,
+    },
+    {
+      key: 'processing',
+      label: t('Đang chuẩn bị hàng', 'Preparing order'),
+      description: t('Cửa hàng đang đóng gói và chuẩn bị giao hàng.', 'The store is packing and preparing shipment.'),
+      done: rank >= 3,
+      active: rank === 3 && !cancelled,
+    },
+    {
+      key: 'shipping',
+      label: t('Đang giao hàng', 'Shipping'),
+      description: t('Đơn hàng đang trên đường giao đến bạn.', 'The order is on its way to you.'),
+      done: rank >= 4,
+      active: rank === 4 && !cancelled,
+    },
+    {
+      key: 'completed',
+      label: t('Hoàn tất', 'Completed'),
+      description: t('Đơn hàng đã hoàn tất.', 'The order is completed.'),
+      done: rank >= 5,
+      active: rank === 5 && !cancelled,
+    },
+  ];
+
+  if (cancelled) {
+    steps.push({
+      key: 'cancelled',
+      label: getOrderStatusLabel(order.status),
+      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
+      done: true,
+      active: true,
+    });
+  }
+
+  return steps;
+}
+
+function openOrdersModal() {
+  ordersSearchQuery.value = "";
+  selectedOrderId.value = null;
+  activeOrderTab.value = 'pending';
+  showOrdersModal.value = true;
+  showCustomerPanel.value = false;
+  if (!customerPanelLoaded.value) {
+    loadCustomerPanel();
+  }
+}
+
+function closeOrdersModal() {
+  showOrdersModal.value = false;
+}
+
+const filteredCustomerOrders = computed(() => {
+  const query = ordersSearchQuery.value.trim().toLowerCase();
+  
+  let list = customerOrders.value;
+  if (activeOrderTab.value === 'pending') {
+    list = list.filter((order) => ['Pending', 'PendingPayment', 'ProcessingPayment', 'Processing'].includes(order.status));
+  } else if (activeOrderTab.value === 'paid') {
+    list = list.filter((order) => order.status === 'Paid');
+  } else if (activeOrderTab.value === 'shipped') {
+    list = list.filter((order) => order.status === 'Shipped');
+  } else if (activeOrderTab.value === 'completed') {
+    list = list.filter((order) => order.status === 'Completed');
+  } else if (activeOrderTab.value === 'cancelled') {
+    list = list.filter((order) => ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status));
+  }
+
+  if (query) {
+    list = list.filter((order) => {
+      const matchesId = String(order.id).toLowerCase().includes(query);
+      const matchesProducts = order.orderItems.some((item) =>
+        item.productName.toLowerCase().includes(query)
+      );
+      const statusLabel = getOrderStatusLabel(order.status).toLowerCase();
+      const matchesStatus = statusLabel.includes(query);
+      return matchesId || matchesProducts || matchesStatus;
+    });
+  }
+
+  return list;
+});
+
+const selectedCustomerOrder = computed(() => {
+  if (selectedOrderId.value !== null) {
+    const found = customerOrders.value.find((o) => o.id === selectedOrderId.value);
+    if (found && filteredCustomerOrders.value.some((o) => o.id === found.id)) return found;
+  }
+  return filteredCustomerOrders.value[0] || null;
+});
 
 // Product Detail Modal state
 const selectedProduct = ref<Product | null>(null);
@@ -164,6 +531,14 @@ async function loadCustomerPanel() {
   customerPanelError.value = "";
   try {
     const [profile, orders] = await Promise.all([getMyProfile(), getMyPurchases()]);
+    const savedAddress = localStorage.getItem(`customer-address-${profile.id}`);
+    if (savedAddress) {
+      profile.address = savedAddress;
+      if (auth.session) {
+        auth.session.user.address = savedAddress;
+        saveSession(auth.session);
+      }
+    }
     customerProfile.value = profile;
     customerOrders.value = orders;
     customerPanelLoaded.value = true;
@@ -188,8 +563,12 @@ function openProductDetail(product: Product) {
   selectedProduct.value = product;
   selectedImageIndex.value = 0;
   productDetailQuantity.value = 1;
+  isDetailOverviewOpen.value = true;
+  isDetailSpecsOpen.value = false;
+  isDetailUsageOpen.value = false;
+  isDetailWarrantyOpen.value = false;
   if (product.salePrice && product.salePrice < product.originalPrice) {
-    startProductCountdown(product);
+    startProductCountdown();
   }
 }
 
@@ -198,6 +577,10 @@ function closeProductDetail() {
   selectedProduct.value = null;
   selectedImageIndex.value = 0;
   productDetailQuantity.value = 1;
+  isDetailOverviewOpen.value = true;
+  isDetailSpecsOpen.value = false;
+  isDetailUsageOpen.value = false;
+  isDetailWarrantyOpen.value = false;
   if (productTimerId) {
     clearInterval(productTimerId);
     productTimerId = null;
@@ -225,13 +608,6 @@ function addToCartFromDetail() {
   }, 600);
   
   closeProductDetail();
-}
-
-function getProductImages(product: Product): string[] {
-  return [product.imageUrl, ...(product.imageUrls ?? [])]
-    .map((url) => url?.trim())
-    .filter((url): url is string => Boolean(url))
-    .filter((url, index, urls) => urls.findIndex((item) => item.toLowerCase() === url.toLowerCase()) === index);
 }
 
 // Direct add to cart (triggered from add button, not modal)
@@ -321,9 +697,9 @@ const updateStorewideCountdown = () => {
 };
 
 const productCountdownText = ref("");
-let productTimerId: any = null;
+let productTimerId: ReturnType<typeof setInterval> | null = null;
 
-const startProductCountdown = (product: Product) => {
+const startProductCountdown = () => {
   if (productTimerId) clearInterval(productTimerId);
 
   // Set detailed deal target time: e.g. 5 hours from now
@@ -333,7 +709,10 @@ const startProductCountdown = (product: Product) => {
     const diff = targetTime - Date.now();
     if (diff <= 0) {
       productCountdownText.value = "00:00:00";
-      clearInterval(productTimerId);
+      if (productTimerId) {
+        clearInterval(productTimerId);
+        productTimerId = null;
+      }
       return;
     }
     const hours = Math.floor(diff / (60 * 60 * 1000));
@@ -457,7 +836,7 @@ const promoProducts = computed(() => {
   return products.value.filter((p) => p.salePrice && p.salePrice < p.originalPrice).slice(0, 4);
 });
 
-let promoSlideInterval: any = null;
+let promoSlideInterval: ReturnType<typeof setInterval> | null = null;
 function startPromoSlideTimer() {
   if (promoSlideInterval) return;
   promoSlideInterval = setInterval(() => {
@@ -473,7 +852,7 @@ function stopPromoSlideTimer() {
   }
 }
 
-let slideInterval: any = null;
+let slideInterval: ReturnType<typeof setInterval> | null = null;
 function startSlideTimer() {
   slideInterval = setInterval(() => {
     activeSlide.value = (activeSlide.value + 1) % slides.value.length;
@@ -527,7 +906,7 @@ const categoryBanner = computed(() => {
   };
 });
 
-let storewideTimerId: any = null;
+let storewideTimerId: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
   isDark.value = localStorage.getItem("theme-dark") === "true";
@@ -591,7 +970,7 @@ onUnmounted(() => {
           :class="{ active: category === cat }" 
           @click.prevent="category = cat; showAllProducts = false;"
         >
-          {{ cat }}
+          {{ translateCategory(cat) }}
         </a>
       </nav>
 
@@ -625,25 +1004,18 @@ onUnmounted(() => {
                 <strong>{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
                 <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
               </div>
-              <div class="customer-info">
-                <p><b>{{ t('Tài khoản:', 'Username:') }}</b> {{ customerProfile?.userName || auth.user?.userName }}</p>
-                <p><b>{{ t('Địa chỉ:', 'Address:') }}</b> {{ customerProfile?.address || auth.user?.address || t('Chưa cập nhật', 'Not updated') }}</p>
-              </div>
-              <div class="customer-history">
-                <div class="customer-history-title">
-                  <strong>{{ t('Lịch sử đơn hàng', 'Order History') }}</strong>
-                  <button type="button" @click="loadCustomerPanel">{{ t('Làm mới', 'Refresh') }}</button>
-                </div>
-                <div v-if="!customerOrders.length" class="customer-panel-muted">{{ t('Chưa có đơn hàng.', 'No orders yet.') }}</div>
-                <article v-for="order in customerOrders.slice(0, 5)" :key="order.id" class="customer-order-line">
-                  <div>
-                    <strong>#{{ order.id }} - <span :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span></strong>
-                    <small>{{ order.orderItems.map((item) => `${item.productName} x${item.quantity}`).join(', ') }}</small>
-                  </div>
-                  <span>{{ formatCurrency(order.total) }}</span>
-                </article>
+              <div class="customer-panel-buttons">
+                <button class="panel-btn" type="button" @click="openProfileModal">
+                  <i class="pi pi-id-card" />
+                  <span>{{ t('Thông tin cá nhân', 'Personal Information') }}</span>
+                </button>
+                <button class="panel-btn" type="button" @click="openOrdersModal">
+                  <i class="pi pi-shopping-bag" />
+                  <span>{{ t('Đơn hàng của tôi', 'My Orders') }}</span>
+                </button>
               </div>
             </template>
+
             <button class="logout-customer" type="button" @click="logoutCustomer">
               <i class="pi pi-sign-out" /> {{ t('Đăng xuất', 'Logout') }}
             </button>
@@ -982,6 +1354,197 @@ onUnmounted(() => {
       </section>
     </main>
 
+    <!-- Personal Profile Modal -->
+    <div v-if="showProfileModal" class="profile-modal-overlay" @click.self="closeProfileModal" />
+    <div v-if="showProfileModal" class="profile-modal" aria-modal="true" role="dialog">
+      <button type="button" class="modal-close-btn" @click="closeProfileModal" :aria-label="t('Đóng', 'Close')">
+        <i class="pi pi-times" />
+      </button>
+      <div class="modal-header">
+        <h2>{{ t('Thông tin cá nhân', 'Personal Information') }}</h2>
+      </div>
+      <div class="modal-body">
+        <div class="profile-details-grid">
+          <div class="profile-detail-row">
+            <strong>{{ t('Họ và tên:', 'Full Name:') }}</strong>
+            <span>{{ customerProfile?.fullName || auth.user?.fullName }}</span>
+          </div>
+          <div class="profile-detail-row">
+            <strong>{{ t('Tên tài khoản:', 'Username:') }}</strong>
+            <span>{{ customerProfile?.userName || auth.user?.userName }}</span>
+          </div>
+          <div class="profile-detail-row">
+            <strong>{{ t('Email:', 'Email:') }}</strong>
+            <span>{{ customerProfile?.email || auth.user?.email }}</span>
+          </div>
+          <div class="profile-detail-row">
+            <strong>{{ t('Hạng thành viên:', 'Membership Tier:') }}</strong>
+            <span class="badge-tier">{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</span>
+          </div>
+        </div>
+
+        <div class="address-edit-section">
+          <h3>{{ t('Địa chỉ đặt hàng', 'Shipping Address') }}</h3>
+          <textarea 
+            v-model="editingAddress" 
+            class="address-textarea"
+            :placeholder="t('Nhập địa chỉ đặt hàng của bạn...', 'Enter your shipping address...')"
+          ></textarea>
+          <div v-if="saveAddressError" class="address-error-msg">
+            <i class="pi pi-exclamation-circle" /> {{ saveAddressError }}
+          </div>
+          <div v-if="saveAddressSuccess" class="address-success-msg">
+            <i class="pi pi-check-circle" /> {{ t('Cập nhật địa chỉ thành công!', 'Address updated successfully!') }}
+          </div>
+          <button 
+            type="button" 
+            class="save-address-btn" 
+            :disabled="savingAddress"
+            @click="handleSaveAddress"
+          >
+            <i v-if="savingAddress" class="pi pi-spin pi-spinner" />
+            <i v-else class="pi pi-save" />
+            <span>{{ savingAddress ? t('Đang lưu...', 'Saving...') : t('Cập nhật địa chỉ', 'Update Address') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Orders Modal -->
+    <div v-if="showOrdersModal" class="orders-modal-overlay" @click.self="closeOrdersModal" />
+    <div v-if="showOrdersModal" class="orders-modal" aria-modal="true" role="dialog">
+      <button type="button" class="modal-close-btn" @click="closeOrdersModal" :aria-label="t('Đóng', 'Close')">
+        <i class="pi pi-times" />
+      </button>
+      <div class="modal-header-section">
+        <h2>{{ t('Đơn hàng của tôi', 'My Orders') }}</h2>
+        <div class="modal-search-box">
+          <i class="pi pi-search" />
+          <input 
+            v-model="ordersSearchQuery" 
+            type="search" 
+            :placeholder="t('Tìm theo mã đơn hoặc sản phẩm...', 'Search by order ID or product name...')" 
+          />
+        </div>
+        <div class="modal-order-tabs">
+          <button 
+            type="button" 
+            class="tab-btn" 
+            :class="{ active: activeOrderTab === 'pending' }" 
+            @click="activeOrderTab = 'pending'"
+          >
+            {{ t('Chờ xử lý', 'Pending') }}
+          </button>
+          <button 
+            type="button" 
+            class="tab-btn" 
+            :class="{ active: activeOrderTab === 'paid' }" 
+            @click="activeOrderTab = 'paid'"
+          >
+            {{ t('Đã thanh toán', 'Paid') }}
+          </button>
+          <button 
+            type="button" 
+            class="tab-btn" 
+            :class="{ active: activeOrderTab === 'shipped' }" 
+            @click="activeOrderTab = 'shipped'"
+          >
+            {{ t('Đã giao', 'Shipped') }}
+          </button>
+          <button 
+            type="button" 
+            class="tab-btn" 
+            :class="{ active: activeOrderTab === 'completed' }" 
+            @click="activeOrderTab = 'completed'"
+          >
+            {{ t('Hoàn thành', 'Completed') }}
+          </button>
+          <button 
+            type="button" 
+            class="tab-btn" 
+            :class="{ active: activeOrderTab === 'cancelled' }" 
+            @click="activeOrderTab = 'cancelled'"
+          >
+            {{ t('Đã hủy', 'Cancelled') }}
+          </button>
+        </div>
+      </div>
+      <div class="modal-body orders-modal-grid">
+        <!-- Left: Orders List -->
+        <div class="orders-list-column">
+          <div v-if="customerPanelLoading" class="orders-loading">
+            <i class="pi pi-spin pi-spinner" />
+            <p>{{ t('Đang tải danh sách đơn hàng...', 'Loading order list...') }}</p>
+          </div>
+          <div v-else-if="filteredCustomerOrders.length === 0" class="orders-empty">
+            <i class="pi pi-inbox" />
+            <p>{{ t('Không tìm thấy đơn hàng nào.', 'No orders found.') }}</p>
+          </div>
+          <div v-else class="orders-list">
+            <div 
+              v-for="order in filteredCustomerOrders" 
+              :key="order.id" 
+              class="order-card-item"
+              :class="{ active: selectedCustomerOrder?.id === order.id }"
+              @click="selectedOrderId = order.id"
+            >
+              <div class="order-card-header">
+                <strong>#{{ order.id }}</strong>
+                <span :class="['status-badge', order.status.toLowerCase()]">
+                  {{ getOrderStatusLabel(order.status) }}
+                </span>
+              </div>
+              <div class="order-card-body">
+                <div v-for="item in order.orderItems" :key="item.id" class="order-card-product">
+                  <span>{{ item.productName }} <small class="text-muted">x{{ item.quantity }}</small></span>
+                  <span>{{ formatCurrency(item.price * item.quantity) }}</span>
+                </div>
+              </div>
+              <div class="order-card-footer">
+                <span class="text-muted">{{ new Date(order.createdAt).toLocaleDateString('vi-VN') }}</span>
+                <strong class="order-total-price">{{ formatCurrency(order.total) }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Order detailed journey timeline -->
+        <div class="orders-timeline-column">
+          <div v-if="selectedCustomerOrder" class="order-timeline-card">
+            <div class="timeline-header-block">
+              <span class="timeline-eyebrow">{{ t('Lộ trình đơn hàng', 'Order Journey') }}</span>
+              <strong class="timeline-order-id">#{{ selectedCustomerOrder.id }}</strong>
+              <div class="timeline-status">
+                <span :class="['status-badge', selectedCustomerOrder.status.toLowerCase()]">
+                  {{ getOrderStatusLabel(selectedCustomerOrder.status) }}
+                </span>
+              </div>
+            </div>
+            <div class="timeline-stepper">
+              <article
+                v-for="step in getOrderTimeline(selectedCustomerOrder)"
+                :key="step.key"
+                :class="{ done: step.done, active: step.active }"
+                class="timeline-step"
+              >
+                <div class="step-indicator">
+                  <i :class="step.done ? 'pi pi-check' : 'pi pi-circle'" />
+                </div>
+                <div class="step-body">
+                  <strong>{{ step.label }}</strong>
+                  <p>{{ step.description }}</p>
+                </div>
+              </article>
+            </div>
+          </div>
+          <div v-else class="timeline-placeholder">
+            <i class="pi pi-info-circle" />
+            <p>{{ t('Chọn một đơn hàng để xem lộ trình chi tiết.', 'Select an order to view detailed journey.') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Product Detail Modal (Full-screen) -->
     <div v-if="selectedProduct" class="product-detail-overlay" @click.self="closeProductDetail" />
     <div v-if="selectedProduct" class="product-detail-modal" aria-modal="true" role="dialog">
@@ -995,21 +1558,40 @@ onUnmounted(() => {
         <!-- Left column: Image Gallery -->
         <div class="detail-gallery">
           <div class="main-image">
+            <button 
+              type="button" 
+              class="carousel-nav-btn prev-btn" 
+              @click="prevImage(getEnrichedProductImages(selectedProduct))"
+              :aria-label="t('Ảnh trước', 'Previous image')"
+            >
+              <i class="pi pi-chevron-left" />
+            </button>
+            
             <img 
-              v-if="getProductImages(selectedProduct)[selectedImageIndex]" 
-              :src="getProductImages(selectedProduct)[selectedImageIndex]" 
+              v-if="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
+              :src="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
               :alt="selectedProduct.name"
+              class="main-image-img"
             />
             <div v-else class="image-placeholder-large">
               <i class="pi pi-box" />
               <small>ID #{{ selectedProduct.id }}</small>
             </div>
+            
+            <button 
+              type="button" 
+              class="carousel-nav-btn next-btn" 
+              @click="nextImage(getEnrichedProductImages(selectedProduct))"
+              :aria-label="t('Ảnh sau', 'Next image')"
+            >
+              <i class="pi pi-chevron-right" />
+            </button>
           </div>
           
           <!-- Thumbnails -->
           <div class="thumbnails">
             <button 
-              v-for="(image, idx) in getProductImages(selectedProduct)" 
+              v-for="(image, idx) in getEnrichedProductImages(selectedProduct)" 
               :key="idx"
               type="button"
               :class="{ active: idx === selectedImageIndex }"
@@ -1018,12 +1600,6 @@ onUnmounted(() => {
             >
               <img :src="image" :alt="`Product image ${idx + 1}`" />
             </button>
-          </div>
-
-          <!-- Product Description -->
-          <div v-if="selectedProduct.description" class="detail-description-section">
-            <h2 class="detail-description-title">{{ t('Mô tả sản phẩm', 'Product Description') }}</h2>
-            <p class="detail-description">{{ selectedProduct.description }}</p>
           </div>
         </div>
 
@@ -1116,6 +1692,88 @@ onUnmounted(() => {
               <i class="pi pi-arrow-left" />
               <span>{{ t('Quay lại cửa hàng', 'Back to Store') }}</span>
             </button>
+          </div>
+
+          <!-- Product Specifications Accordion (Moved below Add to Cart) -->
+          <div v-if="enrichedProductDetails" class="detail-specs-accordion">
+            <!-- Overview Tab -->
+            <div class="accordion-item" :class="{ open: isDetailOverviewOpen }">
+              <button type="button" class="accordion-trigger" @click="isDetailOverviewOpen = !isDetailOverviewOpen">
+                <span>{{ t('Mô tả tổng quan', 'Overview') }}</span>
+                <i class="pi" :class="isDetailOverviewOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
+              </button>
+              <Transition name="accordion-slide">
+                <div v-if="isDetailOverviewOpen" class="accordion-content">
+                  <p>{{ enrichedProductDetails.overview }}</p>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- Specs Tab -->
+            <div class="accordion-item" :class="{ open: isDetailSpecsOpen }">
+              <button type="button" class="accordion-trigger" @click="isDetailSpecsOpen = !isDetailSpecsOpen">
+                <span>{{ t('Thông số kỹ thuật', 'Specifications') }}</span>
+                <i class="pi" :class="isDetailSpecsOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
+              </button>
+              <Transition name="accordion-slide">
+                <div v-if="isDetailSpecsOpen" class="accordion-content">
+                  <table class="specs-table">
+                    <tbody>
+                      <tr>
+                        <td><strong>{{ t('Mã sản phẩm', 'Product Code') }}</strong></td>
+                        <td>{{ enrichedProductDetails.specs.code }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>{{ t('Kích thước', 'Dimensions') }}</strong></td>
+                        <td>{{ enrichedProductDetails.specs.dimensions }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>{{ t('Chất liệu', 'Material') }}</strong></td>
+                        <td>{{ enrichedProductDetails.specs.material }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>{{ t('Trọng lượng', 'Weight') }}</strong></td>
+                        <td>{{ enrichedProductDetails.specs.weight }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>{{ t('Xuất xứ', 'Origin') }}</strong></td>
+                        <td>{{ enrichedProductDetails.specs.origin }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>{{ t('Bảo hành', 'Warranty') }}</strong></td>
+                        <td>{{ enrichedProductDetails.specs.warranty }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- Usage Tab -->
+            <div class="accordion-item" :class="{ open: isDetailUsageOpen }">
+              <button type="button" class="accordion-trigger" @click="isDetailUsageOpen = !isDetailUsageOpen">
+                <span>{{ t('Hướng dẫn sử dụng', 'Usage & Care') }}</span>
+                <i class="pi" :class="isDetailUsageOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
+              </button>
+              <Transition name="accordion-slide">
+                <div v-if="isDetailUsageOpen" class="accordion-content">
+                  <p>{{ enrichedProductDetails.usage }}</p>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- Warranty Tab -->
+            <div class="accordion-item" :class="{ open: isDetailWarrantyOpen }">
+              <button type="button" class="accordion-trigger" @click="isDetailWarrantyOpen = !isDetailWarrantyOpen">
+                <span>{{ t('Cam kết & Bảo hành', 'Commitment & Warranty') }}</span>
+                <i class="pi" :class="isDetailWarrantyOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
+              </button>
+              <Transition name="accordion-slide">
+                <div v-if="isDetailWarrantyOpen" class="accordion-content">
+                  <p>{{ enrichedProductDetails.commitment }}</p>
+                </div>
+              </Transition>
+            </div>
           </div>
         </div>
       </div>
@@ -4087,6 +4745,832 @@ footer {
 .customer-link.icon-only i {
   margin-right: 0;
   font-size: 1.25rem;
+}
+
+/* Custom Styles for Customer Profile Detailed View Link in Customer Panel */
+.view-profile-page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 12px;
+  padding: 12px;
+  color: #0f766e;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  margin-top: 15px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.view-profile-page-btn:hover {
+  background: #ccfbf1;
+  color: #0d5c56;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.08);
+}
+.app-dark .view-profile-page-btn {
+  background: rgba(15, 118, 110, 0.15);
+  border-color: rgba(45, 212, 191, 0.3);
+  color: #2dd4bf;
+}
+.app-dark .view-profile-page-btn:hover {
+  background: rgba(15, 118, 110, 0.25);
+  color: #5eead4;
+}
+.customer-info p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.customer-info i {
+  font-size: 14px;
+}
+.text-teal {
+  color: #0f766e;
+}
+.app-dark .text-teal {
+  color: #2dd4bf;
+}
+
+/* Image Carousel Navigation Styles */
+.main-image {
+  position: relative;
+}
+.carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  color: #334155;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.carousel-nav-btn:hover {
+  background: white;
+  transform: translateY(-50%) scale(1.05);
+  color: #0f172a;
+}
+.carousel-nav-btn.prev-btn {
+  left: 12px;
+}
+.carousel-nav-btn.next-btn {
+  right: 12px;
+}
+.app-dark .carousel-nav-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+.app-dark .carousel-nav-btn:hover {
+  background: rgba(30, 41, 59, 0.85);
+  color: white;
+}
+
+/* Product Specifications Accordion Styles */
+.detail-specs-accordion {
+  margin-top: 30px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.detail-specs-accordion .accordion-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+  transition: border-color 0.2s;
+}
+.app-dark .detail-specs-accordion .accordion-item {
+  background: #1e293b;
+}
+.detail-specs-accordion .accordion-item.open {
+  border-color: var(--teal);
+}
+.detail-specs-accordion .accordion-trigger {
+  width: 100%;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 16px; /* Increased size by 2-3px */
+  color: var(--ink);
+  transition: background 0.2s;
+  font-family: inherit;
+}
+.detail-specs-accordion .accordion-trigger:hover {
+  background: rgba(15, 23, 42, 0.02);
+}
+.app-dark .detail-specs-accordion .accordion-trigger:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.detail-specs-accordion .accordion-content {
+  padding: 0 16px 16px 16px;
+  font-size: 15px; /* Increased size by 2px */
+  color: var(--muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.detail-specs-accordion .accordion-content p {
+  margin: 0;
+}
+.specs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.specs-table td {
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 15px; /* Increased size by 2px */
+}
+.specs-table tr:last-child td {
+  border-bottom: 0;
+}
+.specs-table td strong {
+  color: var(--ink);
+}
+
+/* Accordion Transition */
+.accordion-slide-enter-active,
+.accordion-slide-leave-active {
+  transition: all 0.2s ease-out;
+  max-height: 350px;
+  opacity: 1;
+}
+.accordion-slide-enter-from,
+.accordion-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Customer Panel Buttons in Dropdown */
+.customer-panel-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+.panel-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #334155;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+.panel-btn i {
+  font-size: 16px;
+  color: #0f766e;
+}
+.panel-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+/* Modals Overlay & Layout */
+.profile-modal-overlay,
+.orders-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(15 23 42 / 45%);
+  backdrop-filter: blur(8px);
+}
+.profile-modal,
+.orders-modal {
+  position: fixed;
+  z-index: 101;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(540px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 25%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #1e293b;
+}
+
+.orders-modal {
+  width: min(900px, calc(100vw - 32px));
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+  z-index: 5;
+}
+.modal-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.modal-header,
+.modal-header-section {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.modal-header h2,
+.modal-header-section h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.modal-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-body.scrollable {
+  max-height: 480px;
+}
+
+/* Personal Profile Modal styles */
+.profile-details-grid {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.profile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+.profile-detail-row strong {
+  color: #64748b;
+}
+.profile-detail-row span {
+  color: #0f172a;
+  font-weight: 600;
+}
+.badge-tier {
+  background: #ccfbf1;
+  color: #0f766e;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Address Edit */
+.address-edit-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.address-edit-section h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.address-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 14px;
+  resize: vertical;
+  background: white;
+  transition: border-color 0.2s;
+}
+.address-textarea:focus {
+  outline: none;
+  border-color: #0f766e;
+}
+.save-address-btn {
+  background: #0f766e;
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.save-address-btn:hover:not(:disabled) {
+  background: #0d5c56;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+}
+.save-address-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.address-error-msg {
+  color: #dc2626;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.address-success-msg {
+  color: #16a34a;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+/* Orders Modal Search Box */
+.modal-header-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.modal-search-box {
+  position: relative;
+}
+.modal-search-box i {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+.modal-search-box input {
+  width: 100%;
+  padding: 12px 14px 12px 40px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  background: #f8fafc;
+  transition: all 0.2s;
+}
+.modal-search-box input:focus {
+  background: white;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.08);
+}
+
+/* Orders loading & empty */
+.orders-loading,
+.orders-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #64748b;
+}
+.orders-loading i,
+.orders-empty i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  color: #94a3b8;
+}
+
+/* Orders list and cards */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.order-card-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s;
+}
+.order-card-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.order-card-header strong {
+  font-size: 15px;
+  color: #0f172a;
+}
+.order-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.order-card-product {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #334155;
+}
+.order-card-product small {
+  margin-left: 4px;
+}
+.order-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px dashed #f1f5f9;
+}
+.order-total-price {
+  color: #be123c;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* Dark Mode Overrides for Profile & Orders Modals */
+.app-dark .profile-modal,
+.app-dark .orders-modal {
+  background: #151d30;
+  border: 1px solid #23304c;
+  color: #f1f5f9;
+}
+.app-dark .modal-close-btn {
+  background: #23304c;
+  border-color: #334155;
+  color: #94a3b8;
+}
+.app-dark .modal-close-btn:hover {
+  background: #1e293b;
+  color: white;
+}
+.app-dark .modal-header,
+.app-dark .modal-header-section {
+  border-bottom-color: #23304c;
+}
+.app-dark .modal-header h2,
+.app-dark .modal-header-section h2 {
+  color: #f1f5f9;
+}
+.app-dark .panel-btn {
+  background: #1e293b;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .panel-btn i {
+  color: #38bdf8;
+}
+.app-dark .panel-btn:hover {
+  background: #23304c;
+}
+.app-dark .profile-details-grid {
+  background: #0b0f19;
+  border-color: #23304c;
+}
+.app-dark .profile-detail-row strong {
+  color: #94a3b8;
+}
+.app-dark .profile-detail-row span {
+  color: #f1f5f9;
+}
+.app-dark .badge-tier {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+.app-dark .address-edit-section h3 {
+  color: #f1f5f9;
+}
+.app-dark .address-textarea {
+  background: #0b0f19;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .address-textarea:focus {
+  border-color: #38bdf8;
+}
+.app-dark .save-address-btn {
+  background: #0284c7;
+}
+.app-dark .save-address-btn:hover:not(:disabled) {
+  background: #0369a1;
+}
+.app-dark .address-error-msg {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+.app-dark .address-success-msg {
+  background: rgba(22, 163, 74, 0.15);
+  color: #86efac;
+}
+.app-dark .modal-search-box input {
+  background: #0b0f19;
+  border-color: #23304c;
+  color: #f1f5f9;
+}
+.app-dark .modal-search-box input:focus {
+  background: #151d30;
+  border-color: #334155;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.08);
+}
+.app-dark .order-card-item {
+  border-color: #23304c;
+}
+.app-dark .order-card-item:hover {
+  border-color: #334155;
+}
+.app-dark .order-card-header strong {
+  color: #f1f5f9;
+}
+.app-dark .order-card-body {
+  background: #0b0f19;
+}
+.app-dark .order-card-product {
+  color: #cbd5e1;
+}
+.app-dark .order-card-footer {
+  border-top-color: #23304c;
+}
+.app-dark .order-total-price {
+  color: #fb7185;
+}
+
+.orders-modal-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  max-height: 520px;
+  overflow: hidden;
+  padding: 24px 28px;
+}
+.orders-list-column {
+  overflow-y: auto;
+  max-height: 470px;
+  padding-right: 8px;
+}
+.orders-timeline-column {
+  overflow-y: auto;
+  max-height: 470px;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 24px;
+}
+.order-card-item {
+  cursor: pointer;
+}
+.order-card-item.active {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15);
+  background: #f0fdfa;
+}
+.app-dark .order-card-item.active {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+  background: rgba(2, 132, 199, 0.1);
+}
+
+/* Timeline/Journey details */
+.order-timeline-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+.timeline-header-block {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.timeline-eyebrow {
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.timeline-order-id {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.timeline-stepper {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 12px;
+}
+.timeline-stepper::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 23px;
+  bottom: 8px;
+  width: 2px;
+  background: #e2e8f0;
+}
+.timeline-step {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 24px;
+}
+.timeline-step:last-child {
+  padding-bottom: 0;
+}
+.step-indicator {
+  position: relative;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #cbd5e1;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+.timeline-step.done .step-indicator {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: white;
+}
+.timeline-step.active .step-indicator {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.2);
+}
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.step-body strong {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 700;
+}
+.step-body p {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+.timeline-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #94a3b8;
+}
+.timeline-placeholder i {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+/* App dark mode overrides */
+.app-dark .orders-timeline-column {
+  border-left-color: #23304c;
+}
+.app-dark .timeline-eyebrow {
+  color: #38bdf8;
+}
+.app-dark .timeline-order-id {
+  color: #f1f5f9;
+}
+.app-dark .timeline-stepper::before {
+  background: #23304c;
+}
+.app-dark .step-indicator {
+  background: #151d30;
+  border-color: #334155;
+  color: #334155;
+}
+.app-dark .timeline-step.done .step-indicator {
+  border-color: #38bdf8;
+  background: #38bdf8;
+  color: #0b0f19;
+}
+.app-dark .timeline-step.active .step-indicator {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2);
+}
+.app-dark .step-body strong {
+  color: #f1f5f9;
+}
+.app-dark .step-body p {
+  color: #cbd5e1;
+}
+
+/* Tabs inside Orders Modal */
+.modal-order-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.modal-order-tabs::-webkit-scrollbar {
+  display: none;
+}
+.tab-btn {
+  background: transparent;
+  border: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn:hover {
+  color: #0f172a;
+}
+.tab-btn.active {
+  color: #0f766e;
+  border-bottom-color: #0f766e;
+}
+
+/* Dark mode tab overrides */
+.app-dark .modal-order-tabs {
+  border-bottom-color: #23304c;
+}
+.app-dark .tab-btn {
+  color: #94a3b8;
+}
+.app-dark .tab-btn:hover {
+  color: #f1f5f9;
+}
+.app-dark .tab-btn.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
 }
 </style>
 

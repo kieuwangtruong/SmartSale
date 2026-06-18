@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -19,7 +19,6 @@ const route = useRoute()
 const { t } = useLanguage()
 
 const activeRole = ref<UserRole>('Admin')
-const isRoleLocked = computed(() => !!route.meta.loginRole)
 
 watch(
   () => route.meta.loginRole,
