@@ -5,6 +5,7 @@ import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel,
 import { getProducts, type Product } from "../services/productApi";
 import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
 import { saveSession } from "../services/apiClient";
+import { endChatSession, getChatSession, sendChatMessage, type ChatAction, type ChatMessage } from "../services/chatbotApi";
 import { useAuthStore } from "../stores/authStore";
 import { useLanguage } from "../services/i18n";
 
@@ -211,6 +212,20 @@ const customerOrders = ref<Order[]>([]);
 const customerPanelLoading = ref(false);
 const customerPanelError = ref("");
 const customerPanelLoaded = ref(false);
+const showChatbot = ref(false);
+const chatbotLoaded = ref(false);
+const chatbotLoading = ref(false);
+const chatbotSending = ref(false);
+const chatbotError = ref("");
+const chatbotInput = ref("");
+const chatbotMessages = ref<ChatMessage[]>([]);
+const chatbotActions = ref<ChatAction[]>([]);
+const chatbotSuggestions = [
+  "Sản phẩm nào đang khuyến mãi?",
+  "Tôi có đơn hàng nào đang xử lý?",
+  "Hạng thành viên của tôi là gì?",
+  "Gợi ý sản phẩm còn hàng dưới 500.000đ",
+];
 
 const showProfileModal = ref(false);
 const showOrdersModal = ref(false);
@@ -311,6 +326,16 @@ function getOrderTimeline(order: Order): TimelineStep[] {
   const rank = statusRank(order.status);
   const cashConfirmed = !isPayOs && rank >= 2 && !cancelled;
 
+  if (cancelled) {
+    return [{
+      key: 'cancelled',
+      label: getOrderStatusLabel(order.status),
+      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
+      done: true,
+      active: true,
+    }];
+  }
+
   const steps: TimelineStep[] = [
     {
       key: 'created',
@@ -356,16 +381,6 @@ function getOrderTimeline(order: Order): TimelineStep[] {
       active: rank === 5 && !cancelled,
     },
   ];
-
-  if (cancelled) {
-    steps.push({
-      key: 'cancelled',
-      label: getOrderStatusLabel(order.status),
-      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
-      done: true,
-      active: true,
-    });
-  }
 
   return steps;
 }
@@ -489,7 +504,7 @@ const customerInitials = computed(() => {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   return `${first[0] ?? "K"}${second[0] ?? "H"}`.toUpperCase();
 });
-const isCustomerLoggedIn = computed(() => auth.user?.role === "Customer");
+const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
 const paidCustomerOrders = computed(() =>
   customerOrders.value.filter((order) =>
     ["Paid", "Processing", "Shipped", "Completed"].includes(order.status),
@@ -561,6 +576,10 @@ async function loadCustomerPanel() {
     customerOrders.value = orders;
     customerPanelLoaded.value = true;
   } catch (exception) {
+    if (isAuthExpiredError(exception)) {
+      handleExpiredCustomerSession();
+      return;
+    }
     customerPanelError.value =
       exception instanceof Error ? exception.message : t("Không thể tải thông tin tài khoản.", "Unable to load account information.");
   } finally {
@@ -569,11 +588,131 @@ async function loadCustomerPanel() {
 }
 
 async function logoutCustomer() {
+  await resetChatbotSession();
   await auth.logout();
   customerProfile.value = null;
   customerOrders.value = [];
   customerPanelLoaded.value = false;
   showCustomerPanel.value = false;
+}
+
+async function openChatbot() {
+  if (!isCustomerLoggedIn.value) {
+    router.push({ name: "customer-login", query: { redirect: "/" } });
+    return;
+  }
+  showChatbot.value = true;
+  if (!chatbotLoaded.value) {
+    await loadChatbotSession();
+  }
+}
+
+async function loadChatbotSession() {
+  if (!isCustomerLoggedIn.value) return;
+  chatbotLoading.value = true;
+  chatbotError.value = "";
+  try {
+    const session = await getChatSession();
+    chatbotMessages.value = session.messages;
+    if (!chatbotMessages.value.length) {
+      chatbotMessages.value = [{
+        role: "assistant",
+        content: t("Chào bạn, mình có thể giúp xem sản phẩm, tồn kho, khuyến mãi, hạng thành viên và đơn hàng của bạn.", "Hi, I can help with products, stock, promotions, membership and your orders."),
+        createdAt: new Date().toISOString(),
+      }];
+    }
+    chatbotLoaded.value = true;
+  } catch (exception) {
+    if (isAuthExpiredError(exception)) {
+      handleExpiredCustomerSession();
+      chatbotError.value = t("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để dùng chatbot.", "Your session has expired. Please sign in again to use the chatbot.");
+      return;
+    }
+    chatbotError.value = exception instanceof Error ? exception.message : t("Không thể mở chatbot.", "Unable to open chatbot.");
+  } finally {
+    chatbotLoading.value = false;
+  }
+}
+
+async function sendChatbotText(text = chatbotInput.value) {
+  const message = text.trim();
+  if (!message || chatbotSending.value) return;
+  if (!isCustomerLoggedIn.value) {
+    router.push({ name: "customer-login", query: { redirect: "/" } });
+    return;
+  }
+
+  chatbotInput.value = "";
+  chatbotError.value = "";
+  chatbotSending.value = true;
+  chatbotMessages.value.push({
+    role: "user",
+    content: message,
+    createdAt: new Date().toISOString(),
+  });
+
+  try {
+    const response = await sendChatMessage(message);
+    chatbotMessages.value = response.messages.length ? response.messages : chatbotMessages.value;
+    chatbotActions.value = response.actions;
+  } catch (exception) {
+    if (isAuthExpiredError(exception)) {
+      handleExpiredCustomerSession();
+      chatbotError.value = t("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục chat.", "Your session has expired. Please sign in again to continue chatting.");
+      return;
+    }
+    chatbotError.value = exception instanceof Error ? exception.message : t("Chatbot chưa phản hồi được.", "The chatbot could not respond.");
+  } finally {
+    chatbotSending.value = false;
+  }
+}
+
+function isAuthExpiredError(exception: unknown) {
+  if (!(exception instanceof Error)) return false;
+  return /401|unauthorized|hết hạn|đăng nhập/i.test(exception.message);
+}
+
+function handleExpiredCustomerSession() {
+  auth.sync();
+  customerProfile.value = null;
+  customerOrders.value = [];
+  customerPanelLoaded.value = false;
+  showCustomerPanel.value = false;
+  showChatbot.value = false;
+  chatbotLoaded.value = false;
+  chatbotActions.value = [];
+}
+
+async function resetChatbotSession() {
+  showChatbot.value = false;
+  chatbotLoaded.value = false;
+  chatbotLoading.value = false;
+  chatbotSending.value = false;
+  chatbotError.value = "";
+  chatbotInput.value = "";
+  chatbotMessages.value = [];
+  chatbotActions.value = [];
+  if (auth.isAuthenticated && auth.role === "Customer") {
+    try {
+      await endChatSession();
+    } catch {
+      // Logout must continue even if the chatbot session endpoint is temporarily unavailable.
+    }
+  }
+}
+
+function handleChatAction(action: ChatAction) {
+  const product = products.value.find((item) => item.id === action.productId);
+  if (!product) {
+    chatbotError.value = t("Sản phẩm này chưa có trong danh sách hiện tại.", "This product is not in the current list.");
+    return;
+  }
+  if (action.type === "add-to-cart") {
+    quickAddToCart(product);
+    showCart.value = true;
+    return;
+  }
+  openProductDetail(product);
 }
 
 // Open product detail modal for quick view
@@ -1550,11 +1689,11 @@ onUnmounted(() => {
               <article
                 v-for="step in getOrderTimeline(selectedCustomerOrder)"
                 :key="step.key"
-                :class="{ done: step.done, active: step.active }"
+                :class="{ done: step.done, active: step.active, cancelled: step.key === 'cancelled' }"
                 class="timeline-step"
               >
                 <div class="step-indicator">
-                  <i :class="step.done ? 'pi pi-check' : 'pi pi-circle'" />
+                  <i :class="step.key === 'cancelled' ? 'pi pi-times' : step.done ? 'pi pi-check' : 'pi pi-circle'" />
                 </div>
                 <div class="step-body">
                   <strong>{{ step.label }}</strong>
@@ -1947,6 +2086,83 @@ onUnmounted(() => {
           <span>{{ checkoutLoading ? t('Đang tạo liên kết...', 'Generating link...') : t('Thanh toán', 'Pay Now') }}</span>
         </button>
       </div>
+    </section>
+
+    <section class="chatbot-widget" :class="{ open: showChatbot }">
+      <button class="chatbot-fab" type="button" @click="openChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')">
+        <i class="pi pi-comments" />
+      </button>
+
+      <aside v-if="showChatbot" class="chatbot-panel">
+        <header class="chatbot-head">
+          <div>
+            <small>{{ ('Smart Store AI') }}</small>
+          </div>
+          <button type="button" @click="showChatbot = false" :aria-label="t('Đóng', 'Close')">
+            <i class="pi pi-times" />
+          </button>
+        </header>
+
+        <div class="chatbot-suggestions" v-if="!chatbotSending">
+          <button
+            v-for="suggestion in chatbotSuggestions"
+            :key="suggestion"
+            type="button"
+            @click="sendChatbotText(suggestion)"
+          >
+            {{ suggestion }}
+          </button>
+        </div>
+
+        <div class="chatbot-body">
+          <div v-if="chatbotLoading" class="chatbot-state">
+            <i class="pi pi-spin pi-spinner" />
+            <span>{{ t('Đang tải phiên chat...', 'Loading chat session...') }}</span>
+          </div>
+          <template v-else>
+            <article
+              v-for="(message, index) in chatbotMessages"
+              :key="`${message.createdAt}-${index}`"
+              class="chat-message"
+              :class="message.role === 'user' ? 'from-user' : 'from-bot'"
+            >
+              <p>{{ message.content }}</p>
+            </article>
+            <div v-if="chatbotSending" class="chat-message from-bot loading-message">
+              <i class="pi pi-spin pi-spinner" />
+              <span>{{ t('Đang suy nghĩ...', 'Thinking...') }}</span>
+            </div>
+          </template>
+        </div>
+
+        <div v-if="chatbotActions.length" class="chatbot-actions">
+          <button
+            v-for="(action, index) in chatbotActions"
+            :key="`${action.type}-${action.productId}-${index}`"
+            type="button"
+            @click="handleChatAction(action)"
+          >
+            <i :class="action.type === 'add-to-cart' ? 'pi pi-shopping-bag' : 'pi pi-eye'" />
+            {{ action.label }}
+          </button>
+        </div>
+
+        <p v-if="chatbotError" class="chatbot-error">
+          <i class="pi pi-exclamation-circle" /> {{ chatbotError }}
+        </p>
+
+        <form class="chatbot-input" @submit.prevent="sendChatbotText()">
+          <input
+            v-model="chatbotInput"
+            type="text"
+            :placeholder="t('Hỏi về sản phẩm, đơn hàng, tồn kho...', 'Ask about products, orders, stock...')"
+            :disabled="chatbotSending"
+          />
+          <button type="submit" :disabled="chatbotSending || !chatbotInput.trim()">
+            <i class="pi pi-send" />
+          </button>
+        </form>
+      </aside>
     </section>
 
     <footer id="footer">
@@ -5543,6 +5759,15 @@ footer {
   border-color: #0f766e;
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.2);
 }
+.timeline-step.cancelled .step-indicator {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+.timeline-step.cancelled.active .step-indicator {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.16);
+}
 .step-body {
   display: flex;
   flex-direction: column;
@@ -5601,6 +5826,15 @@ footer {
   border-color: #38bdf8;
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2);
 }
+.app-dark .timeline-step.cancelled .step-indicator {
+  border-color: #f87171;
+  background: #f87171;
+  color: #0b0f19;
+}
+.app-dark .timeline-step.cancelled.active .step-indicator {
+  border-color: #f87171;
+  box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.18);
+}
 .app-dark .step-body strong {
   color: #f1f5f9;
 }
@@ -5654,6 +5888,250 @@ footer {
 .app-dark .tab-btn.active {
   color: #38bdf8;
   border-bottom-color: #38bdf8;
+}
+
+.chatbot-widget {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 80;
+}
+
+.chatbot-fab {
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), #0f766e);
+  color: white;
+  box-shadow: 0 18px 40px rgba(15, 118, 110, 0.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.chatbot-panel {
+  position: absolute;
+  right: 0;
+  bottom: 72px;
+  width: min(380px, calc(100vw - 32px));
+  height: min(620px, calc(100vh - 120px));
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chatbot-head {
+  padding: 18px 20px;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chatbot-head small {
+  display: block;
+  color: #7dd3fc;
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.chatbot-head strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.chatbot-head button {
+  border: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+}
+
+.chatbot-suggestions {
+  padding: 12px 14px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.chatbot-suggestions button,
+.chatbot-actions button {
+  border: 1px solid #ccfbf1;
+  border-radius: 999px;
+  background: #f0fdfa;
+  color: #0f766e;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chatbot-body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-message {
+  max-width: 86%;
+  padding: 11px 13px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.chat-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-message.from-user {
+  align-self: flex-end;
+  background: #0f766e;
+  color: white;
+  border-bottom-right-radius: 5px;
+}
+
+.chat-message.from-bot {
+  align-self: flex-start;
+  background: white;
+  color: #1e293b;
+  border-bottom-left-radius: 5px;
+}
+
+.loading-message {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chatbot-state {
+  margin: auto;
+  color: #64748b;
+  display: grid;
+  gap: 10px;
+  place-items: center;
+  font-weight: 700;
+}
+
+.chatbot-actions {
+  padding: 10px 14px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  border-top: 1px solid #eef2f7;
+}
+
+.chatbot-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ecfeff;
+  color: #155e75;
+}
+
+.chatbot-error {
+  margin: 0;
+  padding: 9px 14px;
+  color: #b91c1c;
+  background: #fee2e2;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chatbot-input {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  gap: 10px;
+  border-top: 1px solid #eef2f7;
+  background: white;
+}
+
+.chatbot-input input {
+  min-height: 44px;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  padding: 0 14px;
+  outline: none;
+}
+
+.chatbot-input input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+}
+
+.chatbot-input button {
+  border: 0;
+  border-radius: 14px;
+  background: #0f766e;
+  color: white;
+  cursor: pointer;
+}
+
+.chatbot-input button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.app-dark .chatbot-panel {
+  background: #151d30;
+  border-color: #23304c;
+}
+
+.app-dark .chatbot-body {
+  background: #0b0f19;
+}
+
+.app-dark .chat-message.from-bot,
+.app-dark .chatbot-input {
+  background: #151d30;
+  color: #f1f5f9;
+}
+
+.app-dark .chatbot-suggestions,
+.app-dark .chatbot-actions,
+.app-dark .chatbot-input {
+  border-color: #23304c;
+}
+
+.app-dark .chatbot-input input {
+  background: #0b0f19;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+@media (max-width: 640px) {
+  .chatbot-widget {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .chatbot-panel {
+    position: fixed;
+    inset: auto 10px 82px 10px;
+    width: auto;
+    height: min(580px, calc(100vh - 100px));
+  }
 }
 </style>
 

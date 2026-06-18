@@ -100,6 +100,16 @@ function getOrderTimeline(order: Order): TimelineStep[] {
   const rank = statusRank(order.status)
   const cashConfirmed = !isPayOs && rank >= 2 && !cancelled
 
+  if (cancelled) {
+    return [{
+      key: 'cancelled',
+      label: getOrderStatusLabel(order.status),
+      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
+      done: true,
+      active: true,
+    }]
+  }
+
   const steps: TimelineStep[] = [
     {
       key: 'created',
@@ -145,16 +155,6 @@ function getOrderTimeline(order: Order): TimelineStep[] {
       active: rank === 5 && !cancelled,
     },
   ]
-
-  if (cancelled) {
-    steps.push({
-      key: 'cancelled',
-      label: getOrderStatusLabel(order.status),
-      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
-      done: true,
-      active: true,
-    })
-  }
 
   return steps
 }
@@ -434,11 +434,11 @@ onMounted(load)
                     <article
                       v-for="step in getOrderTimeline(selectedOrder)"
                       :key="step.key"
-                      :class="{ done: step.done, active: step.active }"
+                      :class="{ done: step.done, active: step.active, cancelled: step.key === 'cancelled' }"
                       class="timeline-step"
                     >
                       <div class="step-indicator">
-                        <i :class="step.done ? 'pi pi-check' : 'pi pi-circle'" />
+                        <i :class="step.key === 'cancelled' ? 'pi pi-times' : step.done ? 'pi pi-check' : 'pi pi-circle'" />
                       </div>
                       <div class="step-body">
                         <strong>{{ step.label }}</strong>
@@ -1249,6 +1249,17 @@ onMounted(load)
   background: #0f766e;
   color: white;
   box-shadow: 0 0 0 5px #ccfbf1;
+}
+
+.timeline-step.cancelled .step-indicator {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.timeline-step.cancelled.active .step-indicator {
+  background: #dc2626;
+  color: white;
+  box-shadow: 0 0 0 5px #fee2e2;
 }
 
 .step-body {
