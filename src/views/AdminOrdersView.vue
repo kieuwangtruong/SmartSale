@@ -27,6 +27,7 @@ import { useToast } from 'primevue/usetoast'
 
 const auth = useAuthStore()
 const isAdmin = computed(() => auth.role === 'Admin')
+const canEditOrderStatus = computed(() => auth.role === 'Admin' || auth.role === 'SalesStaff')
 const { t } = useLanguage()
 const toast = useToast()
 
@@ -378,7 +379,7 @@ onMounted(load)
             <td>{{ formatCurrency(order.debtAmount) }}</td>
             <td>
               <SearchableSelect
-                v-if="isAdmin && canChangeOrderStatus(order.status)"
+                v-if="canEditOrderStatus && canChangeOrderStatus(order.status)"
                 :key="`status-${order.id}-${statusSelectKey[order.id] ?? 0}`"
                 :model-value="statusDraft[order.id] ?? order.status"
                 :options="getEditableStatusOptions(order)"
