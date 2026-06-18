@@ -1,11 +1,12 @@
 ﻿<script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { registerCustomer } from '../services/userApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const mode = ref<'login' | 'register'>('login')
 const loading = ref(false)
@@ -35,7 +36,8 @@ async function submit() {
       error.value = t('Tài khoản nhân viên vui lòng đăng nhập ở cổng /admin.', 'Employee accounts must log in at the /admin portal.')
       return
     }
-    await router.replace('/')
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    await router.replace(redirect)
   } catch (exception) {
     error.value = exception instanceof Error ? exception.message : t('Không thể xử lý tài khoản.', 'Failed to process account.')
   } finally {

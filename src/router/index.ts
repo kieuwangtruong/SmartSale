@@ -4,6 +4,7 @@ import { getSession, type UserRole } from '../services/apiClient'
 declare module 'vue-router' {
   interface RouteMeta {
     public?: boolean
+    customerPage?: boolean
     adminLogin?: boolean
     roles?: UserRole[]
   }
@@ -58,7 +59,13 @@ const routes: RouteRecordRaw[] = [
     path: '/customer',
     name: 'customer-profile',
     component: () => import('../views/CustomerProfileView.vue'),
-    meta: { roles: ['Customer'] },
+    meta: { roles: ['Customer'], customerPage: true },
+  },
+  {
+    path: '/checkout',
+    name: 'checkout',
+    component: () => import('../views/CheckoutView.vue'),
+    meta: { roles: ['Customer'], customerPage: true },
   },
   {
     path: '/employees',
@@ -154,6 +161,9 @@ router.beforeEach((to) => {
   }
 
   if (!session) {
+    if (to.path.includes('/checkout') || to.path.includes('/customer')) {
+      return { name: 'customer-login', query: { redirect: to.fullPath } }
+    }
     if (to.path.includes('/inventory') || to.path.includes('/products') || to.path.includes('/suppliers')) {
       return { name: 'warehouse-login', query: { redirect: to.fullPath } }
     }

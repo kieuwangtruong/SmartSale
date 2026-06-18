@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
 import { getMyProfile, type UserDto } from "../services/userApi";
@@ -29,6 +29,7 @@ const error = ref("");
 const showCart = ref(false);
 const animateCart = ref(false);
 const route = useRoute();
+const router = useRouter();
 const auth = useAuthStore();
 const CART_STORAGE_KEY = "storefront-cart";
 const showCustomerPanel = ref(false);
@@ -352,18 +353,13 @@ const startProductCountdown = (product: Product) => {
 
 function openCheckoutModal() {
   checkoutError.value = "";
-  if (isCustomerLoggedIn.value && auth.user) {
-    customerForm.value.fullName = auth.user.fullName || "";
-    customerForm.value.email = auth.user.email || "";
-    customerForm.value.address = auth.user.address || "";
-    customerForm.value.phone = localStorage.getItem("customer-phone") || "";
-
-    if (customerForm.value.fullName && customerForm.value.address && customerForm.value.phone) {
-      requestPaymentConfirmation();
-      return;
-    }
+  if (!cart.value.length) return;
+  if (!auth.isAuthenticated || auth.role !== "Customer") {
+    router.push({ name: "customer-login", query: { redirect: "/checkout" } });
+    return;
   }
-  showCheckout.value = true;
+  showCart.value = false;
+  router.push({ name: "checkout" });
 }
 
 async function submitOrder() {
@@ -1176,9 +1172,9 @@ onUnmounted(() => {
         <div>
           <span>{{ t('Tạm tính', 'Subtotal') }}</span><strong>{{ formatCurrency(cartTotal) }}</strong>
         </div>
-        <p><i class="pi pi-info-circle" /> {{ t('Nhân viên bán hàng sẽ xác nhận thông tin và tạo đơn.', 'Sales staff will verify details and issue the order.') }}</p>
+        <p><i class="pi pi-info-circle" /> {{ t('Bạn sẽ xác nhận thông tin giao hàng trước khi đặt đơn.', 'You will confirm shipping details before placing the order.') }}</p>
         <button type="button" @click="openCheckoutModal">
-          {{ t('Liên hệ đặt hàng', 'Proceed to Checkout') }} <i class="pi pi-arrow-right" />
+          {{ t('Mua hàng', 'Buy Now') }} <i class="pi pi-arrow-right" />
         </button>
       </div>
     </aside>

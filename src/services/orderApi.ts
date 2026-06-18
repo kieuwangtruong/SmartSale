@@ -104,6 +104,14 @@ export interface CreateOrderPayload {
   orderItems: Array<{ productId: number; quantity: number }>
 }
 
+export interface CustomerCheckoutPayload {
+  fullName: string
+  phone: string
+  email?: string | null
+  address: string
+  orderItems: Array<{ productId: number; quantity: number }>
+}
+
 export interface PaymentLink {
   orderId: number
   orderCode: number
@@ -225,13 +233,15 @@ export function createOrder(payload: CreateOrderPayload) {
   })
 }
 
-export function createPaymentLink(payload: {
-  fullName: string
-  phone: string
-  email?: string | null
-  address: string
-  orderItems: Array<{ productId: number; quantity: number }>
-}) {
+export function createCustomerCashOrder(payload: CustomerCheckoutPayload) {
+  return apiRequest<Order>(API_URLS.order, '/api/Order/customer-cash', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createPaymentLink(payload: CustomerCheckoutPayload) {
   return apiRequest<PaymentLink>(API_URLS.order, '/api/payments/links', {
     method: 'POST',
     auth: true,
