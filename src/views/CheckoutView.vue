@@ -161,7 +161,7 @@ onMounted(() => {
         </div>
       </div>
       <div class="result-actions">
-        <RouterLink to="/customer?tab=orders">{{ t('Xem đơn hàng của tôi', 'View my orders') }}</RouterLink>
+        
         <RouterLink to="/">{{ t('Tiếp tục mua sắm', 'Continue shopping') }}</RouterLink>
       </div>
     </section>
