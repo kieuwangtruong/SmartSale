@@ -226,18 +226,11 @@ function addToCartFromDetail() {
   closeProductDetail();
 }
 
-// Mock additional product images (in real app, would come from API)
 function getProductImages(product: Product): string[] {
-  const images = [product.imageUrl || ""];
-  // Add mock alternative images for demo
-  if (images[0]) {
-    images.push(
-      `${images[0]}?alt=1`,
-      `${images[0]}?alt=2`,
-      `${images[0]}?alt=3`
-    );
-  }
-  return images.filter(Boolean);
+  return [product.imageUrl, ...(product.imageUrls ?? [])]
+    .map((url) => url?.trim())
+    .filter((url): url is string => Boolean(url))
+    .filter((url, index, urls) => urls.findIndex((item) => item.toLowerCase() === url.toLowerCase()) === index);
 }
 
 // Direct add to cart (triggered from add button, not modal)

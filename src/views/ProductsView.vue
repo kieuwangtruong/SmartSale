@@ -31,6 +31,7 @@ const editingId = ref<number | null>(null)
 const categoryName = ref('')
 const { t } = useLanguage()
 const toast = useToast()
+const detailImageCount = 4
 
 function showError(msg: string) {
   toast.add({
@@ -49,12 +50,14 @@ const form = reactive<ProductPayload>({
   originalPrice: null,
   salePrice: null,
   imageUrl: '',
+  imageUrls: [],
   categoryId: 0,
   quantity: 0,
   reserveStock: 0,
   supplierId: 0,
 })
 
+const detailImageUrls = ref(createEmptyDetailImages())
 const showProductModal = ref(false)
 const showCategoryModal = ref(false)
 const showAddMenu = ref(false)
@@ -121,10 +124,15 @@ watch(search, () => {
 })
 
 // Fix potential typescript strict mode issue
+function createEmptyDetailImages() {
+  return Array.from({ length: detailImageCount }, () => '')
+}
+
 function reset() {
   editingId.value = null
   showProductModal.value = false
   showCategoryModal.value = false
+  detailImageUrls.value = createEmptyDetailImages()
   Object.assign(form, {
     name: '',
     description: '',
@@ -133,6 +141,7 @@ function reset() {
     originalPrice: null,
     salePrice: null,
     imageUrl: '',
+    imageUrls: [],
     categoryId: 0,
     supplierId: 0,
     quantity: 0,
@@ -155,6 +164,12 @@ async function load() {
 }
 function edit(p: Product) {
   editingId.value = p.id
+  const imageUrls = (p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : [])
+    .slice(0, detailImageCount)
+  detailImageUrls.value = [
+    ...imageUrls,
+    ...Array.from({ length: Math.max(detailImageCount - imageUrls.length, 0) }, () => ''),
+  ]
   Object.assign(form, {
     name: p.name,
     description: p.description || '',
@@ -163,6 +178,7 @@ function edit(p: Product) {
     originalPrice: p.originalPrice ?? null,
     salePrice: p.salePrice ?? null,
     imageUrl: p.imageUrl || '',
+    imageUrls: detailImageUrls.value,
     categoryId: p.categoryId,
     supplierId: p.supplierId,
     quantity: p.quantity,
@@ -170,10 +186,26 @@ function edit(p: Product) {
   })
   showProductModal.value = true
 }
+
+function normalizeDetailImages(imageUrls: string[]) {
+  return imageUrls
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .filter((url, index, urls) => urls.findIndex((item) => item.toLowerCase() === url.toLowerCase()) === index)
+}
+
+function buildProductPayload(): ProductPayload {
+  return {
+    ...form,
+    imageUrls: normalizeDetailImages(detailImageUrls.value),
+  }
+}
+
 async function save() {
   try {
-    if (editingId.value) await updateProduct(editingId.value, form)
-    else await createProduct(form)
+    const payload = buildProductPayload()
+    if (editingId.value) await updateProduct(editingId.value, payload)
+    else await createProduct(payload)
     reset(); await load()
   } catch (e) { showError(e instanceof Error ? e.message : t('KhÃ´ng thá»ƒ lÆ°u sáº£n pháº©m.', 'Unable to save product.')) }
 }
@@ -261,6 +293,26 @@ onMounted(load)
         </div>
 
         <label>{{ t('áº¢nh URL', 'Image URL') }}<input v-model="form.imageUrl" placeholder="https://..." /></label>
+        <section class="detail-image-editor">
+          <div class="detail-image-editor-head">
+            <strong>{{ t('Ảnh chi tiết sản phẩm', 'Product Detail Images') }}</strong>
+            <span>{{ t('4 ảnh cho phần chi tiết', '4 images for product detail') }}</span>
+          </div>
+          <div
+            v-for="(_, index) in detailImageUrls"
+            :key="index"
+            class="detail-image-row"
+          >
+            <div class="detail-image-preview">
+              <img v-if="detailImageUrls[index]" :src="detailImageUrls[index]" :alt="`Ảnh ${index + 1}`" />
+              <i v-else class="pi pi-image" />
+            </div>
+            <label>
+              {{ t(`Ảnh ${index + 1}`, `Image ${index + 1}`) }}
+              <input v-model="detailImageUrls[index]" placeholder="https://..." />
+            </label>
+          </div>
+        </section>
 
         <div class="actions">
           <button class="primary">{{ t('LÆ°u sáº£n pháº©m', 'Save Product') }}</button>
@@ -373,6 +425,70 @@ onMounted(load)
 
 .app-dark .product-description {
   color: #cbd5e1;
+}
+
+.detail-image-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.detail-image-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0f172a;
+}
+
+.detail-image-editor-head span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.detail-image-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.detail-image-preview {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.detail-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-dark .detail-image-editor {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.app-dark .detail-image-editor-head {
+  color: #e2e8f0;
+}
+
+.app-dark .detail-image-editor-head span {
+  color: #94a3b8;
+}
+
+.app-dark .detail-image-preview {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.55);
 }
 
 /* Pagination Styles */

@@ -10,6 +10,7 @@ export interface Product {
   originalPrice: number
   salePrice?: number | null
   imageUrl?: string | null
+  imageUrls?: string[]
   categoryId: number
   categoryName: string
   supplierId: number
@@ -20,6 +21,7 @@ export interface Product {
 
 type ProductApiResponse = Product & {
   Description?: string | null
+  ImageUrls?: string[] | null
 }
 
 export interface Category {
@@ -36,6 +38,7 @@ export interface ProductPayload {
   originalPrice?: number | null
   salePrice?: number | null
   imageUrl?: string | null
+  imageUrls?: string[]
   categoryId: number
   supplierId: number
   quantity: number
@@ -69,6 +72,7 @@ function normalizeProduct(product: ProductApiResponse): Product {
   return {
     ...product,
     description: product.description ?? product.Description ?? null,
+    imageUrls: product.imageUrls ?? product.ImageUrls ?? [],
   }
 }
 
