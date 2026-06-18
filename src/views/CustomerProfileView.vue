@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { formatCurrency, getMyPurchases, getOrderStatusLabel, type Order, type OrderStatus } from '../services/orderApi'
+import { formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from '../services/orderApi'
 import { getMyProfile, type UserDto } from '../services/userApi'
 import { useLanguage } from '../services/i18n'
 
@@ -96,8 +96,9 @@ function statusRank(status: OrderStatus) {
 
 function getOrderTimeline(order: Order): TimelineStep[] {
   const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status)
-  const paidOnline = ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status) && order.amountPaid > 0
+  const isPayOs = (order.paymentMethod || '').toLowerCase() === 'payos'
   const rank = statusRank(order.status)
+  const cashConfirmed = !isPayOs && rank >= 2 && !cancelled
 
   const steps: TimelineStep[] = [
     {
@@ -109,10 +110,16 @@ function getOrderTimeline(order: Order): TimelineStep[] {
     },
     {
       key: 'confirmed',
-      label: paidOnline ? t('Đã thanh toán', 'Paid') : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
-      description: paidOnline
+      label: isPayOs
+        ? t('Đã thanh toán', 'Paid')
+        : cashConfirmed
+          ? t('Đã xác nhận tiền mặt', 'Cash confirmed')
+          : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
+      description: isPayOs
         ? t('Đơn chuyển khoản đã thanh toán, không cần xác nhận tiền mặt.', 'Online payment is completed; no cash confirmation is needed.')
-        : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
+        : cashConfirmed
+          ? t('Nhân viên bán hàng đã xác nhận khách thanh toán tiền mặt.', 'Sales staff confirmed the cash payment.')
+          : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
       done: rank >= 2,
       active: rank === 2 && !cancelled,
     },
@@ -373,6 +380,7 @@ onMounted(load)
                         <th>{{ t('Mã đơn', 'Order ID') }}</th>
                         <th>{{ t('Ngày tạo', 'Created Date') }}</th>
                         <th>{{ t('Trạng thái', 'Status') }}</th>
+                        <th>{{ t('Thanh toán', 'Payment') }}</th>
                         <th>{{ t('Sản phẩm', 'Products') }}</th>
                         <th>{{ t('Tổng tiền', 'Total Amount') }}</th>
                       </tr>
@@ -391,13 +399,14 @@ onMounted(load)
                             {{ getOrderStatusLabel(order.status) }}
                           </span>
                         </td>
+                        <td><span class="payment-method-badge">{{ getPaymentMethodLabel(order.paymentMethod) }}</span></td>
                         <td class="product-names-cell">
                           {{ order.orderItems.map((item) => `${item.productName} x${item.quantity}`).join(', ') }}
                         </td>
                         <td class="total-cell">{{ formatCurrency(order.total) }}</td>
                       </tr>
                       <tr v-if="!filteredOrders.length">
-                        <td colspan="5" class="empty-orders-fallback">
+                        <td colspan="6" class="empty-orders-fallback">
                           <i class="pi pi-shopping-bag" />
                           <p>{{ t('Không tìm thấy đơn hàng phù hợp.', 'No matching orders found.') }}</p>
                         </td>
@@ -415,6 +424,10 @@ onMounted(load)
                       <span :class="['status-badge', selectedOrder.status.toLowerCase()]">
                         {{ getOrderStatusLabel(selectedOrder.status) }}
                       </span>
+                    </div>
+                    <div class="timeline-payment-method">
+                      <i class="pi pi-credit-card" />
+                      <span>{{ getPaymentMethodLabel(selectedOrder.paymentMethod) }}</span>
                     </div>
                   </div>
                   <div class="timeline-stepper">
@@ -1078,6 +1091,28 @@ onMounted(load)
   padding: 4px 10px;
   border-radius: 20px;
   text-transform: capitalize;
+}
+
+.payment-method-badge,
+.timeline-payment-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-method-badge {
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.timeline-payment-method {
+  margin-top: 8px;
+  padding: 6px 10px;
 }
 
 /* Badge styles mapped to order status classes */

@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order, type OrderStatus } from "../services/orderApi";
+import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
 import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
 import { saveSession } from "../services/apiClient";
@@ -296,8 +296,9 @@ function statusRank(status: OrderStatus) {
 
 function getOrderTimeline(order: Order): TimelineStep[] {
   const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status);
-  const paidOnline = ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status) && order.amountPaid > 0;
+  const isPayOs = (order.paymentMethod || '').toLowerCase() === 'payos';
   const rank = statusRank(order.status);
+  const cashConfirmed = !isPayOs && rank >= 2 && !cancelled;
 
   const steps: TimelineStep[] = [
     {
@@ -309,10 +310,16 @@ function getOrderTimeline(order: Order): TimelineStep[] {
     },
     {
       key: 'confirmed',
-      label: paidOnline ? t('Đã thanh toán', 'Paid') : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
-      description: paidOnline
+      label: isPayOs
+        ? t('Đã thanh toán', 'Paid')
+        : cashConfirmed
+          ? t('Đã xác nhận tiền mặt', 'Cash confirmed')
+          : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
+      description: isPayOs
         ? t('Đơn chuyển khoản đã thanh toán, không cần xác nhận tiền mặt.', 'Online payment is completed; no cash confirmation is needed.')
-        : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
+        : cashConfirmed
+          ? t('Nhân viên bán hàng đã xác nhận khách thanh toán tiền mặt.', 'Sales staff confirmed the cash payment.')
+          : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
       done: rank >= 2,
       active: rank === 2 && !cancelled,
     },
@@ -1494,6 +1501,10 @@ onUnmounted(() => {
                   {{ getOrderStatusLabel(order.status) }}
                 </span>
               </div>
+              <div class="order-payment-line">
+                <i class="pi pi-credit-card" />
+                <span>{{ getPaymentMethodLabel(order.paymentMethod) }}</span>
+              </div>
               <div class="order-card-body">
                 <div v-for="item in order.orderItems" :key="item.id" class="order-card-product">
                   <span>{{ item.productName }} <small class="text-muted">x{{ item.quantity }}</small></span>
@@ -1518,6 +1529,10 @@ onUnmounted(() => {
                 <span :class="['status-badge', selectedCustomerOrder.status.toLowerCase()]">
                   {{ getOrderStatusLabel(selectedCustomerOrder.status) }}
                 </span>
+              </div>
+              <div class="order-payment-line timeline-payment-line">
+                <i class="pi pi-credit-card" />
+                <span>{{ getPaymentMethodLabel(selectedCustomerOrder.paymentMethod) }}</span>
               </div>
             </div>
             <div class="timeline-stepper">
@@ -5218,6 +5233,22 @@ footer {
   font-size: 15px;
   color: #0f172a;
 }
+.order-payment-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+.timeline-payment-line {
+  margin-top: 8px;
+}
 .order-card-body {
   display: flex;
   flex-direction: column;
@@ -5340,6 +5371,10 @@ footer {
 }
 .app-dark .order-card-header strong {
   color: #f1f5f9;
+}
+.app-dark .order-payment-line {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
 }
 .app-dark .order-card-body {
   background: #0b0f19;

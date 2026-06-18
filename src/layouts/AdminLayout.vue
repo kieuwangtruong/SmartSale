@@ -90,7 +90,7 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
     <aside class="admin-sidebar" :class="{ open: sidebarOpen }">
       <RouterLink class="admin-brand" to="/">
         <span class="admin-brand-mark"><i class="pi pi-shopping-bag" /></span>
-        <span><strong>SalesFlow</strong><small>{{ t('Hệ thống bán hàng', 'Sales & Inventory') }}</small></span>
+        <span><strong>Admin Smart Store</strong><small>{{ t('Hệ thống bán hàng', 'Sales & Inventory') }}</small></span>
       </RouterLink>
 
       <p class="nav-caption">{{ t('MENU QUẢN LÝ', 'MANAGEMENT MENU') }}</p>

@@ -361,7 +361,7 @@ onMounted(load)
             </td>
             <td class="actions">
               <button v-if="canManageProducts" @click="edit(p)">{{ t('Sửa', 'Edit') }}</button>
-              <button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">{{ t('Xóa', 'Delete') }}</button>
+              <button v-if="canManageProducts" class="danger" @click="remove(p)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
         </tbody>
