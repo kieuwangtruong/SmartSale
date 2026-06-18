@@ -1347,6 +1347,10 @@ onUnmounted(() => {
               <h2>{{ t('Sản phẩm nổi bật', 'Featured Products') }}</h2>
               <p>{{ t('Những sản phẩm được khách hàng lựa chọn nhiều nhất.', 'The most selected items by our customers.') }}</p>
             </div>
+            <div class="search-box">
+              <i class="pi pi-search" />
+              <input v-model="search" type="search" :placeholder="t('Tìm tên, mã hoặc danh mục...', 'Search name, code or category...')" />
+            </div>
           </div>
           
           <div v-if="loading" class="product-grid" style="margin-top: 30px;">
