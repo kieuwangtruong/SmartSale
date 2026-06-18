@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import {
@@ -9,7 +9,7 @@ import {
   type CreateUserPayload,
   type UserDto,
 } from '../services/userApi'
-import { USER_ROLES, type UserRole } from '../services/apiClient'
+import type { UserRole } from '../services/apiClient'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
 
@@ -19,7 +19,7 @@ const toast = useToast()
 function showError(msg: string) {
   toast.add({
     severity: 'error',
-    summary: t('Lỗi', 'Error'),
+    summary: t('Lá»—i', 'Error'),
     detail: msg,
     life: 5000,
   })
@@ -42,6 +42,7 @@ const form = reactive<CreateUserPayload>({
 
 const search = ref('')
 const showForm = ref(false)
+const INTERNAL_ROLE_ORDER: UserRole[] = ['Admin', 'SalesStaff', 'WarehouseKeeper']
 
 // Pagination state
 const currentPage = ref(1)
@@ -71,22 +72,20 @@ const editingUser = computed(() =>
 const isEditingAdmin = computed(() => editingUser.value?.role === 'Admin')
 
 const roleOptions = computed(() =>
-  USER_ROLES
-    .filter((r) => r.value !== 'Customer')
-    .map((role) => ({
-      label: role.value === 'Admin'
-        ? t('Quản trị viên', 'Admin')
-        : role.value === 'SalesStaff'
-          ? t('Nhân viên bán hàng', 'Retail Staff')
-          : t('Thủ kho', 'Warehouse Keeper'),
-      value: role.value
-    }))
+  INTERNAL_ROLE_ORDER.map((role) => ({
+    label: role === 'Admin'
+      ? t('Quản trị viên', 'Admin')
+      : role === 'SalesStaff'
+        ? t('Nhân viên bán hàng', 'Retail Staff')
+        : t('Thủ kho', 'Warehouse Keeper'),
+    value: role,
+  })),
 )
 
 const sexOptions = computed(() => [
   { label: t('Nam', 'Male'), value: 0 },
-  { label: t('Nữ', 'Female'), value: 1 },
-  { label: t('Khác', 'Other'), value: 2 },
+  { label: t('Ná»¯', 'Female'), value: 1 },
+  { label: t('KhÃ¡c', 'Other'), value: 2 },
 ])
 
 // Status display
@@ -95,7 +94,7 @@ const paginationInfo = computed(() => {
   if (total === 0) return ''
   const start = (currentPage.value - 1) * itemsPerPage + 1
   const end = Math.min(currentPage.value * itemsPerPage, total)
-  return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
+  return t(`Hiá»ƒn thá»‹ ${start}-${end} trong tá»•ng sá»‘ ${total} má»¥c`, `Showing ${start}-${end} of ${total} items`)
 })
 
 // Reset to page 1 when search changes
@@ -120,7 +119,7 @@ async function load() {
     // Exclude customer accounts from internal employee/account management
     users.value = all.filter((u) => u.role !== 'Customer')
   } catch (e) {
-    showError(e instanceof Error ? e.message : t('Không thể tải tài khoản.', 'Failed to load accounts.'))
+    showError(e instanceof Error ? e.message : t('KhÃ´ng thá»ƒ táº£i tÃ i khoáº£n.', 'Failed to load accounts.'))
   } finally {
     loading.value = false
   }
@@ -153,25 +152,25 @@ async function save() {
     reset()
     await load()
   } catch (e) {
-    showError(e instanceof Error ? e.message : t('Không thể lưu tài khoản.', 'Failed to save account.'))
+    showError(e instanceof Error ? e.message : t('KhÃ´ng thá»ƒ lÆ°u tÃ i khoáº£n.', 'Failed to save account.'))
   }
 }
 
 async function remove(user: UserDto) {
-  if (!confirm(t(`Xóa tài khoản ${user.fullName}?`, `Delete account ${user.fullName}?`))) return
+  if (!confirm(t(`XÃ³a tÃ i khoáº£n ${user.fullName}?`, `Delete account ${user.fullName}?`))) return
   try {
     await deleteUser(user.id)
     await load()
   } catch (e) {
-    showError(e instanceof Error ? e.message : t('Không thể xóa.', 'Failed to delete.'))
+    showError(e instanceof Error ? e.message : t('KhÃ´ng thá»ƒ xÃ³a.', 'Failed to delete.'))
   }
 }
 
 function translateRole(role: UserRole) {
-  if (role === 'Admin') return t('Quản trị viên', 'Admin')
-  if (role === 'SalesStaff') return t('Nhân viên bán hàng', 'Retail Staff')
-  if (role === 'WarehouseKeeper') return t('Thủ kho', 'Warehouse Keeper')
-  if (role === 'Customer') return t('Khách hàng', 'Customer')
+  if (role === 'Admin') return t('Quáº£n trá»‹ viÃªn', 'Admin')
+  if (role === 'SalesStaff') return t('NhÃ¢n viÃªn bÃ¡n hÃ ng', 'Retail Staff')
+  if (role === 'WarehouseKeeper') return t('Thá»§ kho', 'Warehouse Keeper')
+  if (role === 'Customer') return t('KhÃ¡ch hÃ ng', 'Customer')
   return role
 }
 
@@ -182,28 +181,28 @@ onMounted(load)
   <section class="page">
     <div class="page-head">
       <div>
-        <h2>{{ t('Quản lý tài khoản', 'Account Management') }}</h2>
-        <p>{{ t('Admin tạo và phân quyền nhân viên.', 'Admin creation and role assignment for staff.') }}</p>
+        <h2>{{ t('Quáº£n lÃ½ tÃ i khoáº£n', 'Account Management') }}</h2>
+        <p>{{ t('Admin táº¡o vÃ  phÃ¢n quyá»n nhÃ¢n viÃªn.', 'Admin creation and role assignment for staff.') }}</p>
       </div>
       <div class="page-head-actions">
-        <input v-model="search" :placeholder="t('Tìm tài khoản...', 'Search accounts...')" class="search-input" />
+        <input v-model="search" :placeholder="t('TÃ¬m tÃ i khoáº£n...', 'Search accounts...')" class="search-input" />
         <button type="button" class="primary" @click="showForm = true">
-          <i class="pi pi-plus" /> {{ t('Tạo tài khoản', 'Create Account') }}
+          <i class="pi pi-plus" /> {{ t('Táº¡o tÃ i khoáº£n', 'Create Account') }}
         </button>
       </div>
     </div>
 
     <div v-if="showForm" class="modal-backdrop" @click="reset" />
-    <aside v-if="showForm" class="admin-modal" :aria-label="t('Biểu mẫu tài khoản', 'Account Form')">
+    <aside v-if="showForm" class="admin-modal" :aria-label="t('Biá»ƒu máº«u tÃ i khoáº£n', 'Account Form')">
       <div class="modal-head">
-        <h2>{{ editingId ? t('Cập nhật tài khoản', 'Update Account') : t('Tạo tài khoản', 'Create Account') }}</h2>
+        <h2>{{ editingId ? t('Cáº­p nháº­t tÃ i khoáº£n', 'Update Account') : t('Táº¡o tÃ i khoáº£n', 'Create Account') }}</h2>
         <button type="button" @click="reset"><i class="pi pi-times" /></button>
       </div>
       <form class="form admin-modal-body" @submit.prevent="save">
-        <label>{{ t('Tên đăng nhập', 'Username') }}<input v-model="form.userName" required /></label>
-        <label>{{ t('Họ tên', 'Full Name') }}<input v-model="form.fullName" required /></label>
+        <label>{{ t('TÃªn Ä‘Äƒng nháº­p', 'Username') }}<input v-model="form.userName" required /></label>
+        <label>{{ t('Há» tÃªn', 'Full Name') }}<input v-model="form.fullName" required /></label>
         <label>{{ t('Email', 'Email') }}<input v-model="form.email" type="email" required /></label>
-        <label>{{ t('Mật khẩu', 'Password') }}
+        <label>{{ t('Máº­t kháº©u', 'Password') }}
           <input
             v-model="form.passwordHash"
             type="password"
@@ -212,31 +211,31 @@ onMounted(load)
             :placeholder="isEditingAdmin ? '********' : ''"
           />
         </label>
-        <p v-if="isEditingAdmin" class="admin-password-note">{{ t('Không thể đổi mật khẩu tài khoản Admin.', 'Cannot change password of Admin account.') }}</p>
-        <label>{{ t('Ngày sinh', 'Date of Birth') }}<input v-model="form.dateOfBirth" type="date" required /></label>
-        <label>{{ t('Vai trò', 'Role') }}
-          <SearchableSelect v-model="form.role" :options="roleOptions" :placeholder="t('Chọn vai trò', 'Select role')" />
+        <p v-if="isEditingAdmin" class="admin-password-note">{{ t('KhÃ´ng thá»ƒ Ä‘á»•i máº­t kháº©u tÃ i khoáº£n Admin.', 'Cannot change password of Admin account.') }}</p>
+        <label>{{ t('NgÃ y sinh', 'Date of Birth') }}<input v-model="form.dateOfBirth" type="date" required /></label>
+        <label>{{ t('Vai trÃ²', 'Role') }}
+          <SearchableSelect v-model="form.role" :options="roleOptions" :placeholder="t('Chá»n vai trÃ²', 'Select role')" />
         </label>
-        <label>{{ t('Giới tính', 'Gender') }}
-          <SearchableSelect v-model="form.sex" :options="sexOptions" :placeholder="t('Chọn giới tính', 'Select gender')" />
+        <label>{{ t('Giá»›i tÃ­nh', 'Gender') }}
+          <SearchableSelect v-model="form.sex" :options="sexOptions" :placeholder="t('Chá»n giá»›i tÃ­nh', 'Select gender')" />
         </label>
-        <label>{{ t('Địa chỉ', 'Address') }}<input v-model="form.address" /></label>
+        <label>{{ t('Äá»‹a chá»‰', 'Address') }}<input v-model="form.address" /></label>
         <div class="actions">
-          <button class="primary">{{ t('Lưu', 'Save') }}</button>
-          <button type="button" @click="reset">{{ t('Hủy', 'Cancel') }}</button>
+          <button class="primary">{{ t('LÆ°u', 'Save') }}</button>
+          <button type="button" @click="reset">{{ t('Há»§y', 'Cancel') }}</button>
         </div>
       </form>
     </aside>
 
     <article class="panel table-wrap">
-      <p v-if="loading">{{ t('Đang tải...', 'Loading...') }}</p>
+      <p v-if="loading">{{ t('Äang táº£i...', 'Loading...') }}</p>
       <table v-else>
         <thead>
           <tr>
-            <th>{{ t('Họ tên', 'Full Name') }}</th>
+            <th>{{ t('Há» tÃªn', 'Full Name') }}</th>
             <th>{{ t('Email', 'Email') }}</th>
-            <th>{{ t('Vai trò', 'Role') }}</th>
-            <th>{{ t('Hành động', 'Actions') }}</th>
+            <th>{{ t('Vai trÃ²', 'Role') }}</th>
+            <th>{{ t('HÃ nh Ä‘á»™ng', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -245,8 +244,8 @@ onMounted(load)
             <td>{{ user.email }}</td>
             <td><span class="role-label">{{ translateRole(user.role) }}</span></td>
             <td class="actions">
-              <button @click="edit(user)">{{ t('Sửa', 'Edit') }}</button>
-              <button class="danger" @click="remove(user)">{{ t('Xóa', 'Delete') }}</button>
+              <button @click="edit(user)">{{ t('Sá»­a', 'Edit') }}</button>
+              <button class="danger" @click="remove(user)">{{ t('XÃ³a', 'Delete') }}</button>
             </td>
           </tr>
         </tbody>
@@ -259,8 +258,8 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === 1"
             @click="currentPage = 1"
-            aria-label="Về đầu"
-            title="Về đầu"
+            aria-label="Vá» Ä‘áº§u"
+            title="Vá» Ä‘áº§u"
           >
             <i class="pi pi-chevron-double-left" />
           </button>
@@ -268,7 +267,7 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === 1"
             @click="currentPage--"
-            aria-label="Trang trước"
+            aria-label="Trang trÆ°á»›c"
           >
             <i class="pi pi-chevron-left" />
           </button>
@@ -285,8 +284,8 @@ onMounted(load)
             type="button" 
             :disabled="currentPage === totalPages"
             @click="currentPage = totalPages"
-            aria-label="Về cuối"
-            title="Về cuối"
+            aria-label="Vá» cuá»‘i"
+            title="Vá» cuá»‘i"
           >
             <i class="pi pi-chevron-double-right" />
           </button>

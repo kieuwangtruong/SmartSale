@@ -1,15 +1,14 @@
-import { API_URLS } from './config'
+﻿import { API_URLS } from './config'
 import { getErrorMessage, translateApiMessage } from './apiMessages'
 
 export type UserRole = 'SalesStaff' | 'Admin' | 'WarehouseKeeper' | 'Customer'
 
 export const USER_ROLES: Array<{ value: UserRole; label: string; apiValue: number }> = [
-  { value: 'SalesStaff', label: 'Nhân viên bán hàng', apiValue: 0 },
   { value: 'Admin', label: 'Quản trị viên', apiValue: 1 },
+  { value: 'SalesStaff', label: 'Nhân viên bán hàng', apiValue: 0 },
   { value: 'WarehouseKeeper', label: 'Thủ kho', apiValue: 2 },
   { value: 'Customer', label: 'Khách hàng', apiValue: 3 },
 ]
-
 export interface AuthUser {
   id: number
   userName: string

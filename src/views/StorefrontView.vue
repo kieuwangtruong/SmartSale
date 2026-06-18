@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order } from "../services/orderApi";
@@ -1037,6 +1037,9 @@ onUnmounted(() => {
           <div class="detail-header">
             <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
             <h1 class="detail-title">{{ selectedProduct.name }}</h1>
+            <p v-if="selectedProduct.description" class="detail-description">
+              {{ selectedProduct.description }}
+            </p>
             
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
@@ -2385,6 +2388,14 @@ main {
   line-height: 1.2;
   margin: 0;
   color: var(--ink);
+}
+
+.detail-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-line;
 }
 
 .detail-meta {

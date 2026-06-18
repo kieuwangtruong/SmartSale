@@ -4,6 +4,7 @@ import { API_URLS } from './config'
 export interface Product {
   id: number
   name: string
+  description?: string | null
   importPrice: number
   sellingPrice: number
   originalPrice: number
@@ -17,6 +18,10 @@ export interface Product {
   reserveStock: number
 }
 
+type ProductApiResponse = Product & {
+  Description?: string | null
+}
+
 export interface Category {
   id: number
   name: string
@@ -25,6 +30,7 @@ export interface Category {
 
 export interface ProductPayload {
   name: string
+  description?: string | null
   importPrice: number
   sellingPrice: number
   originalPrice?: number | null
@@ -59,24 +65,32 @@ export interface StockReceipt {
   }>
 }
 
+function normalizeProduct(product: ProductApiResponse): Product {
+  return {
+    ...product,
+    description: product.description ?? product.Description ?? null,
+  }
+}
+
 export function getProducts() {
-  return apiRequest<Product[]>(API_URLS.product, '/api/products')
+  return apiRequest<ProductApiResponse[]>(API_URLS.product, '/api/products')
+    .then((products) => products.map(normalizeProduct))
 }
 
 export function createProduct(payload: ProductPayload) {
-  return apiRequest<Product>(API_URLS.product, '/api/products', {
+  return apiRequest<ProductApiResponse>(API_URLS.product, '/api/products', {
     method: 'POST',
     auth: true,
     body: JSON.stringify(payload),
-  })
+  }).then(normalizeProduct)
 }
 
 export function updateProduct(id: number, payload: ProductPayload) {
-  return apiRequest<Product>(API_URLS.product, `/api/products/${id}`, {
+  return apiRequest<ProductApiResponse>(API_URLS.product, `/api/products/${id}`, {
     method: 'PUT',
     auth: true,
     body: JSON.stringify({ id, ...payload }),
-  })
+  }).then(normalizeProduct)
 }
 
 export function deleteProduct(id: number) {
