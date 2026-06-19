@@ -505,11 +505,22 @@ const customerInitials = computed(() => {
   return `${first[0] ?? "K"}${second[0] ?? "H"}`.toUpperCase();
 });
 const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
-const paidCustomerOrders = computed(() =>
-  customerOrders.value.filter((order) =>
-    ["Paid", "Processing", "Shipped", "Completed"].includes(order.status),
-  ),
+const purchasedCustomerOrders = computed(() =>
+  customerOrders.value.filter((order) => {
+    const isPayOs = (order.paymentMethod || "Cash").toLowerCase() === "payos";
+    return isPayOs
+      ? ["Paid", "Processing", "Shipped", "Completed"].includes(order.status)
+      : order.status === "Completed";
+  }),
 );
+const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
+const displayedCustomerTierLabel = computed(() => {
+  const count = totalPurchasedOrderCount.value;
+  if (count >= 100) return t("Thành viên Kim cương", "Diamond Member");
+  if (count >= 60) return t("Thành viên Vàng", "Gold Member");
+  if (count >= 30) return t("Thành viên Bạc", "Silver Member");
+  return t("Thành viên thường", "Standard Member");
+});
 
 async function loadProducts() {
   loading.value = true;
@@ -1158,8 +1169,8 @@ onUnmounted(() => {
             <template v-else>
               <div class="customer-tier-card">
                 <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
-                <strong>{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
-                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
+                <strong>{{ displayedCustomerTierLabel }}</strong>
+                <span>{{ totalPurchasedOrderCount }} {{ t('đơn đã mua', 'purchased orders') }}</span>
               </div>
               <div class="customer-panel-buttons">
                 <button class="panel-btn" type="button" @click="openProfileModal">
@@ -1540,7 +1551,7 @@ onUnmounted(() => {
           </div>
           <div class="profile-detail-row">
             <strong>{{ t('Hạng thành viên:', 'Membership Tier:') }}</strong>
-            <span class="badge-tier">{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</span>
+            <span class="badge-tier">{{ displayedCustomerTierLabel }}</span>
           </div>
         </div>
 
