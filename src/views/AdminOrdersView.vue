@@ -22,6 +22,7 @@ import {
   type OrderStatus,
 } from '../services/orderApi'
 import { getProducts, type Product } from '../services/productApi'
+import { getUsers, type UserDto } from '../services/userApi'
 import { filterVisibleOrders } from '../services/orderHiddenStorage'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
@@ -44,6 +45,7 @@ function showError(msg: string) {
 const orders = ref<Order[]>([])
 const products = ref<Product[]>([])
 const customers = ref<Customer[]>([])
+const staffUsers = ref<UserDto[]>([])
 const loading = ref(false)
 const filter = ref<'All' | OrderStatus>('All')
 
@@ -104,6 +106,47 @@ const orderTotalPreview = computed(() => {
 
 const selectedOrderQuantity = computed(() =>
   selectedOrder.value?.orderItems.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
+)
+
+const usersById = computed(() => new Map(staffUsers.value.map((user) => [user.id, user])))
+
+function getStaffRoleLabel(role: UserDto['role']) {
+  if (role === 'Admin') return t('Quản trị viên', 'Administrator')
+  if (role === 'SalesStaff') return t('Nhân viên bán hàng', 'Sales Staff')
+  if (role === 'WarehouseKeeper') return t('Thủ kho', 'Warehouse Keeper')
+  return t('Khách hàng', 'Customer')
+}
+
+function resolveOrderSalesStaff(order: Order) {
+  const directName = order.salesStaffName?.trim() || order.createdByUserName?.trim()
+  if (directName) {
+    return {
+      name: directName,
+      roleLabel: t('Nhân viên bán hàng', 'Sales Staff'),
+    }
+  }
+
+  const candidateIds = [order.salesStaffId, order.createdByUserId, order.userId].filter(
+    (id): id is number => typeof id === 'number' && id > 0,
+  )
+
+  for (const id of candidateIds) {
+    const user = usersById.value.get(id)
+    if (!user) continue
+    if (user.role === 'SalesStaff' || user.role === 'Admin') {
+      return {
+        name: user.fullName,
+        roleLabel: getStaffRoleLabel(user.role),
+        email: user.email,
+      }
+    }
+  }
+
+  return null
+}
+
+const selectedOrderSalesStaff = computed(() =>
+  selectedOrder.value ? resolveOrderSalesStaff(selectedOrder.value) : null,
 )
 
 const filtered = computed(() => {
@@ -175,8 +218,8 @@ function syncStatusDrafts(list: Order[] = orders.value) {
 async function load() {
   loading.value = true
   try {
-    ;[orders.value, products.value, customers.value] = await Promise.all([
-      getOrders(), getProducts(), getCustomers(),
+    ;[orders.value, products.value, customers.value, staffUsers.value] = await Promise.all([
+      getOrders(), getProducts(), getCustomers(), getUsers(),
     ])
     orders.value = filterVisibleOrders(orders.value)
     syncStatusDrafts()
@@ -403,6 +446,18 @@ onMounted(load)
           <div class="detail-card">
             <span>{{ t('Cập nhật cuối', 'Last updated') }}</span>
             <strong>{{ selectedOrder.lastModifiedAt ? new Date(selectedOrder.lastModifiedAt).toLocaleString('vi-VN') : '—' }}</strong>
+          </div>
+          <div class="detail-card detail-card-wide sales-staff-card">
+            <span>{{ t('Nhân viên bán hàng', 'Sales Staff') }}</span>
+            <template v-if="selectedOrderSalesStaff">
+              <strong>{{ selectedOrderSalesStaff.name }}</strong>
+              <small>{{ selectedOrderSalesStaff.roleLabel }}</small>
+              <small v-if="selectedOrderSalesStaff.email">{{ selectedOrderSalesStaff.email }}</small>
+            </template>
+            <template v-else>
+              <strong class="sales-staff-pending">{{ t('Chưa gán nhân viên', 'Not assigned yet') }}</strong>
+              <small>{{ t('Đơn đặt online hoặc chưa có NV xác nhận.', 'Online order or not yet confirmed by staff.') }}</small>
+            </template>
           </div>
         </div>
 
@@ -666,6 +721,26 @@ onMounted(load)
   color: #0f172a;
   font-size: 14px;
 }
+.detail-card-wide {
+  grid-column: span 2;
+}
+.sales-staff-card {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+.sales-staff-card strong {
+  display: block;
+  font-size: 16px;
+}
+.sales-staff-card small {
+  display: block;
+  margin-top: 4px;
+  color: #047857;
+  font-size: 12px;
+}
+.sales-staff-pending {
+  color: #b45309 !important;
+}
 .detail-section-title {
   color: #0f172a;
   font-size: 14px;
@@ -725,6 +800,13 @@ onMounted(load)
 .app-dark .detail-summary div,
 .app-dark .order-detail-modal .modal-head p {
   color: #9ca3af;
+}
+.app-dark .sales-staff-card {
+  background: #064e3b33;
+  border-color: #047857;
+}
+.app-dark .sales-staff-card small {
+  color: #6ee7b7;
 }
 .muted-action {
   color: #94a3b8;

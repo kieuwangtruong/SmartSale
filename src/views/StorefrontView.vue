@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from "../services/orderApi";
-import { getProducts, type Product, type ProductVariant, type ProductVariantColor } from "../services/productApi";
+import { getProducts, type Product } from "../services/productApi";
 import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
 import { saveSession } from "../services/apiClient";
 import { endChatSession, getChatSession, sendChatMessage, type ChatAction, type ChatMessage } from "../services/chatbotApi";
@@ -97,6 +97,17 @@ function getEnrichedProductImages(product: Product): string[] {
   return finalImages.slice(0, 4);
 }
 
+function getEnrichedProductImageItems(product: Product) {
+  const productVersion = product.productVersion?.trim()
+    || product.imageItems?.find((item) => item.version?.trim())?.version?.trim()
+    || '';
+
+  return getEnrichedProductImages(product).map((imageUrl) => ({
+    imageUrl,
+    version: productVersion,
+  }));
+}
+
 const enrichedProductDetails = computed(() => {
   if (!selectedProduct.value) return null;
   const p = selectedProduct.value;
@@ -177,8 +188,6 @@ const enrichedProductDetails = computed(() => {
 
 interface CartLine {
   product: Product;
-  variant: ProductVariant;
-  color: ProductVariantColor;
   quantity: number;
 }
 
@@ -434,33 +443,6 @@ const selectedCustomerOrder = computed(() => {
 const selectedProduct = ref<Product | null>(null);
 const selectedImageIndex = ref(0);
 const productDetailQuantity = ref(1);
-const selectedVariantId = ref<number | null>(null);
-const selectedColorId = ref<number | null>(null);
-const selectedVariant = computed(() => selectedProduct.value?.variants
-  .find((variant) => variant.id === selectedVariantId.value) ?? null);
-const selectableColors = computed(() => selectedVariant.value?.colors ?? []);
-const selectedColor = computed(() => selectableColors.value
-  .find((color) => color.id === selectedColorId.value) ?? null);
-const selectedStock = computed(() => selectedVariant.value && selectedColor.value
-  ? Math.min(selectedVariant.value.quantity, selectedColor.value.quantity)
-  : 0);
-const selectedDetailImages = computed(() => {
-  const images = selectedColor.value?.images.map((image) => image.imageUrl).filter(Boolean) ?? [];
-  return images.length ? images : selectedProduct.value ? getEnrichedProductImages(selectedProduct.value) : [];
-});
-
-watch(selectedVariantId, () => {
-  const firstColor = selectedVariant.value?.colors.find((color) => color.isActive && color.quantity > 0)
-    ?? selectedVariant.value?.colors.find((color) => color.isActive);
-  selectedColorId.value = firstColor?.id ?? null;
-  selectedImageIndex.value = 0;
-  productDetailQuantity.value = 1;
-});
-
-watch(selectedColorId, () => {
-  selectedImageIndex.value = 0;
-  productDetailQuantity.value = Math.min(productDetailQuantity.value, Math.max(selectedStock.value, 1));
-});
 
 const categories = computed(() =>
   [
@@ -509,7 +491,7 @@ const cartCount = computed(() =>
 );
 const cartTotal = computed(() =>
   cart.value.reduce(
-    (sum, line) => sum + line.variant.sellingPrice * line.quantity,
+    (sum, line) => sum + line.product.sellingPrice * line.quantity,
     0,
   ),
 );
@@ -523,22 +505,11 @@ const customerInitials = computed(() => {
   return `${first[0] ?? "K"}${second[0] ?? "H"}`.toUpperCase();
 });
 const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
-const purchasedCustomerOrders = computed(() =>
-  customerOrders.value.filter((order) => {
-    const isPayOs = (order.paymentMethod || "Cash").toLowerCase() === "payos";
-    return isPayOs
-      ? ["Paid", "Processing", "Shipped", "Completed"].includes(order.status)
-      : order.status === "Completed";
-  }),
+const paidCustomerOrders = computed(() =>
+  customerOrders.value.filter((order) =>
+    ["Paid", "Processing", "Shipped", "Completed"].includes(order.status),
+  ),
 );
-const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
-const displayedCustomerTierLabel = computed(() => {
-  const count = totalPurchasedOrderCount.value;
-  if (count >= 100) return t("Thành viên Kim cương", "Diamond Member");
-  if (count >= 60) return t("Thành viên Vàng", "Gold Member");
-  if (count >= 30) return t("Thành viên Bạc", "Silver Member");
-  return t("Thành viên thường", "Standard Member");
-});
 
 async function loadProducts() {
   loading.value = true;
@@ -747,11 +718,6 @@ function handleChatAction(action: ChatAction) {
 // Open product detail modal for quick view
 function openProductDetail(product: Product) {
   selectedProduct.value = product;
-  const firstVariant = product.variants.find((variant) => variant.isActive && variant.quantity > 0)
-    ?? product.variants.find((variant) => variant.isActive);
-  selectedVariantId.value = firstVariant?.id ?? null;
-  selectedColorId.value = firstVariant?.colors.find((color) => color.isActive && color.quantity > 0)?.id
-    ?? firstVariant?.colors.find((color) => color.isActive)?.id ?? null;
   selectedImageIndex.value = 0;
   productDetailQuantity.value = 1;
   isDetailOverviewOpen.value = true;
@@ -780,17 +746,16 @@ function closeProductDetail() {
 
 // Add to cart from product detail modal
 function addToCartFromDetail() {
-  if (!selectedProduct.value || !selectedVariant.value || !selectedColor.value || selectedStock.value <= 0) return;
-  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id
-    && item.variant.id === selectedVariant.value!.id && item.color.id === selectedColor.value!.id);
+  if (!selectedProduct.value) return;
+  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id);
   const quantity = productDetailQuantity.value;
   
   if (line) {
-    if (line.quantity + quantity <= selectedStock.value) {
+    if (line.quantity + quantity <= selectedProduct.value.quantity) {
       line.quantity += quantity;
     }
   } else {
-    cart.value.push({ product: selectedProduct.value, variant: selectedVariant.value, color: selectedColor.value, quantity });
+    cart.value.push({ product: selectedProduct.value, quantity });
   }
   
   // Animate cart button
@@ -804,19 +769,16 @@ function addToCartFromDetail() {
 
 // Direct add to cart (triggered from add button, not modal)
 function quickAddToCart(product: Product) {
-  const variant = product.variants.find((item) => item.isActive && item.quantity > 0);
-  const color = variant?.colors.find((item) => item.isActive && item.quantity > 0);
-  if (!variant || !color) return;
+  if (product.quantity <= 0) return;
   
-  const line = cart.value.find((item) => item.product.id === product.id
-    && item.variant.id === variant.id && item.color.id === color.id);
+  const line = cart.value.find((item) => item.product.id === product.id);
   
   if (line) {
-    if (line.quantity + 1 <= Math.min(variant.quantity, color.quantity)) {
+    if (line.quantity + 1 <= product.quantity) {
       line.quantity += 1;
     }
   } else {
-    cart.value.push({ product, variant, color, quantity: 1 });
+    cart.value.push({ product, quantity: 1 });
   }
   
   // Animate cart button
@@ -827,11 +789,11 @@ function quickAddToCart(product: Product) {
 }
 
 function changeQuantity(line: CartLine, quantity: number) {
-  line.quantity = Math.max(1, Math.min(quantity || 1, Math.min(line.variant.quantity, line.color.quantity)));
+  line.quantity = Math.max(1, Math.min(quantity || 1, line.product.quantity));
 }
 
-function removeLine(lineToRemove: CartLine) {
-  cart.value = cart.value.filter((line) => line !== lineToRemove);
+function removeLine(productId: number) {
+  cart.value = cart.value.filter((line) => line.product.id !== productId);
 }
 
 function clearFilters() {
@@ -948,8 +910,6 @@ async function submitOrder() {
       address: customerForm.value.address,
       orderItems: cart.value.map((item) => ({
         productId: item.product.id,
-        productVariantId: item.variant.id,
-        productVariantColorId: item.color.id,
         quantity: item.quantity,
       })),
     });
@@ -1198,8 +1158,8 @@ onUnmounted(() => {
             <template v-else>
               <div class="customer-tier-card">
                 <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
-                <strong>{{ displayedCustomerTierLabel }}</strong>
-                <span>{{ totalPurchasedOrderCount }} {{ t('đơn đã mua', 'purchased orders') }}</span>
+                <strong>{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
+                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
               </div>
               <div class="customer-panel-buttons">
                 <button class="panel-btn" type="button" @click="openProfileModal">
@@ -1580,7 +1540,7 @@ onUnmounted(() => {
           </div>
           <div class="profile-detail-row">
             <strong>{{ t('Hạng thành viên:', 'Membership Tier:') }}</strong>
-            <span class="badge-tier">{{ displayedCustomerTierLabel }}</span>
+            <span class="badge-tier">{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</span>
           </div>
         </div>
 
@@ -1770,22 +1730,22 @@ onUnmounted(() => {
             <button 
               type="button" 
               class="carousel-nav-btn prev-btn" 
-              @click="prevImage(selectedDetailImages)"
+              @click="prevImage(getEnrichedProductImages(selectedProduct))"
               :aria-label="t('Ảnh trước', 'Previous image')"
             >
               <i class="pi pi-chevron-left" />
             </button>
             
             <img 
-              v-if="selectedDetailImages[selectedImageIndex]" 
-              :src="selectedDetailImages[selectedImageIndex]" 
+              v-if="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
+              :src="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
               :alt="selectedProduct.name"
               class="main-image-img"
             />
             <button 
               type="button" 
               class="carousel-nav-btn next-btn" 
-              @click="nextImage(selectedDetailImages)"
+              @click="nextImage(getEnrichedProductImages(selectedProduct))"
               :aria-label="t('Ảnh sau', 'Next image')"
             >
               <i class="pi pi-chevron-right" />
@@ -1795,14 +1755,14 @@ onUnmounted(() => {
           <!-- Thumbnails -->
           <div class="thumbnails">
             <button 
-              v-for="(image, idx) in selectedDetailImages" 
+              v-for="(image, idx) in getEnrichedProductImageItems(selectedProduct)" 
               :key="idx"
               type="button"
               :class="{ active: idx === selectedImageIndex }"
               @click="selectedImageIndex = idx"
               :aria-label="`Image ${idx + 1}`"
             >
-              <img :src="image" :alt="`Product image ${idx + 1}`" />
+              <img :src="image.imageUrl" :alt="`Product image ${idx + 1}`" />
             </button>
           </div>
         </div>
@@ -1813,15 +1773,20 @@ onUnmounted(() => {
             <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
             <div class="detail-title-row">
               <h1 class="detail-title">{{ selectedProduct.name }}</h1>
-              <span v-if="selectedVariant" class="product-version-badge">{{ selectedVariant.name }}</span>
+              <span
+                v-if="selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version"
+                class="product-version-badge"
+              >
+                {{ selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version }}
+              </span>
             </div>
 
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
               <span class="product-id">{{ t('Mã ID:', 'Product ID:') }} <strong>#{{ selectedProduct.id }}</strong></span>
-              <div v-if="selectedStock > 0" class="stock-status in-stock">
+              <div v-if="selectedProduct.quantity > 0" class="stock-status in-stock">
                 <i class="pi pi-check-circle" />
-                <span>{{ selectedStock <= (selectedVariant?.reserveStock ?? 0) ? t(`Sắp hết (Còn ${selectedStock})`, `Low stock (${selectedStock} left)`) : t(`Còn hàng (${selectedStock} sản phẩm)`, `In stock (${selectedStock} products)`) }}</span>
+                <span>{{ selectedProduct.quantity <= selectedProduct.reserveStock ? t(`Sắp hết (Còn ${selectedProduct.quantity})`, `Low stock (${selectedProduct.quantity} left)`) : t(`Còn hàng (${selectedProduct.quantity} sản phẩm)`, `In stock (${selectedProduct.quantity} products)`) }}</span>
               </div>
               <div class="stock-status out-of-stock" v-else>
                 <i class="pi pi-times-circle" />
@@ -1834,34 +1799,15 @@ onUnmounted(() => {
           <div class="detail-price">
             <span class="price-label">{{ t('Giá bán', 'Price') }}</span>
             <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-              <del style="color: var(--muted); font-size: 16px;" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
-                {{ formatCurrency(selectedVariant.originalPrice) }}
+              <del style="color: var(--muted); font-size: 16px;" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
+                {{ formatCurrency(selectedProduct.originalPrice) }}
               </del>
-              <strong class="price-value" :style="{ color: selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice ? 'var(--teal)' : 'inherit' }">
-                {{ formatCurrency(selectedVariant?.sellingPrice ?? selectedProduct.sellingPrice) }}
+              <strong class="price-value" :style="{ color: selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice ? 'var(--teal)' : 'inherit' }">
+                {{ formatCurrency(selectedProduct.sellingPrice) }}
               </strong>
-              <span class="detail-discount-percent-badge" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
-                {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedVariant.salePrice / selectedVariant.originalPrice) * 100) }}%
+              <span class="detail-discount-percent-badge" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
+                {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedProduct.salePrice / selectedProduct.originalPrice) * 100) }}%
               </span>
-            </div>
-          </div>
-
-          <div class="variant-picker">
-            <label>{{ t('Phiên bản', 'Version') }}</label>
-            <div class="variant-options">
-              <button v-for="variant in selectedProduct.variants" :key="variant.id" type="button"
-                :class="{ active: variant.id === selectedVariantId }"
-                :disabled="!variant.isActive || variant.quantity <= 0"
-                @click="selectedVariantId = variant.id">{{ variant.name }}</button>
-            </div>
-            <label>{{ t('Màu sắc', 'Color') }}</label>
-            <div class="variant-options">
-              <button v-for="color in selectableColors" :key="color.id" type="button"
-                :class="{ active: color.id === selectedColorId }"
-                :disabled="!color.isActive || color.quantity <= 0"
-                @click="selectedColorId = color.id">
-                <span v-if="color.hexCode" class="color-dot" :style="{ backgroundColor: color.hexCode }" />{{ color.name }}
-              </button>
             </div>
           </div>
           
@@ -1887,12 +1833,12 @@ onUnmounted(() => {
                 v-model.number="productDetailQuantity"
                 type="number"
                 min="1"
-                :max="selectedStock"
+                :max="selectedProduct.quantity"
               />
               <button 
                 type="button"
                 :aria-label="t('Tăng số lượng', 'Increase quantity')"
-                @click="productDetailQuantity = Math.min(selectedStock, productDetailQuantity + 1)"
+                @click="productDetailQuantity = Math.min(selectedProduct.quantity, productDetailQuantity + 1)"
               >
                 <i class="pi pi-plus" />
               </button>
@@ -1904,7 +1850,7 @@ onUnmounted(() => {
             <button 
               type="button" 
               class="btn-add-to-cart" 
-              :disabled="selectedStock <= 0 || !selectedVariant || !selectedColor"
+              :disabled="selectedProduct.quantity <= 0"
               @click="addToCartFromDetail"
             >
               <i class="pi pi-shopping-bag" />
@@ -2024,7 +1970,7 @@ onUnmounted(() => {
       </div>
 
       <div v-else class="cart-body">
-        <div v-for="line in cart" :key="`${line.product.id}-${line.variant.id}-${line.color.id}`" class="cart-line">
+        <div v-for="line in cart" :key="line.product.id" class="cart-line">
           <div class="cart-image">
             <img v-if="line.product.imageUrl" :src="line.product.imageUrl" :alt="line.product.name" />
             <i v-else class="pi pi-box" />
@@ -2032,8 +1978,7 @@ onUnmounted(() => {
           <div class="cart-info">
             <small>{{ line.product.categoryName }}</small>
             <strong>{{ line.product.name }}</strong>
-            <small>{{ line.variant.name }} · {{ line.color.name }}</small>
-            <span>{{ formatCurrency(line.variant.sellingPrice) }}</span>
+            <span>{{ formatCurrency(line.product.sellingPrice) }}</span>
             <div class="quantity-control">
               <button type="button" :aria-label="t('Giảm số lượng', 'Decrease quantity')" @click="changeQuantity(line, line.quantity - 1)">
                 <i class="pi pi-minus" />
@@ -2042,7 +1987,7 @@ onUnmounted(() => {
                 :value="line.quantity"
                 type="number"
                 min="1"
-                :max="Math.min(line.variant.quantity, line.color.quantity)"
+                :max="line.product.quantity"
                 @input="changeQuantity(line, Number(($event.target as HTMLInputElement).value))"
               />
               <button type="button" :aria-label="t('Tăng số lượng', 'Increase quantity')" @click="changeQuantity(line, line.quantity + 1)">
@@ -2050,7 +1995,7 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-          <button class="remove-line" type="button" :aria-label="t('Xóa sản phẩm', 'Remove item')" @click="removeLine(line)">
+          <button class="remove-line" type="button" :aria-label="t('Xóa sản phẩm', 'Remove item')" @click="removeLine(line.product.id)">
             <i class="pi pi-trash" />
           </button>
         </div>
