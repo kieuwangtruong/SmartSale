@@ -1966,8 +1966,6 @@ onUnmounted(() => {
         </span>
           </div>
         </div>
-```
-
 
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
