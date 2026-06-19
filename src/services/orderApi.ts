@@ -28,7 +28,12 @@ export type OrderPaymentMethod = 'Cash' | 'PayOS'
 export interface OrderItem {
   id: number
   productId: number
+  productVariantId?: number | null
+  productVariantColorId?: number | null
   productName: string
+  variantName?: string | null
+  colorName?: string | null
+  sku?: string | null
   quantity: number
   price: number
   subTotal: number
@@ -104,7 +109,7 @@ export interface CreateOrderPayload {
   customerId?: number | null
   discountAmount: number
   amountPaid: number
-  orderItems: Array<{ productId: number; quantity: number }>
+  orderItems: Array<{ productId: number; productVariantId?: number | null; productVariantColorId?: number | null; quantity: number }>
 }
 
 export interface CustomerCheckoutPayload {
@@ -112,7 +117,7 @@ export interface CustomerCheckoutPayload {
   phone: string
   email?: string | null
   address: string
-  orderItems: Array<{ productId: number; quantity: number }>
+  orderItems: Array<{ productId: number; productVariantId: number; productVariantColorId: number; quantity: number }>
 }
 
 export interface PaymentLink {

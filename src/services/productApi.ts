@@ -10,9 +10,9 @@ export interface Product {
   originalPrice: number
   salePrice?: number | null
   imageUrl?: string | null
-  productVersion?: string | null
   imageUrls?: string[]
   imageItems?: ProductImageItem[]
+  variants: ProductVariant[]
   categoryId: number
   categoryName: string
   supplierId: number
@@ -22,13 +22,54 @@ export interface Product {
 }
 
 export interface ProductImageItem {
+  id?: number
   imageUrl: string
-  version?: string | null
+  sortOrder?: number
+}
+
+export interface ProductVariantColor {
+  id: number
+  name: string
+  hexCode?: string | null
+  quantity: number
+  isActive: boolean
+  images: ProductImageItem[]
+}
+
+export interface ProductVariant {
+  id: number
+  productId: number
+  name: string
+  sku: string
+  originalPrice: number
+  salePrice?: number | null
+  sellingPrice: number
+  quantity: number
+  reserveStock: number
+  isActive: boolean
+  colors: ProductVariantColor[]
+}
+
+export interface ProductVariantPayload {
+  name: string
+  sku: string
+  originalPrice: number
+  salePrice?: number | null
+  quantity: number
+  reserveStock: number
+  isActive: boolean
+}
+
+export interface ProductVariantColorPayload {
+  name: string
+  hexCode?: string | null
+  quantity: number
+  isActive: boolean
+  imageUrls: string[]
 }
 
 type ProductApiResponse = Product & {
   Description?: string | null
-  ProductVersion?: string | null
   ImageUrls?: string[] | null
   ImageItems?: ProductImageItem[] | null
 }
@@ -47,7 +88,6 @@ export interface ProductPayload {
   originalPrice?: number | null
   salePrice?: number | null
   imageUrl?: string | null
-  productVersion?: string | null
   imageUrls?: string[]
   imageItems?: ProductImageItem[]
   categoryId: number
@@ -83,9 +123,9 @@ function normalizeProduct(product: ProductApiResponse): Product {
   return {
     ...product,
     description: product.description ?? product.Description ?? null,
-    productVersion: product.productVersion ?? product.ProductVersion ?? product.imageItems?.[0]?.version ?? product.ImageItems?.[0]?.version ?? null,
     imageUrls: product.imageUrls ?? product.ImageUrls ?? [],
     imageItems: product.imageItems ?? product.ImageItems ?? [],
+    variants: product.variants ?? [],
   }
 }
 
@@ -114,6 +154,30 @@ export function deleteProduct(id: number) {
   return apiRequest<unknown>(API_URLS.product, `/api/products/${id}`, {
     method: 'DELETE',
     auth: true,
+  })
+}
+
+export function createProductVariant(productId: number, payload: ProductVariantPayload) {
+  return apiRequest<ProductVariant>(API_URLS.product, `/api/product-variants/product/${productId}`, {
+    method: 'POST', auth: true, body: JSON.stringify(payload),
+  })
+}
+
+export function updateProductVariant(id: number, payload: ProductVariantPayload) {
+  return apiRequest<ProductVariant>(API_URLS.product, `/api/product-variants/${id}`, {
+    method: 'PUT', auth: true, body: JSON.stringify(payload),
+  })
+}
+
+export function createVariantColor(variantId: number, payload: ProductVariantColorPayload) {
+  return apiRequest<ProductVariantColor>(API_URLS.product, `/api/product-variants/${variantId}/colors`, {
+    method: 'POST', auth: true, body: JSON.stringify(payload),
+  })
+}
+
+export function updateVariantColor(id: number, payload: ProductVariantColorPayload) {
+  return apiRequest<ProductVariantColor>(API_URLS.product, `/api/product-variants/colors/${id}`, {
+    method: 'PUT', auth: true, body: JSON.stringify(payload),
   })
 }
 
