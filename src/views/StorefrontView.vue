@@ -2,29 +2,48 @@
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from "../services/orderApi";
-import { getProducts, type Product } from "../services/productApi";
+import { getProducts, type Product, type ProductVariant, type ProductVariantColor } from "../services/productApi";
 import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
 import { saveSession } from "../services/apiClient";
 import { endChatSession, getChatSession, sendChatMessage, type ChatAction, type ChatMessage } from "../services/chatbotApi";
 import { useAuthStore } from "../stores/authStore";
 import { useLanguage } from "../services/i18n";
+import { translateProductName } from "../services/productTranslations";
 
 const { t, currentLanguage, setLanguage } = useLanguage();
 function toggleLang() {
   setLanguage(currentLanguage.value === 'vi' ? 'en' : 'vi');
 }
 
+const CATEGORY_LABELS: Record<string, { vi: string; en: string }> = {
+  "Gia dụng": { vi: "Gia dụng", en: "Home & Living" },
+  "Phụ kiện": { vi: "Phụ kiện", en: "Accessories" },
+  "Văn phòng": { vi: "Văn phòng", en: "Office Supplies" },
+  "Điện tử": { vi: "Điện tử", en: "Electronics" },
+};
+
 function translateCategory(cat: string): string {
-  if (cat === "Gia dụng" || cat.toLowerCase().includes("gia dụng")) {
-    return t("Gia dụng", "Home");
-  }
-  if (cat === "Phụ kiện" || cat.toLowerCase().includes("phụ kiện")) {
-    return t("Phụ kiện", "Accessories");
-  }
-  if (cat === "Văn phòng" || cat.toLowerCase().includes("văn phòng")) {
-    return t("Văn phòng", "Office");
+  if (!cat) return cat;
+  const normalized = cat.trim();
+  for (const [key, labels] of Object.entries(CATEGORY_LABELS)) {
+    if (normalized === key || normalized.toLowerCase().includes(key.toLowerCase())) {
+      return t(labels.vi, labels.en);
+    }
   }
   return cat;
+}
+
+function productMatchesSearch(product: Product, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  const categoryName = product.categoryName || "";
+  return (
+    product.name.toLowerCase().includes(q) ||
+    translateProductName(product).toLowerCase().includes(q) ||
+    String(product.id).includes(q) ||
+    categoryName.toLowerCase().includes(q) ||
+    translateCategory(categoryName).toLowerCase().includes(q)
+  );
 }
 
 // Product detail specification accordion state flags
@@ -97,21 +116,11 @@ function getEnrichedProductImages(product: Product): string[] {
   return finalImages.slice(0, 4);
 }
 
-function getEnrichedProductImageItems(product: Product) {
-  const productVersion = product.productVersion?.trim()
-    || product.imageItems?.find((item) => item.version?.trim())?.version?.trim()
-    || '';
-
-  return getEnrichedProductImages(product).map((imageUrl) => ({
-    imageUrl,
-    version: productVersion,
-  }));
-}
-
 const enrichedProductDetails = computed(() => {
   if (!selectedProduct.value) return null;
   const p = selectedProduct.value;
   const cat = p.categoryName || '';
+  const enName = translateProductName(p);
   
   let specs = {
     dimensions: t('30 x 30 x 40 cm', '30 x 30 x 40 cm'),
@@ -124,7 +133,7 @@ const enrichedProductDetails = computed(() => {
   
   let overview = t(
     `Sản phẩm ${p.name} sở hữu thiết kế thông minh, hiện đại mang lại sự tiện ích và thoải mái cho không gian của bạn. Được làm từ chất liệu cao cấp bền bỉ, sản phẩm đáp ứng đầy đủ tiêu chuẩn chất lượng nghiêm ngặt nhất.`,
-    `The ${p.name} features a smart, modern design that brings convenience and comfort to your space. Crafted from premium durable materials, it fully meets the most rigorous quality standards.`
+    `The ${enName} features a smart, modern design that brings convenience and comfort to your space. Crafted from premium durable materials, it fully meets the most rigorous quality standards.`
   );
   
   const usage = t(
@@ -148,7 +157,7 @@ const enrichedProductDetails = computed(() => {
     };
     overview = t(
       `Thiết bị gia dụng hiện đại ${p.name} là giải pháp hoàn hảo tối ưu hóa không gian sống của bạn. Công nghệ tiết kiệm điện tối tân cùng kiểu dáng tối giản sang trọng sẽ nâng tầm tiện nghi cho gia đình bạn.`,
-      `The modern home appliance ${p.name} is the perfect solution to optimize your living space. State-of-the-art power saving technology and elegant minimalist styling will elevate your family convenience.`
+      `The modern home appliance ${enName} is the perfect solution to optimize your living space. State-of-the-art power saving technology and elegant minimalist styling will elevate your family convenience.`
     );
   } else if (cat === 'Phụ kiện' || cat.toLowerCase().includes('phụ kiện')) {
     specs = {
@@ -161,7 +170,7 @@ const enrichedProductDetails = computed(() => {
     };
     overview = t(
       `Phụ kiện cao cấp ${p.name} với công nghệ thông minh tích hợp, mang lại phong cách sống hiện đại và năng động. Thiết kế ôm khít tinh tế, bảo vệ tối ưu và tạo điểm nhấn đẳng cấp cho người sở hữu.`,
-      `The premium accessory ${p.name} features integrated smart technology, bringing a modern and active lifestyle. Delicate, form-fitting design provides optimal protection and creates a high-class highlight for the owner.`
+      `The premium accessory ${enName} features integrated smart technology, bringing a modern and active lifestyle. Delicate, form-fitting design provides optimal protection and creates a high-class highlight for the owner.`
     );
   } else if (cat === 'Văn phòng' || cat.toLowerCase().includes('văn phòng')) {
     specs = {
@@ -174,7 +183,7 @@ const enrichedProductDetails = computed(() => {
     };
     overview = t(
       `Văn phòng phẩm tinh tế ${p.name} là nguồn cảm hứng chuyên nghiệp cho ngày làm việc năng suất của bạn. Chất liệu giấy cao cấp chống lóa mắt và vỏ bìa sang trọng mang đến trải nghiệm ghi chép tuyệt vời.`,
-      `The exquisite office stationery ${p.name} is a professional source of inspiration for your productive workday. Anti-glare premium paper and luxurious cover provide a wonderful writing experience.`
+      `The exquisite office stationery ${enName} is a professional source of inspiration for your productive workday. Anti-glare premium paper and luxurious cover provide a wonderful writing experience.`
     );
   }
 
@@ -188,6 +197,8 @@ const enrichedProductDetails = computed(() => {
 
 interface CartLine {
   product: Product;
+  variant: ProductVariant;
+  color: ProductVariantColor;
   quantity: number;
 }
 
@@ -196,6 +207,8 @@ type SortOption = "featured" | "price-asc" | "price-desc" | "name";
 const products = ref<Product[]>([]);
 const cart = ref<CartLine[]>([]);
 const search = ref("");
+const showSearchDropdown = ref(false);
+const heroSearchRef = ref<HTMLElement | null>(null);
 const category = ref("");
 const sort = ref<SortOption>("featured");
 const loading = ref(true);
@@ -220,12 +233,12 @@ const chatbotError = ref("");
 const chatbotInput = ref("");
 const chatbotMessages = ref<ChatMessage[]>([]);
 const chatbotActions = ref<ChatAction[]>([]);
-const chatbotSuggestions = [
-  "Sản phẩm nào đang khuyến mãi?",
-  "Tôi có đơn hàng nào đang xử lý?",
-  "Hạng thành viên của tôi là gì?",
-  "Gợi ý sản phẩm còn hàng dưới 500.000đ",
-];
+const chatbotSuggestions = computed(() => [
+  t("Sản phẩm nào đang khuyến mãi?", "Which products are on sale?"),
+  t("Tôi có đơn hàng nào đang xử lý?", "Do I have any orders being processed?"),
+  t("Hạng thành viên của tôi là gì?", "What is my membership tier?"),
+  t("Gợi ý sản phẩm còn hàng dưới 500.000đ", "Suggest in-stock products under 500,000đ"),
+]);
 
 const showProfileModal = ref(false);
 const showOrdersModal = ref(false);
@@ -443,6 +456,33 @@ const selectedCustomerOrder = computed(() => {
 const selectedProduct = ref<Product | null>(null);
 const selectedImageIndex = ref(0);
 const productDetailQuantity = ref(1);
+const selectedVariantId = ref<number | null>(null);
+const selectedColorId = ref<number | null>(null);
+const selectedVariant = computed(() => selectedProduct.value?.variants
+  .find((variant) => variant.id === selectedVariantId.value) ?? null);
+const selectableColors = computed(() => selectedVariant.value?.colors ?? []);
+const selectedColor = computed(() => selectableColors.value
+  .find((color) => color.id === selectedColorId.value) ?? null);
+const selectedStock = computed(() => selectedVariant.value && selectedColor.value
+  ? Math.min(selectedVariant.value.quantity, selectedColor.value.quantity)
+  : 0);
+const selectedDetailImages = computed(() => {
+  const images = selectedColor.value?.images.map((image) => image.imageUrl).filter(Boolean) ?? [];
+  return images.length ? images : selectedProduct.value ? getEnrichedProductImages(selectedProduct.value) : [];
+});
+
+watch(selectedVariantId, () => {
+  const firstColor = selectedVariant.value?.colors.find((color) => color.isActive && color.quantity > 0)
+    ?? selectedVariant.value?.colors.find((color) => color.isActive);
+  selectedColorId.value = firstColor?.id ?? null;
+  selectedImageIndex.value = 0;
+  productDetailQuantity.value = 1;
+});
+
+watch(selectedColorId, () => {
+  selectedImageIndex.value = 0;
+  productDetailQuantity.value = Math.min(productDetailQuantity.value, Math.max(selectedStock.value, 1));
+});
 
 const categories = computed(() =>
   [
@@ -461,16 +501,20 @@ watch(showOnlySales, () => {
   currentPage.value = 1;
 });
 
+const searchSuggestions = computed(() => {
+  const query = search.value.trim();
+  if (!query) return [];
+  return products.value
+    .filter((product) => productMatchesSearch(product, query))
+    .slice(0, 8);
+});
+
 const visibleProducts = computed(() => {
-  const query = search.value.trim().toLowerCase();
+  const query = search.value.trim();
   const filtered = products.value.filter((product) => {
     const matchesCategory =
       !category.value || product.categoryName === category.value;
-    const matchesSearch =
-      !query ||
-      product.name.toLowerCase().includes(query) ||
-      String(product.id).includes(query) ||
-      product.categoryName.toLowerCase().includes(query);
+    const matchesSearch = productMatchesSearch(product, query);
     const matchesSales =
       !showOnlySales.value || (product.salePrice && product.salePrice < product.originalPrice);
     return matchesCategory && matchesSearch && matchesSales;
@@ -491,7 +535,7 @@ const cartCount = computed(() =>
 );
 const cartTotal = computed(() =>
   cart.value.reduce(
-    (sum, line) => sum + line.product.sellingPrice * line.quantity,
+    (sum, line) => sum + line.variant.sellingPrice * line.quantity,
     0,
   ),
 );
@@ -505,11 +549,22 @@ const customerInitials = computed(() => {
   return `${first[0] ?? "K"}${second[0] ?? "H"}`.toUpperCase();
 });
 const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
-const paidCustomerOrders = computed(() =>
-  customerOrders.value.filter((order) =>
-    ["Paid", "Processing", "Shipped", "Completed"].includes(order.status),
-  ),
+const purchasedCustomerOrders = computed(() =>
+  customerOrders.value.filter((order) => {
+    const isPayOs = (order.paymentMethod || "Cash").toLowerCase() === "payos";
+    return isPayOs
+      ? ["Paid", "Processing", "Shipped", "Completed"].includes(order.status)
+      : order.status === "Completed";
+  }),
 );
+const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
+const displayedCustomerTierLabel = computed(() => {
+  const count = totalPurchasedOrderCount.value;
+  if (count >= 100) return t("Thành viên Kim cương", "Diamond Member");
+  if (count >= 60) return t("Thành viên Vàng", "Gold Member");
+  if (count >= 30) return t("Thành viên Bạc", "Silver Member");
+  return t("Thành viên thường", "Standard Member");
+});
 
 async function loadProducts() {
   loading.value = true;
@@ -718,6 +773,11 @@ function handleChatAction(action: ChatAction) {
 // Open product detail modal for quick view
 function openProductDetail(product: Product) {
   selectedProduct.value = product;
+  const firstVariant = product.variants.find((variant) => variant.isActive && variant.quantity > 0)
+    ?? product.variants.find((variant) => variant.isActive);
+  selectedVariantId.value = firstVariant?.id ?? null;
+  selectedColorId.value = firstVariant?.colors.find((color) => color.isActive && color.quantity > 0)?.id
+    ?? firstVariant?.colors.find((color) => color.isActive)?.id ?? null;
   selectedImageIndex.value = 0;
   productDetailQuantity.value = 1;
   isDetailOverviewOpen.value = true;
@@ -744,18 +804,31 @@ function closeProductDetail() {
   }
 }
 
+function selectSearchResult(product: Product) {
+  search.value = "";
+  showSearchDropdown.value = false;
+  openProductDetail(product);
+}
+
+function handleHeroSearchClickOutside(event: MouseEvent) {
+  if (heroSearchRef.value && !heroSearchRef.value.contains(event.target as Node)) {
+    showSearchDropdown.value = false;
+  }
+}
+
 // Add to cart from product detail modal
 function addToCartFromDetail() {
-  if (!selectedProduct.value) return;
-  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id);
+  if (!selectedProduct.value || !selectedVariant.value || !selectedColor.value || selectedStock.value <= 0) return;
+  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id
+    && item.variant.id === selectedVariant.value!.id && item.color.id === selectedColor.value!.id);
   const quantity = productDetailQuantity.value;
   
   if (line) {
-    if (line.quantity + quantity <= selectedProduct.value.quantity) {
+    if (line.quantity + quantity <= selectedStock.value) {
       line.quantity += quantity;
     }
   } else {
-    cart.value.push({ product: selectedProduct.value, quantity });
+    cart.value.push({ product: selectedProduct.value, variant: selectedVariant.value, color: selectedColor.value, quantity });
   }
   
   // Animate cart button
@@ -769,16 +842,19 @@ function addToCartFromDetail() {
 
 // Direct add to cart (triggered from add button, not modal)
 function quickAddToCart(product: Product) {
-  if (product.quantity <= 0) return;
+  const variant = product.variants.find((item) => item.isActive && item.quantity > 0);
+  const color = variant?.colors.find((item) => item.isActive && item.quantity > 0);
+  if (!variant || !color) return;
   
-  const line = cart.value.find((item) => item.product.id === product.id);
+  const line = cart.value.find((item) => item.product.id === product.id
+    && item.variant.id === variant.id && item.color.id === color.id);
   
   if (line) {
-    if (line.quantity + 1 <= product.quantity) {
+    if (line.quantity + 1 <= Math.min(variant.quantity, color.quantity)) {
       line.quantity += 1;
     }
   } else {
-    cart.value.push({ product, quantity: 1 });
+    cart.value.push({ product, variant, color, quantity: 1 });
   }
   
   // Animate cart button
@@ -789,11 +865,11 @@ function quickAddToCart(product: Product) {
 }
 
 function changeQuantity(line: CartLine, quantity: number) {
-  line.quantity = Math.max(1, Math.min(quantity || 1, line.product.quantity));
+  line.quantity = Math.max(1, Math.min(quantity || 1, Math.min(line.variant.quantity, line.color.quantity)));
 }
 
-function removeLine(productId: number) {
-  cart.value = cart.value.filter((line) => line.product.id !== productId);
+function removeLine(lineToRemove: CartLine) {
+  cart.value = cart.value.filter((line) => line !== lineToRemove);
 }
 
 function clearFilters() {
@@ -815,7 +891,7 @@ const customerForm = ref({
 });
 
 // Countdown Timer campaigns
-const storewideCountdownText = ref("");
+const storewideCountdownDiff = ref(0);
 
 const getPromoTargetDate = () => {
   const key = "storewide-promo-end-time";
@@ -835,23 +911,66 @@ const getPromoTargetDate = () => {
 
 const updateStorewideCountdown = () => {
   const target = getPromoTargetDate();
-  const diff = target.getTime() - Date.now();
-  if (diff <= 0) {
-    storewideCountdownText.value = t("Đã kết thúc", "Ended");
-    return;
-  }
+  storewideCountdownDiff.value = target.getTime() - Date.now();
+};
+
+const storewideCountdownText = computed(() => {
+  const diff = storewideCountdownDiff.value;
+  if (diff <= 0) return t("Đã kết thúc", "Ended");
+
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
   const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
   const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
   const seconds = Math.floor((diff % (60 * 1000)) / 1000);
 
-  const dStr = days > 0 ? `${days} days ` : "";
+  const dayLabel =
+    days > 0
+      ? days === 1
+        ? t("1 ngày ", "1 day ")
+        : t(`${days} ngày `, `${days} days `)
+      : "";
   const hStr = String(hours).padStart(2, "0");
   const mStr = String(minutes).padStart(2, "0");
   const sStr = String(seconds).padStart(2, "0");
 
-  storewideCountdownText.value = `${dStr}${hStr}:${mStr}:${sStr}`;
-};
+  return `${dayLabel}${hStr}:${mStr}:${sStr}`;
+});
+
+function promoBadgeLabel(product: Product | null): string {
+  if (product?.salePrice && product?.originalPrice) {
+    const percent = Math.round((1 - product.salePrice / product.originalPrice) * 100);
+    return t(`GIẢM SỐC ${percent}%`, `HOT DEAL -${percent}%`);
+  }
+  return t("GIẢM SỐC 50%", "FLASH SALE 50%");
+}
+
+function promoTitleLabel(product: Product | null): string {
+  if (!product) {
+    return t(
+      "SIÊU KHUYẾN MÃI MÙA HÈ - SĂN SALE TOÀN SÀN",
+      "SUMMER MEGA SALE - STOREWIDE SAVINGS",
+    );
+  }
+  const displayName = translateProductName(product).toUpperCase();
+  return t(
+    `SIÊU KHUYẾN MÃI: ${displayName}`,
+    `MEGA DEAL: ${displayName}`,
+  );
+}
+
+function promoDescriptionLabel(product: Product | null): string {
+  if (product?.salePrice) {
+    const displayName = translateProductName(product);
+    return t(
+      `Sở hữu ngay ${displayName} với giá ưu đãi chỉ còn ${formatCurrency(product.salePrice)}. Số lượng có hạn!`,
+      `Get ${displayName} now for only ${formatCurrency(product.salePrice)}. Limited stock!`,
+    );
+  }
+  return t(
+    "Cơ hội tốt nhất để sở hữu sản phẩm cao cấp với giá ưu đãi cực hấp dẫn toàn sàn!",
+    "Your best chance to own premium products at unbeatable storewide prices!",
+  );
+}
 
 const productCountdownText = ref("");
 let productTimerId: ReturnType<typeof setInterval> | null = null;
@@ -910,6 +1029,8 @@ async function submitOrder() {
       address: customerForm.value.address,
       orderItems: cart.value.map((item) => ({
         productId: item.product.id,
+        productVariantId: item.variant.id,
+        productVariantColorId: item.color.id,
         quantity: item.quantity,
       })),
     });
@@ -972,19 +1093,19 @@ const slides = computed(() => [
     image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
     title: t("Văn phòng phẩm cao cấp", "Premium Stationery"),
     subtitle: t("Nâng tầm hiệu suất làm việc với bộ sưu tập sổ tay và bút ký tinh tế.", "Elevate your workspace performance with premium notebooks and fine pens."),
-    category: t("Văn phòng", "Office")
+    categoryKey: "Văn phòng",
   },
   {
     image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1200",
     title: t("Phụ kiện thông minh", "Smart Accessories"),
     subtitle: t("Thiết bị công nghệ chính xác, đồng bộ hóa phong cách sống hiện đại.", "High precision tech devices, synchronizing with your modern lifestyle."),
-    category: t("Phụ kiện", "Accessories")
+    categoryKey: "Phụ kiện",
   },
   {
     image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=1200",
     title: t("Gia dụng tinh tế", "Minimalist Home Appliances"),
     subtitle: t("Không gian sống ấm cúng với các thiết bị gia dụng tối giản, hiện đại.", "Warm cozy living spaces with minimalist, modern home appliances."),
-    category: t("Gia dụng", "Home")
+    categoryKey: "Gia dụng",
   }
 ]);
 
@@ -1051,14 +1172,21 @@ const categoryBanner = computed(() => {
   }
   if (cat === "Văn phòng" || cat.toLowerCase().includes("văn phòng")) {
     return {
-      title: t("Văn phòng phẩm", "Office Stationery"),
+      title: t("Văn phòng phẩm", "Office Supplies"),
       desc: t("Khơi nguồn cảm hứng làm việc chuyên nghiệp mỗi ngày.", "Inspiring professional work every day."),
       image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200"
     };
   }
+  if (cat === "Điện tử" || cat.toLowerCase().includes("điện tử")) {
+    return {
+      title: t("Thiết bị Điện tử", "Electronics"),
+      desc: t("Công nghệ hiện đại, chất lượng cao cho cuộc sống số.", "Modern technology and premium quality for your digital life."),
+      image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&q=80&w=1200"
+    };
+  }
   return {
-    title: cat || t("Cửa hàng bán lẻ", "Retail Store"),
-    desc: t("Bộ sưu tập sản phẩm ", "Collection of ") + (cat || t("chất lượng cao", "high quality")) + ".",
+    title: translateCategory(cat) || t("Cửa hàng bán lẻ", "Retail Store"),
+    desc: t("Khám phá bộ sưu tập sản phẩm chất lượng cao trong danh mục này.", "Explore our high-quality product collection in this category."),
     image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1200"
   };
 });
@@ -1084,6 +1212,7 @@ onMounted(() => {
   loadProducts();
   startSlideTimer();
   startPromoSlideTimer();
+  document.addEventListener("click", handleHeroSearchClickOutside);
 
   // Start storewide countdown timer
   updateStorewideCountdown();
@@ -1099,6 +1228,7 @@ watch(
 onUnmounted(() => {
   stopSlideTimer();
   stopPromoSlideTimer();
+  document.removeEventListener("click", handleHeroSearchClickOutside);
   if (storewideTimerId) clearInterval(storewideTimerId);
   if (productTimerId) clearInterval(productTimerId);
 });
@@ -1114,7 +1244,7 @@ onUnmounted(() => {
     <header class="store-header">
       <RouterLink class="store-brand" to="/">
         <span class="brand-mark"><img src="/icon.png" alt="Smart Sale Store"></span>
-        <span class="brand-copy"><strong>Smart Sale Store</strong><small>Smart store</small></span>
+        <span class="brand-copy"><strong>Smart Sale Store</strong><small>{{ t('Cửa hàng thông minh', 'Smart Store') }}</small></span>
       </RouterLink>
 
       <nav class="main-nav">
@@ -1133,9 +1263,14 @@ onUnmounted(() => {
 
       <div class="header-right">
         <!-- Language Switcher -->
-        <button class="lang-toggle-btn" type="button" @click="toggleLang" :title="t('Đổi ngôn ngữ', 'Switch Language')">
+        <button
+          class="lang-toggle-btn"
+          type="button"
+          @click="toggleLang"
+          :title="t('Đang dùng Tiếng Việt — bấm để đổi sang English', 'Using English — click to switch to Vietnamese')"
+        >
           <i class="pi pi-globe" />
-          <span>{{ currentLanguage === 'vi' ? 'EN' : 'VI' }}</span>
+          <span>{{ currentLanguage === 'vi' ? 'VI' : 'EN' }}</span>
         </button>
 
         <RouterLink v-if="!isCustomerLoggedIn" class="customer-link icon-only" to="/customer-login" :title="t('Tài khoản', 'Account')">
@@ -1158,8 +1293,8 @@ onUnmounted(() => {
             <template v-else>
               <div class="customer-tier-card">
                 <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
-                <strong>{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
-                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
+                <strong>{{ displayedCustomerTierLabel }}</strong>
+                <span>{{ totalPurchasedOrderCount }} {{ t('đơn đã mua', 'purchased orders') }}</span>
               </div>
               <div class="customer-panel-buttons">
                 <button class="panel-btn" type="button" @click="openProfileModal">
@@ -1194,6 +1329,55 @@ onUnmounted(() => {
         <div class="hero-copy">
           <span class="eyebrow">{{ t('BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN', 'CURATED COLLECTION') }}</span>
           <h1>{{ t('Mua sắm tinh gọn.', 'Minimalist Shopping.') }}<br /><em class="fs-6">{{ t('Chọn lựa thông minh.', 'Smart Choices.') }}</em></h1>
+
+          <div ref="heroSearchRef" class="hero-search-wrap">
+            <div class="hero-search-box">
+              <i class="pi pi-search" />
+              <input
+                v-model="search"
+                type="search"
+                :placeholder="t('Tìm sản phẩm theo tên, mã hoặc danh mục...', 'Search by name, ID or category...')"
+                autocomplete="off"
+                @focus="showSearchDropdown = true"
+                @input="showSearchDropdown = true"
+              />
+              <button
+                v-if="search"
+                type="button"
+                class="hero-search-clear"
+                :aria-label="t('Xóa tìm kiếm', 'Clear search')"
+                @click="search = ''; showSearchDropdown = false"
+              >
+                <i class="pi pi-times" />
+              </button>
+            </div>
+            <div v-if="showSearchDropdown && search.trim()" class="hero-search-dropdown">
+              <template v-if="searchSuggestions.length">
+                <button
+                  v-for="product in searchSuggestions"
+                  :key="product.id"
+                  type="button"
+                  class="hero-search-result"
+                  @click="selectSearchResult(product)"
+                >
+                  <div class="search-result-thumb">
+                    <img v-if="product.imageUrl" :src="product.imageUrl" :alt="translateProductName(product)" />
+                    <i v-else class="pi pi-box" />
+                  </div>
+                  <div class="search-result-info">
+                    <strong>{{ translateProductName(product) }}</strong>
+                    <small>{{ translateCategory(product.categoryName || '') }} · {{ formatCurrency(product.sellingPrice) }}</small>
+                  </div>
+                  <i class="pi pi-arrow-right search-result-arrow" />
+                </button>
+              </template>
+              <div v-else class="hero-search-empty">
+                <i class="pi pi-search" />
+                <span>{{ t('Không tìm thấy sản phẩm phù hợp', 'No matching products found') }}</span>
+              </div>
+            </div>
+          </div>
+
           <div class="hero-actions">
             <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
               {{ t('Xem sản phẩm', 'Explore Products') }} <i class="pi pi-arrow-right" />
@@ -1214,7 +1398,7 @@ onUnmounted(() => {
           </div>
           <div class="floating-card top-card">
             <i class="pi pi-sync" />
-            <span><strong>{{ t('Real-time', 'Real-time') }}</strong><small>{{ t('Đồng bộ tồn kho', 'Stock synchronized') }}</small></span>
+            <span><strong>{{ t('Thời gian thực', 'Real-time') }}</strong><small>{{ t('Đồng bộ tồn kho', 'Stock synchronized') }}</small></span>
           </div>
           <div class="floating-card bottom-card">
             <i class="pi pi-shield" />
@@ -1233,10 +1417,10 @@ onUnmounted(() => {
             :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.45)), url(${slide.image})` }"
           >
             <div class="slide-content">
-              <span class="slide-badge">{{ slide.category }}</span>
+              <span class="slide-badge">{{ translateCategory(slide.categoryKey) }}</span>
               <h2>{{ slide.title }}</h2>
               <p>{{ slide.subtitle }}</p>
-              <button class="slide-btn" type="button" @click="category = slide.category; showAllProducts = false;">
+              <button class="slide-btn" type="button" @click="category = slide.categoryKey; showAllProducts = false;">
                 {{ t('Khám phá ngay', 'Explore now') }} <i class="pi pi-arrow-right" />
               </button>
             </div>
@@ -1307,18 +1491,14 @@ onUnmounted(() => {
             <div class="promo-flash-content">
               <div class="promo-flash-text">
                 <span class="promo-badge">
-                  <i class="pi pi-bolt" /> 
-                  {{ (product && product.salePrice && product.originalPrice) ? t(`GIẢM SỐC ${Math.round((1 - product.salePrice / product.originalPrice) * 100)}%`, `HOT DEAL -${Math.round((1 - product.salePrice / product.originalPrice) * 100)}%`) : t('GIẢM SỐC 50%', '50% FLASH SALE') }}
+                  <i class="pi pi-bolt" />
+                  {{ promoBadgeLabel(product) }}
                 </span>
-                <h2>
-                  {{ product ? t(`SIÊU CAMPAIGN: ${product.name.toUpperCase()}`, `MEGA CAMPAIGN: ${product.name.toUpperCase()}`) : t('SIÊU KHUYẾN MÃI MÙA HÈ - ĐỒNG GIÁ SĂN SALE', 'SUMMER FLASHSALE - HOT SAVINGS') }}
-                </h2>
-                <p>
-                  {{ (product && product.salePrice) ? t(`Sở hữu ngay ${product.name} với giá ưu đãi cực sốc chỉ còn ${formatCurrency(product.salePrice)}. Số lượng có hạn!`, `Own ${product.name} now for only ${formatCurrency(product.salePrice)}. Limited stock!`) : t('Cơ hội tốt nhất để sở hữu những sản phẩm cao cấp với giá ưu đãi cực hấp dẫn toàn sàn!', 'Best opportunity to claim top products at a fraction of their original prices!') }}
-                </p>
+                <h2>{{ promoTitleLabel(product) }}</h2>
+                <p>{{ promoDescriptionLabel(product) }}</p>
               </div>
               <div class="promo-flash-timer-wrapper" @click.stop>
-                <span>{{ t('Thời gian còn lại:', 'Time remaining:') }}</span>
+                <span>{{ t('Thời gian còn lại', 'Time remaining') }}</span>
                 <div class="countdown-clock">
                   <strong>{{ storewideCountdownText }}</strong>
                 </div>
@@ -1347,10 +1527,6 @@ onUnmounted(() => {
               <h2>{{ t('Sản phẩm nổi bật', 'Featured Products') }}</h2>
               <p>{{ t('Những sản phẩm được khách hàng lựa chọn nhiều nhất.', 'The most selected items by our customers.') }}</p>
             </div>
-            <div class="search-box">
-              <i class="pi pi-search" />
-              <input v-model="search" type="search" :placeholder="t('Tìm tên, mã hoặc danh mục...', 'Search name, code or category...')" />
-            </div>
           </div>
           
           <div v-if="loading" class="product-grid" style="margin-top: 30px;">
@@ -1371,7 +1547,7 @@ onUnmounted(() => {
                   <div class="ribbon low-stock">{{ t('Sắp hết', 'Low Stock') }}</div>
                 </div>
                 <span v-if="product.quantity <= 0" class="stock-badge sold-out">{{ t('Hết hàng', 'Out of stock') }}</span>
-                <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
+                <img v-if="product.imageUrl" :src="product.imageUrl" :alt="translateProductName(product)" />
                 <div v-else class="image-placeholder">
                   <i class="pi pi-box" />
                   <small>ID #{{ product.id }}</small>
@@ -1379,10 +1555,10 @@ onUnmounted(() => {
               </div>
               <div class="product-content">
                 <div class="product-labels">
-                  <span>{{ product.categoryName || t('Sản phẩm', 'Product') }}</span>
+                  <span>{{ translateCategory(product.categoryName || '') || t('Sản phẩm', 'Product') }}</span>
                   <small>ID #{{ product.id }}</small>
                 </div>
-                <h3>{{ product.name }}</h3>
+                <h3>{{ translateProductName(product) }}</h3>
                 <div class="product-footer">
                   <div>
                     <del v-if="product.salePrice && product.salePrice < product.originalPrice">{{ formatCurrency(product.originalPrice) }}</del>
@@ -1407,7 +1583,7 @@ onUnmounted(() => {
           <div class="section-heading">
             <div>
               <span class="eyebrow">{{ t('DANH MỤC SẢN PHẨM', 'PRODUCT CATALOG') }}</span>
-              <h2>{{ category || t('Tất cả sản phẩm', 'All Products') }}</h2>
+              <h2>{{ category ? translateCategory(category) : t('Tất cả sản phẩm', 'All Products') }}</h2>
               <p>{{ visibleProducts.length }} {{ t('sản phẩm phù hợp', 'matching products') }}</p>
             </div>
             <div class="search-box">
@@ -1470,7 +1646,7 @@ onUnmounted(() => {
                     <div class="ribbon low-stock">{{ t('Sắp hết', 'Low Stock') }}</div>
                   </div>
                   <span v-if="product.quantity <= 0" class="stock-badge sold-out">{{ t('Hết hàng', 'Out of stock') }}</span>
-                  <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
+                  <img v-if="product.imageUrl" :src="product.imageUrl" :alt="translateProductName(product)" />
                   <div v-else class="image-placeholder">
                     <i class="pi pi-box" />
                     <small>ID #{{ product.id }}</small>
@@ -1478,10 +1654,10 @@ onUnmounted(() => {
                 </div>
                 <div class="product-content">
                   <div class="product-labels">
-                    <span>{{ product.categoryName || t('Sản phẩm', 'Product') }}</span>
+                    <span>{{ translateCategory(product.categoryName || '') || t('Sản phẩm', 'Product') }}</span>
                     <small>ID #{{ product.id }}</small>
                   </div>
-                  <h3>{{ product.name }}</h3>
+                  <h3>{{ translateProductName(product) }}</h3>
                   <div class="product-footer">
                     <div>
                       <del v-if="product.salePrice && product.salePrice < product.originalPrice">{{ formatCurrency(product.originalPrice) }}</del>
@@ -1540,7 +1716,7 @@ onUnmounted(() => {
           </div>
           <div class="profile-detail-row">
             <strong>{{ t('Hạng thành viên:', 'Membership Tier:') }}</strong>
-            <span class="badge-tier">{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</span>
+            <span class="badge-tier">{{ displayedCustomerTierLabel }}</span>
           </div>
         </div>
 
@@ -1730,7 +1906,7 @@ onUnmounted(() => {
             <button 
               type="button" 
               class="carousel-nav-btn prev-btn" 
-              @click="prevImage(getEnrichedProductImages(selectedProduct))"
+              @click="prevImage(selectedDetailImages)"
               :aria-label="t('Ảnh trước', 'Previous image')"
             >
               <i class="pi pi-chevron-left" />
@@ -1739,13 +1915,13 @@ onUnmounted(() => {
             <img 
               v-if="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
               :src="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
-              :alt="selectedProduct.name"
+              :alt="translateProductName(selectedProduct)"
               class="main-image-img"
             />
             <button 
               type="button" 
               class="carousel-nav-btn next-btn" 
-              @click="nextImage(getEnrichedProductImages(selectedProduct))"
+              @click="nextImage(selectedDetailImages)"
               :aria-label="t('Ảnh sau', 'Next image')"
             >
               <i class="pi pi-chevron-right" />
@@ -1755,38 +1931,50 @@ onUnmounted(() => {
           <!-- Thumbnails -->
           <div class="thumbnails">
             <button 
-              v-for="(image, idx) in getEnrichedProductImageItems(selectedProduct)" 
+              v-for="(image, idx) in selectedDetailImages" 
               :key="idx"
               type="button"
               :class="{ active: idx === selectedImageIndex }"
               @click="selectedImageIndex = idx"
               :aria-label="`Image ${idx + 1}`"
             >
-              <img :src="image.imageUrl" :alt="`Product image ${idx + 1}`" />
+              <img :src="image" :alt="`Product image ${idx + 1}`" />
             </button>
           </div>
         </div>
 
         <!-- Right column: Product Info & Actions -->
         <div class="detail-info">
-          <div class="detail-header">
-            <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
-            <div class="detail-title-row">
-              <h1 class="detail-title">{{ selectedProduct.name }}</h1>
-              <span
-                v-if="selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version"
-                class="product-version-badge"
-              >
-                {{ selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version }}
-              </span>
-            </div>
+        <div class="detail-header">
+          <span class="detail-category">
+            {{
+              translateCategory(selectedProduct.categoryName || '') ||
+              t('Sản phẩm', 'Product')
+            }}
+          </span>
+
+          <div class="detail-title-row">
+            <h1 class="detail-title">
+              {{ translateProductName(selectedProduct) }}
+            </h1>
+
+                <span
+          v-if="selectedVariant"
+          class="product-version-badge"
+        >
+          {{ selectedVariant.name }}
+        </span>
+          </div>
+        </div>
+```
+
 
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
               <span class="product-id">{{ t('Mã ID:', 'Product ID:') }} <strong>#{{ selectedProduct.id }}</strong></span>
-              <div v-if="selectedProduct.quantity > 0" class="stock-status in-stock">
+              <div v-if="selectedStock > 0" class="stock-status in-stock">
                 <i class="pi pi-check-circle" />
-                <span>{{ selectedProduct.quantity <= selectedProduct.reserveStock ? t(`Sắp hết (Còn ${selectedProduct.quantity})`, `Low stock (${selectedProduct.quantity} left)`) : t(`Còn hàng (${selectedProduct.quantity} sản phẩm)`, `In stock (${selectedProduct.quantity} products)`) }}</span>
+                <span>{{ selectedStock <= (selectedVariant?.reserveStock ?? 0) ? t(`Sắp hết (Còn ${selectedStock})`, `Low stock (${selectedStock} left)`) : t(`Còn hàng (${selectedStock} sản phẩm)`, `In stock (${selectedStock} products)`) }}</span>
               </div>
               <div class="stock-status out-of-stock" v-else>
                 <i class="pi pi-times-circle" />
@@ -1799,21 +1987,40 @@ onUnmounted(() => {
           <div class="detail-price">
             <span class="price-label">{{ t('Giá bán', 'Price') }}</span>
             <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-              <del style="color: var(--muted); font-size: 16px;" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
-                {{ formatCurrency(selectedProduct.originalPrice) }}
+              <del style="color: var(--muted); font-size: 16px;" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
+                {{ formatCurrency(selectedVariant.originalPrice) }}
               </del>
-              <strong class="price-value" :style="{ color: selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice ? 'var(--teal)' : 'inherit' }">
-                {{ formatCurrency(selectedProduct.sellingPrice) }}
+              <strong class="price-value" :style="{ color: selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice ? 'var(--teal)' : 'inherit' }">
+                {{ formatCurrency(selectedVariant?.sellingPrice ?? selectedProduct.sellingPrice) }}
               </strong>
-              <span class="detail-discount-percent-badge" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
-                {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedProduct.salePrice / selectedProduct.originalPrice) * 100) }}%
+              <span class="detail-discount-percent-badge" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
+                {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedVariant.salePrice / selectedVariant.originalPrice) * 100) }}%
               </span>
+            </div>
+          </div>
+
+          <div class="variant-picker">
+            <label>{{ t('Phiên bản', 'Version') }}</label>
+            <div class="variant-options">
+              <button v-for="variant in selectedProduct.variants" :key="variant.id" type="button"
+                :class="{ active: variant.id === selectedVariantId }"
+                :disabled="!variant.isActive || variant.quantity <= 0"
+                @click="selectedVariantId = variant.id">{{ variant.name }}</button>
+            </div>
+            <label>{{ t('Màu sắc', 'Color') }}</label>
+            <div class="variant-options">
+              <button v-for="color in selectableColors" :key="color.id" type="button"
+                :class="{ active: color.id === selectedColorId }"
+                :disabled="!color.isActive || color.quantity <= 0"
+                @click="selectedColorId = color.id">
+                <span v-if="color.hexCode" class="color-dot" :style="{ backgroundColor: color.hexCode }" />{{ color.name }}
+              </button>
             </div>
           </div>
           
           <!-- Detailed Countdown Deal for product -->
           <div class="detail-deal-countdown" v-if="selectedProduct.salePrice && selectedProduct.salePrice < selectedProduct.originalPrice">
-            <i class="pi pi-bolt" /> <span>{{ t('Ưu đãi Flash Deal kết thúc sau:', 'Flash Deal expires in:') }}</span>
+            <i class="pi pi-bolt" /> <span>{{ t('Ưu đãi kết thúc sau', 'Deal ends in') }}</span>
             <strong>{{ productCountdownText }}</strong>
           </div>
 
@@ -1833,12 +2040,12 @@ onUnmounted(() => {
                 v-model.number="productDetailQuantity"
                 type="number"
                 min="1"
-                :max="selectedProduct.quantity"
+                :max="selectedStock"
               />
               <button 
                 type="button"
                 :aria-label="t('Tăng số lượng', 'Increase quantity')"
-                @click="productDetailQuantity = Math.min(selectedProduct.quantity, productDetailQuantity + 1)"
+                @click="productDetailQuantity = Math.min(selectedStock, productDetailQuantity + 1)"
               >
                 <i class="pi pi-plus" />
               </button>
@@ -1850,7 +2057,7 @@ onUnmounted(() => {
             <button 
               type="button" 
               class="btn-add-to-cart" 
-              :disabled="selectedProduct.quantity <= 0"
+              :disabled="selectedStock <= 0 || !selectedVariant || !selectedColor"
               @click="addToCartFromDetail"
             >
               <i class="pi pi-shopping-bag" />
@@ -1970,14 +2177,14 @@ onUnmounted(() => {
       </div>
 
       <div v-else class="cart-body">
-        <div v-for="line in cart" :key="line.product.id" class="cart-line">
+        <div v-for="line in cart" :key="`${line.product.id}-${line.variant.id}-${line.color.id}`" class="cart-line">
           <div class="cart-image">
-            <img v-if="line.product.imageUrl" :src="line.product.imageUrl" :alt="line.product.name" />
+            <img v-if="line.product.imageUrl" :src="line.product.imageUrl" :alt="translateProductName(line.product)" />
             <i v-else class="pi pi-box" />
           </div>
           <div class="cart-info">
-            <small>{{ line.product.categoryName }}</small>
-            <strong>{{ line.product.name }}</strong>
+            <small>{{ translateCategory(line.product.categoryName || '') }}</small>
+            <strong>{{ translateProductName(line.product) }}</strong>
             <span>{{ formatCurrency(line.product.sellingPrice) }}</span>
             <div class="quantity-control">
               <button type="button" :aria-label="t('Giảm số lượng', 'Decrease quantity')" @click="changeQuantity(line, line.quantity - 1)">
@@ -1987,7 +2194,7 @@ onUnmounted(() => {
                 :value="line.quantity"
                 type="number"
                 min="1"
-                :max="line.product.quantity"
+                :max="Math.min(line.variant.quantity, line.color.quantity)"
                 @input="changeQuantity(line, Number(($event.target as HTMLInputElement).value))"
               />
               <button type="button" :aria-label="t('Tăng số lượng', 'Increase quantity')" @click="changeQuantity(line, line.quantity + 1)">
@@ -1995,7 +2202,7 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-          <button class="remove-line" type="button" :aria-label="t('Xóa sản phẩm', 'Remove item')" @click="removeLine(line.product.id)">
+          <button class="remove-line" type="button" :aria-label="t('Xóa sản phẩm', 'Remove item')" @click="removeLine(line)">
             <i class="pi pi-trash" />
           </button>
         </div>
@@ -2006,7 +2213,7 @@ onUnmounted(() => {
           <span>{{ t('Tạm tính', 'Subtotal') }}</span><strong>{{ formatCurrency(cartTotal) }}</strong>
         </div>
         <p><i class="pi pi-info-circle" /> {{ t('Bạn sẽ xác nhận thông tin giao hàng trước khi đặt đơn.', 'You will confirm shipping details before placing the order.') }}</p>
-        <button type="button" @click="openCheckoutModal">
+        <button type="button" class="cart-checkout-btn" @click="openCheckoutModal">
           {{ t('Mua hàng', 'Buy Now') }} <i class="pi pi-arrow-right" />
         </button>
       </div>
@@ -2213,7 +2420,6 @@ onUnmounted(() => {
         <span class="system-status"><i class="pi pi-circle-fill" /> {{ t('Hệ thống trực tuyến', 'System Online') }}</span>
       </div>
     </footer>
-  </div>
 </template>
 
 <style scoped>
@@ -2267,6 +2473,109 @@ onUnmounted(() => {
 }
 .store button {
   font-family: inherit;
+}
+/* Override global admin button styles inside storefront */
+.store button:not(.p-button):not(.sidebar-backdrop) {
+  border: unset;
+  border-radius: unset;
+  background: unset;
+  color: unset;
+  font-weight: unset;
+  min-height: unset;
+  padding: unset;
+  box-shadow: unset;
+}
+.store button:not(.p-button):not(.sidebar-backdrop):hover {
+  border-color: unset;
+  background: unset;
+}
+.store .cart-footer > button,
+.store .cart-checkout-btn,
+.store .btn-add-to-cart,
+.store .submit-btn,
+.store .pay-button {
+  min-height: 62px;
+  padding: 0 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  color: #fff !important;
+  background: var(--teal) !important;
+  border: 0 !important;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.store .cart-footer > button:hover,
+.store .cart-checkout-btn:hover,
+.store .btn-add-to-cart:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgb(15 118 110 / 28%);
+}
+.store .btn-add-to-cart {
+  min-height: 64px;
+  padding: 0 32px;
+  font-size: 16px;
+}
+.store .btn-back-to-store {
+  min-height: 64px;
+  padding: 0 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--ink) !important;
+  background: #fff !important;
+  border: 2px solid var(--line) !important;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.store .btn-back-to-store:hover {
+  color: #fff !important;
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+  transform: translateY(-1px);
+}
+.store .empty-cart button {
+  min-height: 58px;
+  min-width: 240px;
+  margin-top: 22px;
+  padding: 16px 40px !important;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff !important;
+  background: var(--teal) !important;
+  border: 0 !important;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.store .empty-cart button:hover {
+  background: var(--teal-dark) !important;
+  transform: translateY(-1px);
+}
+.store .state-card button {
+  color: var(--ink) !important;
+  background: transparent !important;
+  border: 1px solid var(--ink) !important;
+}
+.store .primary-cta {
+  color: #fff !important;
+  background: var(--ink) !important;
+}
+.store .primary-cta:hover {
+  color: #fff !important;
+  background: var(--teal) !important;
 }
 .announcement {
   min-height: 34px;
@@ -2472,6 +2781,144 @@ main {
 }
 .hero-actions > span i {
   color: var(--teal);
+}
+.hero-search-wrap {
+  position: relative;
+  width: min(520px, 100%);
+  margin: 28px 0 0;
+  z-index: 5;
+}
+.hero-search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 0 18px;
+  border: 1px solid #c5ccc9;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(20 33 61 / 8%);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.hero-search-box:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 10px 30px rgb(15 118 110 / 14%);
+}
+.hero-search-box > i {
+  color: var(--muted);
+  font-size: 16px;
+}
+.hero-search-box input {
+  flex: 1;
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+}
+.hero-search-box input:focus {
+  outline: 0;
+}
+.hero-search-clear {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: #eef2f0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.hero-search-clear:hover {
+  color: var(--ink);
+  background: #e2e8e6;
+}
+.hero-search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgb(20 33 61 / 14%);
+}
+.hero-search-result {
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid #f0f0ec;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.hero-search-result:last-child {
+  border-bottom: 0;
+}
+.hero-search-result:hover {
+  background: #f4faf8;
+}
+.search-result-thumb {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f0f4f2;
+  display: grid;
+  place-items: center;
+}
+.search-result-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.search-result-thumb i {
+  color: var(--muted);
+  font-size: 18px;
+}
+.search-result-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.search-result-info strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-result-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.search-result-arrow {
+  color: var(--teal);
+  font-size: 12px;
+}
+.hero-search-empty {
+  padding: 28px 20px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.hero-search-empty i {
+  font-size: 22px;
+  color: #c5ccc9;
 }
 .hero-visual {
   position: relative;
@@ -3102,16 +3549,18 @@ main {
   color: #9f4d4d;
 }
 .product-footer > button {
-  min-height: 35px;
-  padding: 0 11px;
-  border: 1px solid #d8d9d4;
-  border-radius: 2px;
+  min-height: 48px;
+  min-width: 96px;
+  padding: 0 18px;
+  border: 1px solid #c5ccc9;
+  border-radius: 10px;
   color: var(--ink);
-  background: transparent;
+  background: #fff;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 10px;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 750;
   cursor: pointer;
   transition: all 0.2s;
@@ -3479,19 +3928,19 @@ main {
 .detail-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding-top: 16px;
+  gap: 14px;
+  padding-top: 20px;
 }
 
 .btn-add-to-cart {
-  min-height: 52px;
-  padding: 0 24px;
+  min-height: 64px;
+  padding: 0 32px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 12px;
   background: var(--teal);
   color: white;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3512,14 +3961,14 @@ main {
 }
 
 .btn-back-to-store {
-  min-height: 52px;
-  padding: 0 24px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  min-height: 64px;
+  padding: 0 32px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
   background: white;
   color: var(--ink);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3729,12 +4178,19 @@ main {
   font-size: 12px;
 }
 .empty-cart button {
-  min-height: 42px;
-  margin-top: 10px;
-  padding: 0 18px;
+  min-height: 52px;
+  min-width: 220px;
+  margin-top: 22px;
+  padding: 14px 36px;
   border: 0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 750;
   color: white;
   background: var(--teal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .cart-body {
   flex: 1;
@@ -3846,16 +4302,19 @@ main {
   background: #f0f4f2;
   font-size: 10px;
 }
-.cart-footer > button {
+.cart-footer > button,
+.cart-checkout-btn {
   width: 100%;
-  min-height: 48px;
+  min-height: 62px;
   border: 0;
+  border-radius: 12px;
   color: white;
   background: var(--teal);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  font-size: 16px;
   font-weight: 750;
 }
 footer {
@@ -4432,7 +4891,39 @@ footer {
   border-bottom-color: #23304c;
 }
 .app-dark .primary-cta {
-  color: #0b0f19;
+  color: #fff !important;
+  background: var(--teal) !important;
+}
+.app-dark .primary-cta:hover {
+  color: #fff !important;
+  background: var(--teal-dark) !important;
+}
+.app-dark .hero-search-box {
+  background: #151d30;
+  border-color: #23304c;
+}
+.app-dark .hero-search-dropdown {
+  background: #151d30;
+  border-color: #23304c;
+}
+.app-dark .hero-search-result {
+  background: #151d30;
+  border-bottom-color: #23304c;
+}
+.app-dark .hero-search-result:hover {
+  background: #1c2740;
+}
+.app-dark .search-result-info strong {
+  color: #f1f5f9;
+}
+.app-dark .btn-back-to-store {
+  color: #f1f5f9 !important;
+  background: #151d30 !important;
+  border-color: #23304c !important;
+}
+.app-dark .btn-back-to-store:hover {
+  color: #0b0f19 !important;
+  background: #f1f5f9 !important;
 }
 .app-dark .cart-footer {
   background: #151d30;
