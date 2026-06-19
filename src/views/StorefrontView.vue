@@ -14,6 +14,7 @@ function toggleLang() {
 }
 
 function translateCategory(cat: string): string {
+  if (!cat) return "";
   if (cat === "Gia dụng" || cat.toLowerCase().includes("gia dụng")) {
     return t("Gia dụng", "Home");
   }
@@ -22,6 +23,9 @@ function translateCategory(cat: string): string {
   }
   if (cat === "Văn phòng" || cat.toLowerCase().includes("văn phòng")) {
     return t("Văn phòng", "Office");
+  }
+  if (cat === "Điện tử" || cat.toLowerCase().includes("điện tử")) {
+    return t("Điện tử", "Electronics");
   }
   return cat;
 }
@@ -163,6 +167,19 @@ const enrichedProductDetails = computed(() => {
     overview = t(
       `Văn phòng phẩm tinh tế ${p.name} là nguồn cảm hứng chuyên nghiệp cho ngày làm việc năng suất của bạn. Chất liệu giấy cao cấp chống lóa mắt và vỏ bìa sang trọng mang đến trải nghiệm ghi chép tuyệt vời.`,
       `The exquisite office stationery ${p.name} is a professional source of inspiration for your productive workday. Anti-glare premium paper and luxurious cover provide a wonderful writing experience.`
+    );
+  } else if (cat === 'Điện tử' || cat.toLowerCase().includes('điện tử')) {
+    specs = {
+      dimensions: t('15 x 8 x 1 cm', '15 x 8 x 1 cm'),
+      material: t('Hợp kim nhôm & Kính Gorilla cường lực', 'Aluminum Alloy & Gorilla Tempered Glass'),
+      weight: t('210g', '210g'),
+      origin: t('Trung Quốc', 'China'),
+      warranty: t('12 tháng chính hãng', '12 months official warranty'),
+      code: `DT-${p.id}`
+    };
+    overview = t(
+      `Thiết bị điện tử thông minh ${p.name} sở hữu cấu hình mạnh mẽ, thiết kế hiện đại mang lại trải nghiệm mượt mà và tối ưu cho người dùng.`,
+      `The smart electronic device ${p.name} features powerful configuration and modern design, providing smooth and optimal user experience.`
     );
   }
 
@@ -815,19 +832,19 @@ const slides = computed(() => [
     image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
     title: t("Văn phòng phẩm cao cấp", "Premium Stationery"),
     subtitle: t("Nâng tầm hiệu suất làm việc với bộ sưu tập sổ tay và bút ký tinh tế.", "Elevate your workspace performance with premium notebooks and fine pens."),
-    category: t("Văn phòng", "Office")
+    category: "Văn phòng"
   },
   {
     image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1200",
     title: t("Phụ kiện thông minh", "Smart Accessories"),
     subtitle: t("Thiết bị công nghệ chính xác, đồng bộ hóa phong cách sống hiện đại.", "High precision tech devices, synchronizing with your modern lifestyle."),
-    category: t("Phụ kiện", "Accessories")
+    category: "Phụ kiện"
   },
   {
     image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=1200",
     title: t("Gia dụng tinh tế", "Minimalist Home Appliances"),
     subtitle: t("Không gian sống ấm cúng với các thiết bị gia dụng tối giản, hiện đại.", "Warm cozy living spaces with minimalist, modern home appliances."),
-    category: t("Gia dụng", "Home")
+    category: "Gia dụng"
   }
 ]);
 
@@ -869,6 +886,40 @@ watch([search, category, sort, showAllProducts], () => {
   currentPage.value = 1;
 });
 
+const isHeroSearchFocused = ref(false);
+
+const searchSuggestions = computed(() => {
+  const query = search.value.trim().toLowerCase();
+  if (!query) return [];
+  return products.value.filter((product) => {
+    return (
+      product.name.toLowerCase().includes(query) ||
+      String(product.id).includes(query) ||
+      (product.categoryName && product.categoryName.toLowerCase().includes(query))
+    );
+  }).slice(0, 5);
+});
+
+function selectSuggestion(product: Product) {
+  openProductDetail(product);
+  search.value = "";
+  isHeroSearchFocused.value = false;
+}
+
+function triggerSearch() {
+  if (search.value.trim()) {
+    showAllProducts.value = true;
+    category.value = "";
+    isHeroSearchFocused.value = false;
+  }
+}
+
+function onHeroSearchBlur() {
+  setTimeout(() => {
+    isHeroSearchFocused.value = false;
+  }, 200);
+}
+
 const categoryBanner = computed(() => {
   if (showAllProducts.value) {
     return {
@@ -899,9 +950,16 @@ const categoryBanner = computed(() => {
       image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200"
     };
   }
+  if (cat === "Điện tử" || cat.toLowerCase().includes("điện tử")) {
+    return {
+      title: t("Thiết bị Điện tử", "Consumer Electronics"),
+      desc: t("Trải nghiệm công nghệ đỉnh cao và tiện ích hiện đại.", "Experience cutting-edge technology and modern conveniences."),
+      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1200"
+    };
+  }
   return {
-    title: cat || t("Cửa hàng bán lẻ", "Retail Store"),
-    desc: t("Bộ sưu tập sản phẩm ", "Collection of ") + (cat || t("chất lượng cao", "high quality")) + ".",
+    title: translateCategory(cat) || t("Cửa hàng bán lẻ", "Retail Store"),
+    desc: t("Bộ sưu tập sản phẩm ", "Collection of ") + (translateCategory(cat) || t("chất lượng cao", "high quality")) + ".",
     image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1200"
   };
 });
@@ -1037,6 +1095,42 @@ onUnmounted(() => {
         <div class="hero-copy">
           <span class="eyebrow">{{ t('BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN', 'CURATED COLLECTION') }}</span>
           <h1>{{ t('Mua sắm tinh gọn.', 'Minimalist Shopping.') }}<br /><em class="fs-6">{{ t('Chọn lựa thông minh.', 'Smart Choices.') }}</em></h1>
+          
+          <!-- Search Bar on Home Hero -->
+          <div class="hero-search-wrapper">
+            <div class="hero-search">
+              <i class="pi pi-search" />
+              <input 
+                v-model="search" 
+                type="text" 
+                :placeholder="t('Tìm sản phẩm, mã hoặc danh mục...', 'Search products, code or category...')" 
+                @focus="isHeroSearchFocused = true"
+                @blur="onHeroSearchBlur"
+                @keyup.enter="triggerSearch"
+              />
+              <button class="hero-search-btn" type="button" @click="triggerSearch">{{ t('Tìm kiếm', 'Search') }}</button>
+            </div>
+            <!-- Live Suggestions Dropdown -->
+            <div v-if="isHeroSearchFocused && searchSuggestions.length" class="hero-suggestions">
+              <div 
+                v-for="product in searchSuggestions" 
+                :key="product.id" 
+                class="suggestion-item"
+                @mousedown="selectSuggestion(product)"
+              >
+                <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
+                <div v-else class="suggestion-placeholder-img"><i class="pi pi-box" /></div>
+                <div class="suggestion-info">
+                  <span class="suggestion-name">{{ product.name }}</span>
+                  <span class="suggestion-price">{{ formatCurrency(product.sellingPrice) }}</span>
+                </div>
+              </div>
+              <div class="suggestion-footer" @mousedown="triggerSearch">
+                {{ t('Xem tất cả kết quả cho', 'See all results for') }} "{{ search }}"
+              </div>
+            </div>
+          </div>
+
           <div class="hero-actions">
             <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
               {{ t('Xem sản phẩm', 'Explore Products') }} <i class="pi pi-arrow-right" />
@@ -1076,7 +1170,7 @@ onUnmounted(() => {
             :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.45)), url(${slide.image})` }"
           >
             <div class="slide-content">
-              <span class="slide-badge">{{ slide.category }}</span>
+              <span class="slide-badge">{{ translateCategory(slide.category) }}</span>
               <h2>{{ slide.title }}</h2>
               <p>{{ slide.subtitle }}</p>
               <button class="slide-btn" type="button" @click="category = slide.category; showAllProducts = false;">
@@ -1218,7 +1312,7 @@ onUnmounted(() => {
               </div>
               <div class="product-content">
                 <div class="product-labels">
-                  <span>{{ product.categoryName || t('Sản phẩm', 'Product') }}</span>
+                  <span>{{ translateCategory(product.categoryName) || t('Sản phẩm', 'Product') }}</span>
                   <small>ID #{{ product.id }}</small>
                 </div>
                 <h3>{{ product.name }}</h3>
@@ -1317,7 +1411,7 @@ onUnmounted(() => {
                 </div>
                 <div class="product-content">
                   <div class="product-labels">
-                    <span>{{ product.categoryName || t('Sản phẩm', 'Product') }}</span>
+                    <span>{{ translateCategory(product.categoryName) || t('Sản phẩm', 'Product') }}</span>
                     <small>ID #{{ product.id }}</small>
                   </div>
                   <h3>{{ product.name }}</h3>
@@ -5529,7 +5623,7 @@ footer {
 /* Tabs inside Orders Modal */
 .modal-order-tabs {
   display: flex;
-  gap: 8px;
+  gap: 20px;
   border-bottom: 1px solid #f1f5f9;
   padding-bottom: 4px;
   overflow-x: auto;
@@ -5571,6 +5665,378 @@ footer {
 .app-dark .tab-btn.active {
   color: #38bdf8;
   border-bottom-color: #38bdf8;
+}
+
+/* Home Hero Search Styling */
+.hero-search-wrapper {
+  position: relative;
+  max-width: 480px;
+  margin: 30px 0 25px;
+}
+.hero-search {
+  background: white;
+  border-radius: 14px;
+  padding: 4px 6px 4px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(15, 118, 110, 0.06);
+  border: 1px solid #d9d9d2;
+}
+.app-dark .hero-search {
+  background: #1e293b;
+  border-color: #2e3d56;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.hero-search i {
+  color: #64748b;
+  font-size: 16px;
+}
+.hero-search input {
+  border: 0;
+  background: transparent;
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  min-height: 38px;
+}
+.app-dark .hero-search input {
+  color: #f1f5f9;
+}
+.hero-search-btn {
+  background: var(--teal);
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.hero-search-btn:hover {
+  background: #0d5c56;
+}
+
+/* Hero Suggestions Dropdown */
+.hero-suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
+  z-index: 50;
+  overflow: hidden;
+}
+.app-dark .hero-suggestions {
+  background: #1e293b;
+  border-color: #2e3d56;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid #f1f5f9;
+}
+.app-dark .suggestion-item {
+  border-bottom-color: #2e3d56;
+}
+.suggestion-item:hover {
+  background: #f8fafc;
+}
+.app-dark .suggestion-item:hover {
+  background: #334155;
+}
+.suggestion-item img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.suggestion-placeholder-img {
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+}
+.app-dark .suggestion-placeholder-img {
+  background: #334155;
+}
+.suggestion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.suggestion-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.suggestion-price {
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 700;
+}
+.suggestion-footer {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal);
+  background: #f8fafc;
+  cursor: pointer;
+}
+.app-dark .suggestion-footer {
+  background: #0f172a;
+  color: #38bdf8;
+}
+.suggestion-footer:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 780px) {
+  .hero-search-wrapper {
+    margin-inline: auto;
+  }
+}
+
+/* Custom Specificity Hover Overrides to prevent global hover conflicts */
+
+/* 1. Detail modal actions */
+.btn-add-to-cart:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3) !important;
+}
+.btn-back-to-store:hover {
+  border-color: var(--ink) !important;
+  background: var(--ink) !important;
+  color: white !important;
+}
+.detail-close-btn:hover {
+  background: var(--ink) !important;
+  color: white !important;
+  border-color: var(--ink) !important;
+}
+
+/* 2. Specs Accordion */
+.detail-specs-accordion .accordion-trigger:hover {
+  background: rgba(15, 23, 42, 0.02) !important;
+}
+.app-dark .detail-specs-accordion .accordion-trigger:hover {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* 3. Cart panel and Cart Drawer */
+.cart-head button:hover,
+.remove-line:hover {
+  border-color: var(--teal) !important;
+  background: #f0fdfa !important;
+  color: var(--teal) !important;
+}
+.app-dark .cart-head button:hover,
+.app-dark .remove-line:hover {
+  background: rgba(56, 189, 248, 0.1) !important;
+  border-color: var(--teal) !important;
+  color: var(--teal) !important;
+}
+.empty-cart button:hover {
+  background: var(--teal-dark) !important;
+  color: white !important;
+}
+.cart-footer > button:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  color: white !important;
+}
+
+/* 4. Product Catalog and Quick Add */
+.product-footer > button:hover:not(:disabled) {
+  border-color: var(--teal) !important;
+  color: white !important;
+  background: var(--teal) !important;
+}
+.app-dark .product-footer button:hover {
+  background: #384f7a !important;
+  color: white !important;
+}
+.quick-add:hover {
+  background: var(--teal) !important;
+  color: white !important;
+}
+.app-dark .quick-add:hover {
+  background: var(--teal-dark) !important;
+  color: white !important;
+}
+.category-list button.active:hover {
+  background: var(--teal) !important;
+  color: white !important;
+}
+.category-list button:not(.active):hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+.app-dark .category-list button.active:hover {
+  background: var(--teal) !important;
+  color: white !important;
+}
+.app-dark .category-list button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+}
+
+/* 5. Checkout Modal */
+.submit-btn:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  color: white !important;
+}
+
+/* 6. Payment Confirm Modal */
+.confirm-actions .pay-button:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  color: white !important;
+  border-color: var(--teal-dark) !important;
+}
+.confirm-actions button:not(.pay-button):hover:not(:disabled) {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+.app-dark .confirm-actions .pay-button:hover:not(:disabled) {
+  background: #0369a1 !important;
+  border-color: #0369a1 !important;
+  color: white !important;
+}
+.app-dark .confirm-actions button:not(.pay-button):hover:not(:disabled) {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* 7. Header and Control Buttons */
+.theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+.app-dark .theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+.lang-toggle-btn:hover {
+  background: rgba(15, 23, 42, 0.05) !important;
+  color: var(--ink) !important;
+}
+.app-dark .lang-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+.app-dark .customer-link:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+.cart-button:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: var(--ink) !important;
+}
+.app-dark .cart-button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #f1f5f9 !important;
+}
+
+/* 8. Slide Button */
+.slide-btn:hover {
+  transform: translateY(-2px) !important;
+  background: #f1f5f9 !important;
+  color: #0b0f19 !important;
+}
+
+/* 9. Pagination Buttons */
+.pag-btn:hover:not(:disabled) {
+  border-color: var(--teal) !important;
+  color: var(--teal) !important;
+  background: #f0fdfa !important;
+}
+.app-dark .pag-btn:hover:not(:disabled) {
+  border-color: var(--teal) !important;
+  color: var(--teal) !important;
+  background: rgba(56, 189, 248, 0.1) !important;
+}
+
+/* 10. Customer Dropdown Buttons */
+.save-address-btn:hover:not(:disabled) {
+  background: #0d5c56 !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25) !important;
+}
+.app-dark .save-address-btn:hover:not(:disabled) {
+  background: #0369a1 !important;
+  color: white !important;
+}
+.modal-close-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+.app-dark .modal-close-btn:hover {
+  background: #1e293b !important;
+  color: white !important;
+  border-color: #334155 !important;
+}
+.panel-btn:hover {
+  background: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+  transform: translateY(-1px) !important;
+}
+.app-dark .panel-btn:hover {
+  background: #23304c !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+.customer-history-title button:hover {
+  background: #bae6fd !important;
+  color: #0369a1 !important;
+}
+.app-dark .customer-history-title button:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+}
+.logout-customer:hover {
+  background: #dc2626 !important;
+  color: white !important;
+}
+.app-dark .logout-customer:hover {
+  background: #b91c1c !important;
+  color: white !important;
+}
+.tab-btn:hover {
+  color: #0f172a !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+.app-dark .tab-btn:hover {
+  color: #f1f5f9 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+.hero-search-btn:hover {
+  background: #0d5c56 !important;
+  color: white !important;
+}
+.app-dark .hero-search-btn:hover {
+  background: #0284c7 !important;
+  color: white !important;
 }
 </style>
 
