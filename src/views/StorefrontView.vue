@@ -1111,19 +1111,22 @@ const slides = computed(() => [
     image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
     title: t("Văn phòng phẩm cao cấp", "Premium Stationery"),
     subtitle: t("Nâng tầm hiệu suất làm việc với bộ sưu tập sổ tay và bút ký tinh tế.", "Elevate your workspace performance with premium notebooks and fine pens."),
-    category: t("Văn phòng", "Office")
+    category: t("Văn phòng", "Office"),
+    categoryKey: "Văn phòng"
   },
   {
     image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1200",
     title: t("Phụ kiện thông minh", "Smart Accessories"),
     subtitle: t("Thiết bị công nghệ chính xác, đồng bộ hóa phong cách sống hiện đại.", "High precision tech devices, synchronizing with your modern lifestyle."),
-    category: t("Phụ kiện", "Accessories")
+    category: t("Phụ kiện", "Accessories"),
+    categoryKey: "Phụ kiện"
   },
   {
     image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=1200",
     title: t("Gia dụng tinh tế", "Minimalist Home Appliances"),
     subtitle: t("Không gian sống ấm cúng với các thiết bị gia dụng tối giản, hiện đại.", "Warm cozy living spaces with minimalist, modern home appliances."),
-    category: t("Gia dụng", "Home")
+    category: t("Gia dụng", "Home"),
+    categoryKey: "Gia dụng"
   }
 ]);
 
@@ -1165,39 +1168,7 @@ watch([search, category, sort, showAllProducts], () => {
   currentPage.value = 1;
 });
 
-const isHeroSearchFocused = ref(false);
 
-const searchSuggestions = computed(() => {
-  const query = search.value.trim().toLowerCase();
-  if (!query) return [];
-  return products.value.filter((product) => {
-    return (
-      product.name.toLowerCase().includes(query) ||
-      String(product.id).includes(query) ||
-      (product.categoryName && product.categoryName.toLowerCase().includes(query))
-    );
-  }).slice(0, 5);
-});
-
-function selectSuggestion(product: Product) {
-  openProductDetail(product);
-  search.value = "";
-  isHeroSearchFocused.value = false;
-}
-
-function triggerSearch() {
-  if (search.value.trim()) {
-    showAllProducts.value = true;
-    category.value = "";
-    isHeroSearchFocused.value = false;
-  }
-}
-
-function onHeroSearchBlur() {
-  setTimeout(() => {
-    isHeroSearchFocused.value = false;
-  }, 200);
-}
 
 const categoryBanner = computed(() => {
   if (showAllProducts.value) {
