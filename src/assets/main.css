@@ -62,6 +62,8 @@ button { cursor: pointer; }
 .nav-caption { margin: 10px 12px; color: #64748b; font-size: 10px; font-weight: 800; letter-spacing: .15em; }
 .admin-navigation {
   display: grid;
+  align-content: start;
+  grid-auto-rows: minmax(45px, max-content);
   gap: 5px;
   flex: 1;
   overflow-y: auto;

@@ -15,6 +15,12 @@ export const useAuthStore = defineStore('auth', () => {
   const role = computed<UserRole | null>(() => user.value?.role ?? null)
   const isAuthenticated = computed(() => Boolean(session.value?.accessToken))
 
+  if (typeof window !== 'undefined') {
+    window.addEventListener('auth-changed', () => {
+      session.value = getSession()
+    })
+  }
+
   async function login(email: string, password: string) {
     const result = await loginUser({ email, password })
     saveSession(result)

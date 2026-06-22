@@ -23,6 +23,8 @@ export type OrderStatus =
   | 'Completed'
   | 'Cancelled'
 
+export type OrderPaymentMethod = 'Cash' | 'PayOS'
+
 export interface OrderItem {
   id: number
   productId: number
@@ -38,6 +40,7 @@ export interface Order {
   customerId?: number | null
   customerName?: string | null
   status: OrderStatus
+  paymentMethod?: OrderPaymentMethod | string | null
   subtotal: number
   discountAmount: number
   total: number
@@ -231,6 +234,15 @@ export function createOrder(payload: CreateOrderPayload) {
     auth: true,
     body: JSON.stringify(payload),
   })
+}
+
+export function getPaymentMethodLabel(method?: OrderPaymentMethod | string | null) {
+  const { currentLanguage } = useLanguage()
+  const value = (method || 'Cash').toLowerCase()
+  if (value === 'payos') {
+    return currentLanguage.value === 'en' ? 'PayOS transfer' : 'Chuyển khoản PayOS'
+  }
+  return currentLanguage.value === 'en' ? 'Cash payment' : 'Thanh toán tiền mặt'
 }
 
 export function createCustomerCashOrder(payload: CustomerCheckoutPayload) {

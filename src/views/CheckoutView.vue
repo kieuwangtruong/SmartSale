@@ -6,6 +6,7 @@ import {
   createPaymentLink,
   formatCurrency,
   type CustomerCheckoutPayload,
+  type Order,
 } from '../services/orderApi'
 import type { Product } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
@@ -29,6 +30,7 @@ const cart = ref<CartLine[]>([])
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+const placedOrder = ref<Order | null>(null)
 const paymentMethod = ref<PaymentMethod>('cash')
 
 const form = reactive({
@@ -99,10 +101,9 @@ async function submitOrder() {
       return
     }
 
-    await createCustomerCashOrder(payload)
+    placedOrder.value = await createCustomerCashOrder(payload)
     clearPurchasedCart()
-    success.value = t('Đặt hàng thành công. Đơn hàng của bạn đang chờ xử lý.', 'Order placed successfully. Your order is pending processing.')
-    window.setTimeout(() => router.replace('/'), 1200)
+    success.value = t('Đặt hàng thành công. Đơn hàng của bạn đang chờ nhân viên xác nhận.', 'Order placed successfully. Your order is waiting for staff confirmation.')
   } catch (exception) {
     error.value = exception instanceof Error
       ? exception.message
@@ -137,7 +138,35 @@ onMounted(() => {
       <h1>Thanh toán</h1>
     </section>
 
-    <section v-if="!cart.length" class="empty-checkout">
+    <section v-if="placedOrder" class="checkout-result checkout-card">
+      <span class="result-icon"><i class="pi pi-check" /></span>
+      <h2>{{ t('Đặt hàng thành công', 'Order placed successfully') }}</h2>
+      <p>{{ t('Đơn hàng tiền mặt của bạn đã được tạo. Nhân viên bán hàng sẽ xác nhận trước khi xử lý.', 'Your cash order has been created. Sales staff will confirm it before processing.') }}</p>
+      <div class="result-grid">
+        <div>
+          <span>{{ t('Mã đơn', 'Order ID') }}</span>
+          <strong>#{{ placedOrder.id }}</strong>
+        </div>
+        <div>
+          <span>{{ t('Phương thức', 'Payment method') }}</span>
+          <strong>{{ t('Thanh toán tiền mặt', 'Cash payment') }}</strong>
+        </div>
+        <div>
+          <span>{{ t('Tổng tiền', 'Total') }}</span>
+          <strong>{{ formatCurrency(placedOrder.total) }}</strong>
+        </div>
+        <div>
+          <span>{{ t('Trạng thái', 'Status') }}</span>
+          <strong>{{ t('Chờ xác nhận', 'Waiting confirmation') }}</strong>
+        </div>
+      </div>
+      <div class="result-actions">
+        
+        <RouterLink to="/">{{ t('Tiếp tục mua sắm', 'Continue shopping') }}</RouterLink>
+      </div>
+    </section>
+
+    <section v-else-if="!cart.length" class="empty-checkout">
       <i class="pi pi-shopping-bag" />
       <h2>{{ t('Giỏ hàng đang trống', 'Your cart is empty') }}</h2>
       <p>{{ t('Hãy chọn sản phẩm trước khi đặt hàng.', 'Please choose products before checkout.') }}</p>
@@ -447,6 +476,83 @@ onMounted(() => {
 .checkout-message.success {
   background: #f0fdf4;
   color: #16a34a;
+}
+
+.checkout-result {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+  padding: 34px;
+  text-align: center;
+}
+
+.result-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 28px;
+}
+
+.checkout-result h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 34px;
+}
+
+.checkout-result p {
+  margin: 0;
+  color: #64748b;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  text-align: left;
+}
+
+.result-grid div {
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.result-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.result-grid strong {
+  color: #0f172a;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.result-actions a {
+  padding: 13px 18px;
+  border-radius: 16px;
+  background: #0f766e;
+  color: white;
+  font-weight: 850;
+}
+
+.result-actions a + a {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .empty-checkout {
