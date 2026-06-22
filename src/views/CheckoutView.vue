@@ -8,12 +8,14 @@ import {
   type CustomerCheckoutPayload,
   type Order,
 } from '../services/orderApi'
-import type { Product } from '../services/productApi'
+import type { Product, ProductVariant, ProductVariantColor } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
 
 interface CartLine {
   product: Product
+  variant: ProductVariant
+  color: ProductVariantColor
   quantity: number
 }
 
@@ -46,7 +48,7 @@ const cartCount = computed(() =>
 
 const cartTotal = computed(() =>
   cart.value.reduce(
-    (sum, line) => sum + line.product.sellingPrice * line.quantity,
+    (sum, line) => sum + line.variant.sellingPrice * line.quantity,
     0,
   ),
 )
@@ -60,7 +62,7 @@ function loadCart() {
 
   try {
     const parsed = JSON.parse(raw) as CartLine[]
-    cart.value = parsed.filter((line) => line.product?.id && line.quantity > 0)
+    cart.value = parsed.filter((line) => line.product?.id && line.variant?.id && line.color?.id && line.quantity > 0)
   } catch {
     localStorage.removeItem(CART_STORAGE_KEY)
     cart.value = []
@@ -80,6 +82,8 @@ function buildPayload(): CustomerCheckoutPayload {
     address: form.address.trim(),
     orderItems: cart.value.map((line) => ({
       productId: line.product.id,
+      productVariantId: line.variant.id,
+      productVariantColorId: line.color.id,
       quantity: line.quantity,
     })),
   }
@@ -241,14 +245,14 @@ onMounted(() => {
         </div>
 
         <div class="summary-items">
-          <article v-for="line in cart" :key="line.product.id" class="summary-line">
+          <article v-for="line in cart" :key="`${line.product.id}-${line.variant.id}-${line.color.id}`" class="summary-line">
             <img v-if="line.product.imageUrl" :src="line.product.imageUrl" :alt="line.product.name" />
             <span v-else class="summary-placeholder"><i class="pi pi-box" /></span>
             <div>
               <strong>{{ line.product.name }}</strong>
-              <small>{{ line.quantity }} x {{ formatCurrency(line.product.sellingPrice) }}</small>
+              <small>{{ line.variant.name }} · {{ line.color.name }} · {{ line.quantity }} x {{ formatCurrency(line.variant.sellingPrice) }}</small>
             </div>
-            <b>{{ formatCurrency(line.product.sellingPrice * line.quantity) }}</b>
+            <b>{{ formatCurrency(line.variant.sellingPrice * line.quantity) }}</b>
           </article>
         </div>
 
