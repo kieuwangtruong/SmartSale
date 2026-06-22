@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { formatCurrency, getMyPurchases, getOrderStatusLabel, type Order, type OrderStatus } from '../services/orderApi'
+import { formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from '../services/orderApi'
 import { getMyProfile, type UserDto } from '../services/userApi'
 import { useLanguage } from '../services/i18n'
 
@@ -96,8 +96,19 @@ function statusRank(status: OrderStatus) {
 
 function getOrderTimeline(order: Order): TimelineStep[] {
   const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status)
-  const paidOnline = ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status) && order.amountPaid > 0
+  const isPayOs = (order.paymentMethod || '').toLowerCase() === 'payos'
   const rank = statusRank(order.status)
+  const cashConfirmed = !isPayOs && rank >= 2 && !cancelled
+
+  if (cancelled) {
+    return [{
+      key: 'cancelled',
+      label: getOrderStatusLabel(order.status),
+      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
+      done: true,
+      active: true,
+    }]
+  }
 
   const steps: TimelineStep[] = [
     {
@@ -109,10 +120,16 @@ function getOrderTimeline(order: Order): TimelineStep[] {
     },
     {
       key: 'confirmed',
-      label: paidOnline ? t('Đã thanh toán', 'Paid') : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
-      description: paidOnline
+      label: isPayOs
+        ? t('Đã thanh toán', 'Paid')
+        : cashConfirmed
+          ? t('Đã xác nhận tiền mặt', 'Cash confirmed')
+          : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
+      description: isPayOs
         ? t('Đơn chuyển khoản đã thanh toán, không cần xác nhận tiền mặt.', 'Online payment is completed; no cash confirmation is needed.')
-        : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
+        : cashConfirmed
+          ? t('Nhân viên bán hàng đã xác nhận khách thanh toán tiền mặt.', 'Sales staff confirmed the cash payment.')
+          : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
       done: rank >= 2,
       active: rank === 2 && !cancelled,
     },
@@ -138,16 +155,6 @@ function getOrderTimeline(order: Order): TimelineStep[] {
       active: rank === 5 && !cancelled,
     },
   ]
-
-  if (cancelled) {
-    steps.push({
-      key: 'cancelled',
-      label: getOrderStatusLabel(order.status),
-      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
-      done: true,
-      active: true,
-    })
-  }
 
   return steps
 }
@@ -373,6 +380,7 @@ onMounted(load)
                         <th>{{ t('Mã đơn', 'Order ID') }}</th>
                         <th>{{ t('Ngày tạo', 'Created Date') }}</th>
                         <th>{{ t('Trạng thái', 'Status') }}</th>
+                        <th>{{ t('Thanh toán', 'Payment') }}</th>
                         <th>{{ t('Sản phẩm', 'Products') }}</th>
                         <th>{{ t('Tổng tiền', 'Total Amount') }}</th>
                       </tr>
@@ -391,13 +399,14 @@ onMounted(load)
                             {{ getOrderStatusLabel(order.status) }}
                           </span>
                         </td>
+                        <td><span class="payment-method-badge">{{ getPaymentMethodLabel(order.paymentMethod) }}</span></td>
                         <td class="product-names-cell">
                           {{ order.orderItems.map((item) => `${item.productName} x${item.quantity}`).join(', ') }}
                         </td>
                         <td class="total-cell">{{ formatCurrency(order.total) }}</td>
                       </tr>
                       <tr v-if="!filteredOrders.length">
-                        <td colspan="5" class="empty-orders-fallback">
+                        <td colspan="6" class="empty-orders-fallback">
                           <i class="pi pi-shopping-bag" />
                           <p>{{ t('Không tìm thấy đơn hàng phù hợp.', 'No matching orders found.') }}</p>
                         </td>
@@ -416,16 +425,20 @@ onMounted(load)
                         {{ getOrderStatusLabel(selectedOrder.status) }}
                       </span>
                     </div>
+                    <div class="timeline-payment-method">
+                      <i class="pi pi-credit-card" />
+                      <span>{{ getPaymentMethodLabel(selectedOrder.paymentMethod) }}</span>
+                    </div>
                   </div>
                   <div class="timeline-stepper">
                     <article
                       v-for="step in getOrderTimeline(selectedOrder)"
                       :key="step.key"
-                      :class="{ done: step.done, active: step.active }"
+                      :class="{ done: step.done, active: step.active, cancelled: step.key === 'cancelled' }"
                       class="timeline-step"
                     >
                       <div class="step-indicator">
-                        <i :class="step.done ? 'pi pi-check' : 'pi pi-circle'" />
+                        <i :class="step.key === 'cancelled' ? 'pi pi-times' : step.done ? 'pi pi-check' : 'pi pi-circle'" />
                       </div>
                       <div class="step-body">
                         <strong>{{ step.label }}</strong>
@@ -1080,6 +1093,28 @@ onMounted(load)
   text-transform: capitalize;
 }
 
+.payment-method-badge,
+.timeline-payment-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-method-badge {
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.timeline-payment-method {
+  margin-top: 8px;
+  padding: 6px 10px;
+}
+
 /* Badge styles mapped to order status classes */
 .status-badge.pending,
 .status-badge.pendingpayment,
@@ -1214,6 +1249,17 @@ onMounted(load)
   background: #0f766e;
   color: white;
   box-shadow: 0 0 0 5px #ccfbf1;
+}
+
+.timeline-step.cancelled .step-indicator {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.timeline-step.cancelled.active .step-indicator {
+  background: #dc2626;
+  color: white;
+  box-shadow: 0 0 0 5px #fee2e2;
 }
 
 .step-body {

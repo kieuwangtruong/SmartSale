@@ -12,6 +12,7 @@ import {
   updateProduct,
   type Category,
   type Product,
+  type ProductImageItem,
   type ProductPayload,
 } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
@@ -44,6 +45,7 @@ function showError(msg: string) {
 const form = reactive<ProductPayload>({
   name: '',
   description: '',
+  productVersion: '',
   importPrice: 0,
   sellingPrice: 0,
   originalPrice: null,
@@ -135,6 +137,7 @@ function reset() {
   Object.assign(form, {
     name: '',
     description: '',
+    productVersion: '',
     importPrice: 0,
     sellingPrice: 0,
     originalPrice: null,
@@ -163,8 +166,12 @@ async function load() {
 }
 function edit(p: Product) {
   editingId.value = p.id
-  const imageUrls = (p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : [])
+  const imageItems = (p.imageItems?.length
+    ? p.imageItems
+    : (p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : [])
+      .map((imageUrl) => ({ imageUrl, version: '' })))
     .slice(0, detailImageCount)
+  const imageUrls = imageItems.map((item) => item.imageUrl)
   detailImageUrls.value = [
     ...imageUrls,
     ...Array.from({ length: Math.max(detailImageCount - imageUrls.length, 0) }, () => ''),
@@ -172,6 +179,7 @@ function edit(p: Product) {
   Object.assign(form, {
     name: p.name,
     description: p.description || '',
+    productVersion: p.productVersion || imageItems.find((item) => item.version)?.version || '',
     importPrice: p.importPrice,
     sellingPrice: p.sellingPrice,
     originalPrice: p.originalPrice ?? null,
@@ -193,10 +201,31 @@ function normalizeDetailImages(imageUrls: string[]) {
     .filter((url, index, urls) => urls.findIndex((item) => item.toLowerCase() === url.toLowerCase()) === index)
 }
 
+function normalizeDetailImageItems(): ProductImageItem[] {
+  const seen = new Set<string>()
+  const productVersion = form.productVersion?.trim() || null
+  return detailImageUrls.value
+    .map((url) => ({
+      imageUrl: url.trim(),
+      version: productVersion,
+    }))
+    .filter((item) => {
+      if (!item.imageUrl) return false
+      const key = item.imageUrl.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
 function buildProductPayload(): ProductPayload {
+  const imageItems = normalizeDetailImageItems()
   return {
     ...form,
-    imageUrls: normalizeDetailImages(detailImageUrls.value),
+    imageUrls: imageItems.length
+      ? imageItems.map((item) => item.imageUrl)
+      : normalizeDetailImages(detailImageUrls.value),
+    imageItems,
   }
 }
 
@@ -265,6 +294,9 @@ onMounted(load)
             rows="3"
             :placeholder="t('Nhập mô tả ngắn cho sản phẩm', 'Enter a short product description')"
           />
+        </label>
+        <label>{{ t('Phiên bản sản phẩm', 'Product Version') }}
+          <input v-model="form.productVersion" :placeholder="t('VD: v1.1', 'Ex: v1.1')" />
         </label>
 
         <div class="form-row">
@@ -361,7 +393,7 @@ onMounted(load)
             </td>
             <td class="actions">
               <button v-if="canManageProducts" @click="edit(p)">{{ t('Sửa', 'Edit') }}</button>
-              <button v-if="auth.role === 'Admin'" class="danger" @click="remove(p)">{{ t('Xóa', 'Delete') }}</button>
+              <button v-if="canManageProducts" class="danger" @click="remove(p)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
         </tbody>

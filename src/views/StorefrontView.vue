@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, type Order, type OrderStatus } from "../services/orderApi";
+import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from "../services/orderApi";
 import { getProducts, type Product } from "../services/productApi";
 import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
 import { saveSession } from "../services/apiClient";
+import { endChatSession, getChatSession, sendChatMessage, type ChatAction, type ChatMessage } from "../services/chatbotApi";
 import { useAuthStore } from "../stores/authStore";
 import { useLanguage } from "../services/i18n";
 
@@ -98,6 +99,17 @@ function getEnrichedProductImages(product: Product): string[] {
   }
   
   return finalImages.slice(0, 4);
+}
+
+function getEnrichedProductImageItems(product: Product) {
+  const productVersion = product.productVersion?.trim()
+    || product.imageItems?.find((item) => item.version?.trim())?.version?.trim()
+    || '';
+
+  return getEnrichedProductImages(product).map((imageUrl) => ({
+    imageUrl,
+    version: productVersion,
+  }));
 }
 
 const enrichedProductDetails = computed(() => {
@@ -217,6 +229,20 @@ const customerOrders = ref<Order[]>([]);
 const customerPanelLoading = ref(false);
 const customerPanelError = ref("");
 const customerPanelLoaded = ref(false);
+const showChatbot = ref(false);
+const chatbotLoaded = ref(false);
+const chatbotLoading = ref(false);
+const chatbotSending = ref(false);
+const chatbotError = ref("");
+const chatbotInput = ref("");
+const chatbotMessages = ref<ChatMessage[]>([]);
+const chatbotActions = ref<ChatAction[]>([]);
+const chatbotSuggestions = [
+  "Sản phẩm nào đang khuyến mãi?",
+  "Tôi có đơn hàng nào đang xử lý?",
+  "Hạng thành viên của tôi là gì?",
+  "Gợi ý sản phẩm còn hàng dưới 500.000đ",
+];
 
 const showProfileModal = ref(false);
 const showOrdersModal = ref(false);
@@ -313,8 +339,19 @@ function statusRank(status: OrderStatus) {
 
 function getOrderTimeline(order: Order): TimelineStep[] {
   const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status);
-  const paidOnline = ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status) && order.amountPaid > 0;
+  const isPayOs = (order.paymentMethod || '').toLowerCase() === 'payos';
   const rank = statusRank(order.status);
+  const cashConfirmed = !isPayOs && rank >= 2 && !cancelled;
+
+  if (cancelled) {
+    return [{
+      key: 'cancelled',
+      label: getOrderStatusLabel(order.status),
+      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
+      done: true,
+      active: true,
+    }];
+  }
 
   const steps: TimelineStep[] = [
     {
@@ -326,10 +363,16 @@ function getOrderTimeline(order: Order): TimelineStep[] {
     },
     {
       key: 'confirmed',
-      label: paidOnline ? t('Đã thanh toán', 'Paid') : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
-      description: paidOnline
+      label: isPayOs
+        ? t('Đã thanh toán', 'Paid')
+        : cashConfirmed
+          ? t('Đã xác nhận tiền mặt', 'Cash confirmed')
+          : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
+      description: isPayOs
         ? t('Đơn chuyển khoản đã thanh toán, không cần xác nhận tiền mặt.', 'Online payment is completed; no cash confirmation is needed.')
-        : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
+        : cashConfirmed
+          ? t('Nhân viên bán hàng đã xác nhận khách thanh toán tiền mặt.', 'Sales staff confirmed the cash payment.')
+          : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
       done: rank >= 2,
       active: rank === 2 && !cancelled,
     },
@@ -355,16 +398,6 @@ function getOrderTimeline(order: Order): TimelineStep[] {
       active: rank === 5 && !cancelled,
     },
   ];
-
-  if (cancelled) {
-    steps.push({
-      key: 'cancelled',
-      label: getOrderStatusLabel(order.status),
-      description: t('Đơn hàng không tiếp tục xử lý ở trạng thái này.', 'The order will not continue processing in this status.'),
-      done: true,
-      active: true,
-    });
-  }
 
   return steps;
 }
@@ -488,12 +521,23 @@ const customerInitials = computed(() => {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   return `${first[0] ?? "K"}${second[0] ?? "H"}`.toUpperCase();
 });
-const isCustomerLoggedIn = computed(() => auth.user?.role === "Customer");
-const paidCustomerOrders = computed(() =>
-  customerOrders.value.filter((order) =>
-    ["Paid", "Processing", "Shipped", "Completed"].includes(order.status),
-  ),
+const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
+const purchasedCustomerOrders = computed(() =>
+  customerOrders.value.filter((order) => {
+    const isPayOs = (order.paymentMethod || "Cash").toLowerCase() === "payos";
+    return isPayOs
+      ? ["Paid", "Processing", "Shipped", "Completed"].includes(order.status)
+      : order.status === "Completed";
+  }),
 );
+const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
+const displayedCustomerTierLabel = computed(() => {
+  const count = totalPurchasedOrderCount.value;
+  if (count >= 100) return t("Thành viên Kim cương", "Diamond Member");
+  if (count >= 60) return t("Thành viên Vàng", "Gold Member");
+  if (count >= 30) return t("Thành viên Bạc", "Silver Member");
+  return t("Thành viên thường", "Standard Member");
+});
 
 async function loadProducts() {
   loading.value = true;
@@ -560,6 +604,10 @@ async function loadCustomerPanel() {
     customerOrders.value = orders;
     customerPanelLoaded.value = true;
   } catch (exception) {
+    if (isAuthExpiredError(exception)) {
+      handleExpiredCustomerSession();
+      return;
+    }
     customerPanelError.value =
       exception instanceof Error ? exception.message : t("Không thể tải thông tin tài khoản.", "Unable to load account information.");
   } finally {
@@ -568,11 +616,131 @@ async function loadCustomerPanel() {
 }
 
 async function logoutCustomer() {
+  await resetChatbotSession();
   await auth.logout();
   customerProfile.value = null;
   customerOrders.value = [];
   customerPanelLoaded.value = false;
   showCustomerPanel.value = false;
+}
+
+async function openChatbot() {
+  if (!isCustomerLoggedIn.value) {
+    router.push({ name: "customer-login", query: { redirect: "/" } });
+    return;
+  }
+  showChatbot.value = true;
+  if (!chatbotLoaded.value) {
+    await loadChatbotSession();
+  }
+}
+
+async function loadChatbotSession() {
+  if (!isCustomerLoggedIn.value) return;
+  chatbotLoading.value = true;
+  chatbotError.value = "";
+  try {
+    const session = await getChatSession();
+    chatbotMessages.value = session.messages;
+    if (!chatbotMessages.value.length) {
+      chatbotMessages.value = [{
+        role: "assistant",
+        content: t("Chào bạn, mình có thể giúp xem sản phẩm, tồn kho, khuyến mãi, hạng thành viên và đơn hàng của bạn.", "Hi, I can help with products, stock, promotions, membership and your orders."),
+        createdAt: new Date().toISOString(),
+      }];
+    }
+    chatbotLoaded.value = true;
+  } catch (exception) {
+    if (isAuthExpiredError(exception)) {
+      handleExpiredCustomerSession();
+      chatbotError.value = t("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để dùng chatbot.", "Your session has expired. Please sign in again to use the chatbot.");
+      return;
+    }
+    chatbotError.value = exception instanceof Error ? exception.message : t("Không thể mở chatbot.", "Unable to open chatbot.");
+  } finally {
+    chatbotLoading.value = false;
+  }
+}
+
+async function sendChatbotText(text = chatbotInput.value) {
+  const message = text.trim();
+  if (!message || chatbotSending.value) return;
+  if (!isCustomerLoggedIn.value) {
+    router.push({ name: "customer-login", query: { redirect: "/" } });
+    return;
+  }
+
+  chatbotInput.value = "";
+  chatbotError.value = "";
+  chatbotSending.value = true;
+  chatbotMessages.value.push({
+    role: "user",
+    content: message,
+    createdAt: new Date().toISOString(),
+  });
+
+  try {
+    const response = await sendChatMessage(message);
+    chatbotMessages.value = response.messages.length ? response.messages : chatbotMessages.value;
+    chatbotActions.value = response.actions;
+  } catch (exception) {
+    if (isAuthExpiredError(exception)) {
+      handleExpiredCustomerSession();
+      chatbotError.value = t("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục chat.", "Your session has expired. Please sign in again to continue chatting.");
+      return;
+    }
+    chatbotError.value = exception instanceof Error ? exception.message : t("Chatbot chưa phản hồi được.", "The chatbot could not respond.");
+  } finally {
+    chatbotSending.value = false;
+  }
+}
+
+function isAuthExpiredError(exception: unknown) {
+  if (!(exception instanceof Error)) return false;
+  return /401|unauthorized|hết hạn|đăng nhập/i.test(exception.message);
+}
+
+function handleExpiredCustomerSession() {
+  auth.sync();
+  customerProfile.value = null;
+  customerOrders.value = [];
+  customerPanelLoaded.value = false;
+  showCustomerPanel.value = false;
+  showChatbot.value = false;
+  chatbotLoaded.value = false;
+  chatbotActions.value = [];
+}
+
+async function resetChatbotSession() {
+  showChatbot.value = false;
+  chatbotLoaded.value = false;
+  chatbotLoading.value = false;
+  chatbotSending.value = false;
+  chatbotError.value = "";
+  chatbotInput.value = "";
+  chatbotMessages.value = [];
+  chatbotActions.value = [];
+  if (auth.isAuthenticated && auth.role === "Customer") {
+    try {
+      await endChatSession();
+    } catch {
+      // Logout must continue even if the chatbot session endpoint is temporarily unavailable.
+    }
+  }
+}
+
+function handleChatAction(action: ChatAction) {
+  const product = products.value.find((item) => item.id === action.productId);
+  if (!product) {
+    chatbotError.value = t("Sản phẩm này chưa có trong danh sách hiện tại.", "This product is not in the current list.");
+    return;
+  }
+  if (action.type === "add-to-cart") {
+    quickAddToCart(product);
+    showCart.value = true;
+    return;
+  }
+  openProductDetail(product);
 }
 
 // Open product detail modal for quick view
@@ -1059,8 +1227,8 @@ onUnmounted(() => {
             <template v-else>
               <div class="customer-tier-card">
                 <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
-                <strong>{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
-                <span>{{ customerProfile?.paidOrderCount ?? paidCustomerOrders.length }} {{ t('đơn đã thanh toán', 'paid orders') }}</span>
+                <strong>{{ displayedCustomerTierLabel }}</strong>
+                <span>{{ totalPurchasedOrderCount }} {{ t('đơn đã mua', 'purchased orders') }}</span>
               </div>
               <div class="customer-panel-buttons">
                 <button class="panel-btn" type="button" @click="openProfileModal">
@@ -1284,6 +1452,10 @@ onUnmounted(() => {
               <h2>{{ t('Sản phẩm nổi bật', 'Featured Products') }}</h2>
               <p>{{ t('Những sản phẩm được khách hàng lựa chọn nhiều nhất.', 'The most selected items by our customers.') }}</p>
             </div>
+            <div class="search-box">
+              <i class="pi pi-search" />
+              <input v-model="search" type="search" :placeholder="t('Tìm tên, mã hoặc danh mục...', 'Search name, code or category...')" />
+            </div>
           </div>
           
           <div v-if="loading" class="product-grid" style="margin-top: 30px;">
@@ -1473,7 +1645,7 @@ onUnmounted(() => {
           </div>
           <div class="profile-detail-row">
             <strong>{{ t('Hạng thành viên:', 'Membership Tier:') }}</strong>
-            <span class="badge-tier">{{ customerProfile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</span>
+            <span class="badge-tier">{{ displayedCustomerTierLabel }}</span>
           </div>
         </div>
 
@@ -1588,6 +1760,10 @@ onUnmounted(() => {
                   {{ getOrderStatusLabel(order.status) }}
                 </span>
               </div>
+              <div class="order-payment-line">
+                <i class="pi pi-credit-card" />
+                <span>{{ getPaymentMethodLabel(order.paymentMethod) }}</span>
+              </div>
               <div class="order-card-body">
                 <div v-for="item in order.orderItems" :key="item.id" class="order-card-product">
                   <span>{{ item.productName }} <small class="text-muted">x{{ item.quantity }}</small></span>
@@ -1613,16 +1789,20 @@ onUnmounted(() => {
                   {{ getOrderStatusLabel(selectedCustomerOrder.status) }}
                 </span>
               </div>
+              <div class="order-payment-line timeline-payment-line">
+                <i class="pi pi-credit-card" />
+                <span>{{ getPaymentMethodLabel(selectedCustomerOrder.paymentMethod) }}</span>
+              </div>
             </div>
             <div class="timeline-stepper">
               <article
                 v-for="step in getOrderTimeline(selectedCustomerOrder)"
                 :key="step.key"
-                :class="{ done: step.done, active: step.active }"
+                :class="{ done: step.done, active: step.active, cancelled: step.key === 'cancelled' }"
                 class="timeline-step"
               >
                 <div class="step-indicator">
-                  <i :class="step.done ? 'pi pi-check' : 'pi pi-circle'" />
+                  <i :class="step.key === 'cancelled' ? 'pi pi-times' : step.done ? 'pi pi-check' : 'pi pi-circle'" />
                 </div>
                 <div class="step-body">
                   <strong>{{ step.label }}</strong>
@@ -1667,11 +1847,6 @@ onUnmounted(() => {
               :alt="selectedProduct.name"
               class="main-image-img"
             />
-            <div v-else class="image-placeholder-large">
-              <i class="pi pi-box" />
-              <small>ID #{{ selectedProduct.id }}</small>
-            </div>
-            
             <button 
               type="button" 
               class="carousel-nav-btn next-btn" 
@@ -1685,14 +1860,14 @@ onUnmounted(() => {
           <!-- Thumbnails -->
           <div class="thumbnails">
             <button 
-              v-for="(image, idx) in getEnrichedProductImages(selectedProduct)" 
+              v-for="(image, idx) in getEnrichedProductImageItems(selectedProduct)" 
               :key="idx"
               type="button"
               :class="{ active: idx === selectedImageIndex }"
               @click="selectedImageIndex = idx"
               :aria-label="`Image ${idx + 1}`"
             >
-              <img :src="image" :alt="`Product image ${idx + 1}`" />
+              <img :src="image.imageUrl" :alt="`Product image ${idx + 1}`" />
             </button>
           </div>
         </div>
@@ -1701,7 +1876,15 @@ onUnmounted(() => {
         <div class="detail-info">
           <div class="detail-header">
             <span class="detail-category">{{ selectedProduct.categoryName || t('Sản phẩm', 'Product') }}</span>
-            <h1 class="detail-title">{{ selectedProduct.name }}</h1>
+            <div class="detail-title-row">
+              <h1 class="detail-title">{{ selectedProduct.name }}</h1>
+              <span
+                v-if="selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version"
+                class="product-version-badge"
+              >
+                {{ selectedProduct.productVersion || getEnrichedProductImageItems(selectedProduct)[0]?.version }}
+              </span>
+            </div>
 
             <!-- Product ID and Stock Status -->
             <div class="detail-meta">
@@ -2012,6 +2195,83 @@ onUnmounted(() => {
           <span>{{ checkoutLoading ? t('Đang tạo liên kết...', 'Generating link...') : t('Thanh toán', 'Pay Now') }}</span>
         </button>
       </div>
+    </section>
+
+    <section class="chatbot-widget" :class="{ open: showChatbot }">
+      <button class="chatbot-fab" type="button" @click="openChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')">
+        <i class="pi pi-comments" />
+      </button>
+
+      <aside v-if="showChatbot" class="chatbot-panel">
+        <header class="chatbot-head">
+          <div>
+            <small>{{ ('Smart Store AI') }}</small>
+          </div>
+          <button type="button" @click="showChatbot = false" :aria-label="t('Đóng', 'Close')">
+            <i class="pi pi-times" />
+          </button>
+        </header>
+
+        <div class="chatbot-suggestions" v-if="!chatbotSending">
+          <button
+            v-for="suggestion in chatbotSuggestions"
+            :key="suggestion"
+            type="button"
+            @click="sendChatbotText(suggestion)"
+          >
+            {{ suggestion }}
+          </button>
+        </div>
+
+        <div class="chatbot-body">
+          <div v-if="chatbotLoading" class="chatbot-state">
+            <i class="pi pi-spin pi-spinner" />
+            <span>{{ t('Đang tải phiên chat...', 'Loading chat session...') }}</span>
+          </div>
+          <template v-else>
+            <article
+              v-for="(message, index) in chatbotMessages"
+              :key="`${message.createdAt}-${index}`"
+              class="chat-message"
+              :class="message.role === 'user' ? 'from-user' : 'from-bot'"
+            >
+              <p>{{ message.content }}</p>
+            </article>
+            <div v-if="chatbotSending" class="chat-message from-bot loading-message">
+              <i class="pi pi-spin pi-spinner" />
+              <span>{{ t('Đang suy nghĩ...', 'Thinking...') }}</span>
+            </div>
+          </template>
+        </div>
+
+        <div v-if="chatbotActions.length" class="chatbot-actions">
+          <button
+            v-for="(action, index) in chatbotActions"
+            :key="`${action.type}-${action.productId}-${index}`"
+            type="button"
+            @click="handleChatAction(action)"
+          >
+            <i :class="action.type === 'add-to-cart' ? 'pi pi-shopping-bag' : 'pi pi-eye'" />
+            {{ action.label }}
+          </button>
+        </div>
+
+        <p v-if="chatbotError" class="chatbot-error">
+          <i class="pi pi-exclamation-circle" /> {{ chatbotError }}
+        </p>
+
+        <form class="chatbot-input" @submit.prevent="sendChatbotText()">
+          <input
+            v-model="chatbotInput"
+            type="text"
+            :placeholder="t('Hỏi về sản phẩm, đơn hàng, tồn kho...', 'Ask about products, orders, stock...')"
+            :disabled="chatbotSending"
+          />
+          <button type="submit" :disabled="chatbotSending || !chatbotInput.trim()">
+            <i class="pi pi-send" />
+          </button>
+        </form>
+      </aside>
     </section>
 
     <footer id="footer">
@@ -3037,6 +3297,7 @@ main {
 }
 
 .main-image {
+  position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 12px;
   background: var(--cream);
@@ -3078,6 +3339,7 @@ main {
 }
 
 .thumbnails button {
+  position: relative;
   aspect-ratio: 1 / 1;
   padding: 0;
   border: 2px solid var(--line);
@@ -3146,6 +3408,37 @@ main {
   line-height: 1.2;
   margin: 0;
   color: var(--ink);
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-title-row .detail-title {
+  margin: 0;
+}
+
+.product-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.18);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.app-dark .product-version-badge {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  border-color: rgba(110, 231, 183, 0.22);
 }
 
 .detail-description {
@@ -5312,6 +5605,22 @@ footer {
   font-size: 15px;
   color: #0f172a;
 }
+.order-payment-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+.timeline-payment-line {
+  margin-top: 8px;
+}
 .order-card-body {
   display: flex;
   flex-direction: column;
@@ -5435,6 +5744,10 @@ footer {
 .app-dark .order-card-header strong {
   color: #f1f5f9;
 }
+.app-dark .order-payment-line {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+}
 .app-dark .order-card-body {
   background: #0b0f19;
 }
@@ -5555,6 +5868,15 @@ footer {
   border-color: #0f766e;
   box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.2);
 }
+.timeline-step.cancelled .step-indicator {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+.timeline-step.cancelled.active .step-indicator {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.16);
+}
 .step-body {
   display: flex;
   flex-direction: column;
@@ -5613,6 +5935,15 @@ footer {
   border-color: #38bdf8;
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2);
 }
+.app-dark .timeline-step.cancelled .step-indicator {
+  border-color: #f87171;
+  background: #f87171;
+  color: #0b0f19;
+}
+.app-dark .timeline-step.cancelled.active .step-indicator {
+  border-color: #f87171;
+  box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.18);
+}
 .app-dark .step-body strong {
   color: #f1f5f9;
 }
@@ -5623,11 +5954,12 @@ footer {
 /* Tabs inside Orders Modal */
 .modal-order-tabs {
   display: flex;
-  gap: 20px;
+  gap: 8px;
   border-bottom: 1px solid #f1f5f9;
   padding-bottom: 4px;
   overflow-x: auto;
   scrollbar-width: none;
+  justify-content: center;
 }
 .modal-order-tabs::-webkit-scrollbar {
   display: none;
@@ -5665,378 +5997,6 @@ footer {
 .app-dark .tab-btn.active {
   color: #38bdf8;
   border-bottom-color: #38bdf8;
-}
-
-/* Home Hero Search Styling */
-.hero-search-wrapper {
-  position: relative;
-  max-width: 480px;
-  margin: 30px 0 25px;
-}
-.hero-search {
-  background: white;
-  border-radius: 14px;
-  padding: 4px 6px 4px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 10px 30px rgba(15, 118, 110, 0.06);
-  border: 1px solid #d9d9d2;
-}
-.app-dark .hero-search {
-  background: #1e293b;
-  border-color: #2e3d56;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-.hero-search i {
-  color: #64748b;
-  font-size: 16px;
-}
-.hero-search input {
-  border: 0;
-  background: transparent;
-  flex: 1;
-  font-size: 14px;
-  color: var(--ink);
-  outline: none;
-  min-height: 38px;
-}
-.app-dark .hero-search input {
-  color: #f1f5f9;
-}
-.hero-search-btn {
-  background: var(--teal);
-  color: white;
-  border: 0;
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 750;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.hero-search-btn:hover {
-  background: #0d5c56;
-}
-
-/* Hero Suggestions Dropdown */
-.hero-suggestions {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
-  z-index: 50;
-  overflow: hidden;
-}
-.app-dark .hero-suggestions {
-  background: #1e293b;
-  border-color: #2e3d56;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-}
-.suggestion-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: background 0.2s;
-  border-bottom: 1px solid #f1f5f9;
-}
-.app-dark .suggestion-item {
-  border-bottom-color: #2e3d56;
-}
-.suggestion-item:hover {
-  background: #f8fafc;
-}
-.app-dark .suggestion-item:hover {
-  background: #334155;
-}
-.suggestion-item img {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-.suggestion-placeholder-img {
-  width: 40px;
-  height: 40px;
-  background: #f1f5f9;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  color: #94a3b8;
-}
-.app-dark .suggestion-placeholder-img {
-  background: #334155;
-}
-.suggestion-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.suggestion-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.suggestion-price {
-  font-size: 11px;
-  color: #dc2626;
-  font-weight: 700;
-}
-.suggestion-footer {
-  padding: 12px 16px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--teal);
-  background: #f8fafc;
-  cursor: pointer;
-}
-.app-dark .suggestion-footer {
-  background: #0f172a;
-  color: #38bdf8;
-}
-.suggestion-footer:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 780px) {
-  .hero-search-wrapper {
-    margin-inline: auto;
-  }
-}
-
-/* Custom Specificity Hover Overrides to prevent global hover conflicts */
-
-/* 1. Detail modal actions */
-.btn-add-to-cart:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
-  color: white !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3) !important;
-}
-.btn-back-to-store:hover {
-  border-color: var(--ink) !important;
-  background: var(--ink) !important;
-  color: white !important;
-}
-.detail-close-btn:hover {
-  background: var(--ink) !important;
-  color: white !important;
-  border-color: var(--ink) !important;
-}
-
-/* 2. Specs Accordion */
-.detail-specs-accordion .accordion-trigger:hover {
-  background: rgba(15, 23, 42, 0.02) !important;
-}
-.app-dark .detail-specs-accordion .accordion-trigger:hover {
-  background: rgba(255, 255, 255, 0.02) !important;
-}
-
-/* 3. Cart panel and Cart Drawer */
-.cart-head button:hover,
-.remove-line:hover {
-  border-color: var(--teal) !important;
-  background: #f0fdfa !important;
-  color: var(--teal) !important;
-}
-.app-dark .cart-head button:hover,
-.app-dark .remove-line:hover {
-  background: rgba(56, 189, 248, 0.1) !important;
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
-}
-.empty-cart button:hover {
-  background: var(--teal-dark) !important;
-  color: white !important;
-}
-.cart-footer > button:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
-  color: white !important;
-}
-
-/* 4. Product Catalog and Quick Add */
-.product-footer > button:hover:not(:disabled) {
-  border-color: var(--teal) !important;
-  color: white !important;
-  background: var(--teal) !important;
-}
-.app-dark .product-footer button:hover {
-  background: #384f7a !important;
-  color: white !important;
-}
-.quick-add:hover {
-  background: var(--teal) !important;
-  color: white !important;
-}
-.app-dark .quick-add:hover {
-  background: var(--teal-dark) !important;
-  color: white !important;
-}
-.category-list button.active:hover {
-  background: var(--teal) !important;
-  color: white !important;
-}
-.category-list button:not(.active):hover {
-  background: #f1f5f9 !important;
-  color: #0f172a !important;
-}
-.app-dark .category-list button.active:hover {
-  background: var(--teal) !important;
-  color: white !important;
-}
-.app-dark .category-list button:not(.active):hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #f1f5f9 !important;
-}
-
-/* 5. Checkout Modal */
-.submit-btn:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
-  color: white !important;
-}
-
-/* 6. Payment Confirm Modal */
-.confirm-actions .pay-button:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
-  color: white !important;
-  border-color: var(--teal-dark) !important;
-}
-.confirm-actions button:not(.pay-button):hover:not(:disabled) {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-  color: #334155 !important;
-}
-.app-dark .confirm-actions .pay-button:hover:not(:disabled) {
-  background: #0369a1 !important;
-  border-color: #0369a1 !important;
-  color: white !important;
-}
-.app-dark .confirm-actions button:not(.pay-button):hover:not(:disabled) {
-  background: #1e293b !important;
-  border-color: #334155 !important;
-  color: #f1f5f9 !important;
-}
-
-/* 7. Header and Control Buttons */
-.theme-toggle:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-}
-.app-dark .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-.lang-toggle-btn:hover {
-  background: rgba(15, 23, 42, 0.05) !important;
-  color: var(--ink) !important;
-}
-.app-dark .lang-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
-}
-.app-dark .customer-link:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-.cart-button:hover {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-  color: var(--ink) !important;
-}
-.app-dark .cart-button:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #f1f5f9 !important;
-}
-
-/* 8. Slide Button */
-.slide-btn:hover {
-  transform: translateY(-2px) !important;
-  background: #f1f5f9 !important;
-  color: #0b0f19 !important;
-}
-
-/* 9. Pagination Buttons */
-.pag-btn:hover:not(:disabled) {
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
-  background: #f0fdfa !important;
-}
-.app-dark .pag-btn:hover:not(:disabled) {
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
-  background: rgba(56, 189, 248, 0.1) !important;
-}
-
-/* 10. Customer Dropdown Buttons */
-.save-address-btn:hover:not(:disabled) {
-  background: #0d5c56 !important;
-  color: white !important;
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25) !important;
-}
-.app-dark .save-address-btn:hover:not(:disabled) {
-  background: #0369a1 !important;
-  color: white !important;
-}
-.modal-close-btn:hover {
-  background: #f1f5f9 !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-.app-dark .modal-close-btn:hover {
-  background: #1e293b !important;
-  color: white !important;
-  border-color: #334155 !important;
-}
-.panel-btn:hover {
-  background: #e2e8f0 !important;
-  border-color: #cbd5e1 !important;
-  color: #334155 !important;
-  transform: translateY(-1px) !important;
-}
-.app-dark .panel-btn:hover {
-  background: #23304c !important;
-  color: #f1f5f9 !important;
-  border-color: #334155 !important;
-}
-.customer-history-title button:hover {
-  background: #bae6fd !important;
-  color: #0369a1 !important;
-}
-.app-dark .customer-history-title button:hover {
-  background: rgba(56, 189, 248, 0.15) !important;
-  color: #38bdf8 !important;
-  border-color: rgba(56, 189, 248, 0.3) !important;
-}
-.logout-customer:hover {
-  background: #dc2626 !important;
-  color: white !important;
-}
-.app-dark .logout-customer:hover {
-  background: #b91c1c !important;
-  color: white !important;
-}
-.tab-btn:hover {
-  color: #0f172a !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-.app-dark .tab-btn:hover {
-  color: #f1f5f9 !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-.hero-search-btn:hover {
-  background: #0d5c56 !important;
-  color: white !important;
-}
-.app-dark .hero-search-btn:hover {
-  background: #0284c7 !important;
-  color: white !important;
 }
 </style>
 

@@ -13,6 +13,7 @@ import {
   getCustomers,
   getOrderStatusLabel,
   getOrderStatusOptions,
+  getPaymentMethodLabel,
   getOrders,
   ORDER_STATUSES,
   updateOrderStatus,
@@ -27,6 +28,7 @@ import { useToast } from 'primevue/usetoast'
 
 const auth = useAuthStore()
 const isAdmin = computed(() => auth.role === 'Admin')
+const canEditOrderStatus = computed(() => auth.role === 'Admin' || auth.role === 'SalesStaff')
 const { t } = useLanguage()
 const toast = useToast()
 
@@ -55,6 +57,7 @@ const form = reactive({
 const search = ref('')
 const showForm = ref(false)
 const showCustomerForm = ref(false)
+const selectedOrder = ref<Order | null>(null)
 const customerForm = reactive({
   fullName: '',
   phone: '',
@@ -98,6 +101,10 @@ const orderTotalPreview = computed(() => {
   }, 0)
   return Math.max(0, subtotal - form.discountAmount)
 })
+
+const selectedOrderQuantity = computed(() =>
+  selectedOrder.value?.orderItems.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
+)
 
 const filtered = computed(() => {
   let list = orders.value
@@ -149,6 +156,14 @@ function reset() {
   Object.assign(form, {
     customerId: null, discountAmount: 0, amountPaid: 0, items: [{ productId: 0, quantity: 1 }],
   })
+}
+
+function openOrderDetail(order: Order) {
+  selectedOrder.value = order
+}
+
+function closeOrderDetail() {
+  selectedOrder.value = null
 }
 
 function syncStatusDrafts(list: Order[] = orders.value) {
@@ -357,6 +372,87 @@ onMounted(load)
       </form>
     </aside>
 
+    <div v-if="selectedOrder" class="modal-backdrop detail-modal-backdrop" @click="closeOrderDetail" />
+    <aside v-if="selectedOrder" class="admin-modal order-detail-modal" :aria-label="t('Chi tiết đơn hàng', 'Order detail')">
+      <div class="modal-head">
+        <div>
+          <h2>{{ t('Chi tiết đơn hàng', 'Order Detail') }} #{{ selectedOrder.id }}</h2>
+          <p>{{ t('Ngày tạo', 'Created at') }}: {{ new Date(selectedOrder.createdAt).toLocaleString('vi-VN') }}</p>
+        </div>
+        <button type="button" @click="closeOrderDetail"><i class="pi pi-times" /></button>
+      </div>
+
+      <div class="admin-modal-body order-detail-body">
+        <div class="detail-grid">
+          <div class="detail-card">
+            <span>{{ t('Khách hàng', 'Customer') }}</span>
+            <strong>{{ selectedOrder.customerName || t('Khách lẻ', 'Walk-in') }}</strong>
+          </div>
+          <div class="detail-card">
+            <span>{{ t('Trạng thái', 'Status') }}</span>
+            <strong :class="['status-badge', selectedOrder.status.toLowerCase()]">{{ getOrderStatusLabel(selectedOrder.status) }}</strong>
+          </div>
+          <div class="detail-card">
+            <span>{{ t('Thanh toán', 'Payment') }}</span>
+            <strong>{{ getPaymentMethodLabel(selectedOrder.paymentMethod) }}</strong>
+          </div>
+          <div class="detail-card">
+            <span>{{ t('Số lượng sản phẩm', 'Total quantity') }}</span>
+            <strong>{{ selectedOrderQuantity }}</strong>
+          </div>
+          <div class="detail-card">
+            <span>{{ t('Cập nhật cuối', 'Last updated') }}</span>
+            <strong>{{ selectedOrder.lastModifiedAt ? new Date(selectedOrder.lastModifiedAt).toLocaleString('vi-VN') : '—' }}</strong>
+          </div>
+        </div>
+
+        <div class="detail-section-title">{{ t('Sản phẩm trong đơn', 'Order Items') }}</div>
+        <div class="detail-items">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('Sản phẩm', 'Product') }}</th>
+                <th>{{ t('Số lượng', 'Qty') }}</th>
+                <th>{{ t('Đơn giá', 'Price') }}</th>
+                <th>{{ t('Thành tiền', 'Subtotal') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in selectedOrder.orderItems" :key="item.id">
+                <td>{{ item.productName }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ formatCurrency(item.price) }}</td>
+                <td>{{ formatCurrency(item.subTotal) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-summary">
+          <div>
+            <span>{{ t('Tạm tính', 'Subtotal') }}</span>
+            <strong>{{ formatCurrency(selectedOrder.subtotal) }}</strong>
+          </div>
+          <div>
+            <span>{{ t('Giảm giá', 'Discount') }}</span>
+            <strong>{{ formatCurrency(selectedOrder.discountAmount) }}</strong>
+          </div>
+          <div>
+            <span>{{ t('Đã thanh toán', 'Paid') }}</span>
+            <strong>{{ formatCurrency(selectedOrder.amountPaid) }}</strong>
+          </div>
+          <div>
+            <span>{{ t('Công nợ', 'Debt') }}</span>
+            <strong>{{ formatCurrency(selectedOrder.debtAmount) }}</strong>
+          </div>
+          <div class="grand-total">
+            <span>{{ t('Tổng tiền', 'Total') }}</span>
+            <strong>{{ formatCurrency(selectedOrder.total) }}</strong>
+          </div>
+        </div>
+      </div>
+    </aside>
+
     <article class="panel table-wrap">
       <p v-if="loading">{{ t('Đang tải...', 'Loading...') }}</p>
       <table v-else>
@@ -365,20 +461,22 @@ onMounted(load)
             <th>{{ t('Đơn', 'Order') }}</th>
             <th>{{ t('Khách hàng', 'Customer') }}</th>
             <th>{{ t('Tổng tiền', 'Total Amount') }}</th>
+            <th>{{ t('Thanh toán', 'Payment') }}</th>
             <th>{{ t('Công nợ', 'Debt') }}</th>
             <th>{{ t('Trạng thái', 'Status') }}</th>
             <th>{{ t('Hành động', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in visible" :key="order.id">
-            <td>#{{ order.id }}<small>{{ order.orderItems.map((i) => `${i.productName} x${i.quantity}`).join(', ') }}</small></td>
+          <tr v-for="order in visible" :key="order.id" class="clickable-order-row" @click="openOrderDetail(order)">
+            <td>#{{ order.id }}</td>
             <td>{{ order.customerName || t('Khách lẻ', 'Walk-in') }}</td>
             <td>{{ formatCurrency(order.total) }}</td>
+            <td><span class="payment-method-badge">{{ getPaymentMethodLabel(order.paymentMethod) }}</span></td>
             <td>{{ formatCurrency(order.debtAmount) }}</td>
-            <td>
+            <td @click.stop>
               <SearchableSelect
-                v-if="isAdmin && canChangeOrderStatus(order.status)"
+                v-if="canEditOrderStatus && canChangeOrderStatus(order.status)"
                 :key="`status-${order.id}-${statusSelectKey[order.id] ?? 0}`"
                 :model-value="statusDraft[order.id] ?? order.status"
                 :options="getEditableStatusOptions(order)"
@@ -388,9 +486,8 @@ onMounted(load)
               />
               <span v-else :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span>
             </td>
-            <td>
+            <td @click.stop>
               <button v-if="isAdmin" class="danger" @click="remove(order)">{{ t('Xóa', 'Delete') }}</button>
-              <span v-else class="muted-action">—</span>
             </td>
           </tr>
         </tbody>
@@ -503,6 +600,131 @@ onMounted(load)
 }
 .app-dark .status-badge {
   background: #374151;
+}
+.clickable-order-row {
+  cursor: pointer;
+}
+.clickable-order-row:hover {
+  background: #f8fafc;
+}
+.app-dark .clickable-order-row:hover {
+  background: #1f2937;
+}
+.detail-btn {
+  margin-right: 8px;
+}
+.payment-method-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.app-dark .payment-method-badge {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+}
+.detail-modal-backdrop {
+  z-index: 70;
+}
+.order-detail-modal {
+  z-index: 71;
+  width: min(860px, calc(100vw - 32px));
+}
+.order-detail-modal .modal-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+.order-detail-body {
+  display: grid;
+  gap: 18px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.detail-card {
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.detail-card span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.detail-card strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+.detail-section-title {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+}
+.detail-items {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+.detail-items table {
+  min-width: 620px;
+}
+.detail-summary {
+  display: grid;
+  gap: 8px;
+  justify-self: end;
+  min-width: 320px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+.detail-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  color: #475569;
+}
+.detail-summary strong {
+  color: #0f172a;
+}
+.detail-summary .grand-total {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #dbe3ef;
+  color: #0f172a;
+  font-weight: 800;
+}
+.detail-summary .grand-total strong {
+  color: #059669;
+  font-size: 18px;
+}
+.app-dark .detail-card,
+.app-dark .detail-summary,
+.app-dark .detail-items {
+  background: #111827;
+  border-color: #374151;
+}
+.app-dark .detail-card strong,
+.app-dark .detail-section-title,
+.app-dark .detail-summary strong,
+.app-dark .detail-summary .grand-total {
+  color: #f8fafc;
+}
+.app-dark .detail-card span,
+.app-dark .detail-summary div,
+.app-dark .order-detail-modal .modal-head p {
+  color: #9ca3af;
 }
 .muted-action {
   color: #94a3b8;
