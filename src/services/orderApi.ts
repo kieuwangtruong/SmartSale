@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient'
+import { currentLanguage } from './i18n'
 import { API_URLS } from './config'
 import {
   encodeAddressWithExtras,
@@ -28,7 +29,12 @@ export type OrderPaymentMethod = 'Cash' | 'PayOS'
 export interface OrderItem {
   id: number
   productId: number
+  productVariantId?: number | null
+  productVariantColorId?: number | null
   productName: string
+  variantName?: string | null
+  colorName?: string | null
+  sku?: string | null
   quantity: number
   price: number
   subTotal: number
@@ -39,6 +45,10 @@ export interface Order {
   userId: number
   customerId?: number | null
   customerName?: string | null
+  salesStaffId?: number | null
+  salesStaffName?: string | null
+  createdByUserId?: number | null
+  createdByUserName?: string | null
   status: OrderStatus
   paymentMethod?: OrderPaymentMethod | string | null
   subtotal: number
@@ -49,6 +59,24 @@ export interface Order {
   createdAt: string
   lastModifiedAt?: string | null
   orderItems: OrderItem[]
+}
+
+type OrderApiResponse = Order & {
+  SalesStaffId?: number | null
+  SalesStaffName?: string | null
+  CreatedByUserId?: number | null
+  CreatedByUserName?: string | null
+  UserName?: string | null
+}
+
+function normalizeOrder(order: OrderApiResponse): Order {
+  return {
+    ...order,
+    salesStaffId: order.salesStaffId ?? order.SalesStaffId ?? null,
+    salesStaffName: order.salesStaffName ?? order.SalesStaffName ?? null,
+    createdByUserId: order.createdByUserId ?? order.CreatedByUserId ?? null,
+    createdByUserName: order.createdByUserName ?? order.CreatedByUserName ?? null,
+  }
 }
 
 export interface Customer {
@@ -104,7 +132,7 @@ export interface CreateOrderPayload {
   customerId?: number | null
   discountAmount: number
   amountPaid: number
-  orderItems: Array<{ productId: number; quantity: number }>
+  orderItems: Array<{ productId: number; productVariantId?: number | null; productVariantColorId?: number | null; quantity: number }>
 }
 
 export interface CustomerCheckoutPayload {
@@ -112,7 +140,7 @@ export interface CustomerCheckoutPayload {
   phone: string
   email?: string | null
   address: string
-  orderItems: Array<{ productId: number; quantity: number }>
+  orderItems: Array<{ productId: number; productVariantId: number; productVariantColorId: number; quantity: number }>
 }
 
 export interface PaymentLink {
@@ -221,19 +249,23 @@ export function isPaymentDeletableStatus(status: OrderStatus) {
 }
 
 export function getOrders() {
-  return apiRequest<Order[]>(API_URLS.order, '/api/Order', { auth: true })
+  return apiRequest<OrderApiResponse[]>(API_URLS.order, '/api/Order', { auth: true }).then((orders) =>
+    orders.map(normalizeOrder),
+  )
 }
 
 export function getMyPurchases() {
-  return apiRequest<Order[]>(API_URLS.order, '/api/Order/my-purchases', { auth: true })
+  return apiRequest<OrderApiResponse[]>(API_URLS.order, '/api/Order/my-purchases', { auth: true }).then(
+    (orders) => orders.map(normalizeOrder),
+  )
 }
 
 export function createOrder(payload: CreateOrderPayload) {
-  return apiRequest<Order>(API_URLS.order, '/api/Order', {
+  return apiRequest<OrderApiResponse>(API_URLS.order, '/api/Order', {
     method: 'POST',
     auth: true,
     body: JSON.stringify(payload),
-  })
+  }).then(normalizeOrder)
 }
 
 export function getPaymentMethodLabel(method?: OrderPaymentMethod | string | null) {
@@ -246,11 +278,11 @@ export function getPaymentMethodLabel(method?: OrderPaymentMethod | string | nul
 }
 
 export function createCustomerCashOrder(payload: CustomerCheckoutPayload) {
-  return apiRequest<Order>(API_URLS.order, '/api/Order/customer-cash', {
+  return apiRequest<OrderApiResponse>(API_URLS.order, '/api/Order/customer-cash', {
     method: 'POST',
     auth: true,
     body: JSON.stringify(payload),
-  })
+  }).then(normalizeOrder)
 }
 
 export function createPaymentLink(payload: CustomerCheckoutPayload) {
@@ -266,11 +298,11 @@ export function getPaymentStatus(orderCode: string | number) {
 }
 
 export function updateOrderStatus(id: number, status: OrderStatus) {
-  return apiRequest<Order>(API_URLS.order, `/api/Order/${id}/status`, {
+  return apiRequest<OrderApiResponse>(API_URLS.order, `/api/Order/${id}/status`, {
     method: 'PUT',
     auth: true,
     body: JSON.stringify({ id, status }),
-  })
+  }).then(normalizeOrder)
 }
 
 /** Tất cả trạng thái — dùng cho bộ lọc */
@@ -416,7 +448,8 @@ export function deleteSupplier(id: number) {
 }
 
 export function formatCurrency(value: number) {
-  return new Intl.NumberFormat('vi-VN', {
+  const locale = currentLanguage.value === 'vi' ? 'vi-VN' : 'en-US'
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'VND',
     maximumFractionDigits: 0,

@@ -6,14 +6,20 @@ import { getSuppliers, type Supplier } from '../services/orderApi'
 import {
   createCategory,
   createProduct,
+  createProductVariant,
+  createVariantColor,
   deleteProduct,
   getCategories,
   getProducts,
   updateProduct,
+  updateProductVariant,
+  updateVariantColor,
   type Category,
   type Product,
   type ProductImageItem,
   type ProductPayload,
+  type ProductVariant,
+  type ProductVariantColor,
 } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
@@ -45,7 +51,6 @@ function showError(msg: string) {
 const form = reactive<ProductPayload>({
   name: '',
   description: '',
-  productVersion: '',
   importPrice: 0,
   sellingPrice: 0,
   originalPrice: null,
@@ -62,6 +67,63 @@ const detailImageUrls = ref(createEmptyDetailImages())
 const showProductModal = ref(false)
 const showCategoryModal = ref(false)
 const showAddMenu = ref(false)
+const variantProduct = ref<Product | null>(null)
+const editingVariantId = ref<number | null>(null)
+const editingColorId = ref<number | null>(null)
+const variantForm = reactive({ name: '', sku: '', originalPrice: 0, salePrice: null as number | null, quantity: 0, reserveStock: 0, isActive: true })
+const colorForm = reactive({ name: '', hexCode: '', quantity: 0, isActive: true, imageUrls: ['', '', '', ''] })
+
+function openVariantManager(product: Product) {
+  variantProduct.value = product
+  resetVariantForm()
+}
+
+function resetVariantForm() {
+  editingVariantId.value = null
+  editingColorId.value = null
+  Object.assign(variantForm, { name: '', sku: '', originalPrice: 0, salePrice: null, quantity: 0, reserveStock: 0, isActive: true })
+  Object.assign(colorForm, { name: '', hexCode: '', quantity: 0, isActive: true, imageUrls: ['', '', '', ''] })
+}
+
+function editVariant(variant: ProductVariant) {
+  editingVariantId.value = variant.id
+  editingColorId.value = null
+  Object.assign(variantForm, { name: variant.name, sku: variant.sku, originalPrice: variant.originalPrice,
+    salePrice: variant.salePrice ?? null, quantity: variant.quantity, reserveStock: variant.reserveStock, isActive: variant.isActive })
+}
+
+function editColor(color: ProductVariantColor) {
+  editingColorId.value = color.id
+  Object.assign(colorForm, { name: color.name, hexCode: color.hexCode ?? '', quantity: color.quantity,
+    isActive: color.isActive, imageUrls: [...color.images.map((image) => image.imageUrl), '', '', '', ''].slice(0, 4) })
+}
+
+async function saveVariant() {
+  if (!variantProduct.value) return
+  try {
+    if (editingVariantId.value) await updateProductVariant(editingVariantId.value, variantForm)
+    else await createProductVariant(variantProduct.value.id, variantForm)
+    await reloadVariantProduct()
+    resetVariantForm()
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể lưu phiên bản.', 'Unable to save variant.')) }
+}
+
+async function saveColor(variantId: number) {
+  try {
+    const payload = { ...colorForm, hexCode: colorForm.hexCode || null, imageUrls: colorForm.imageUrls.map((url) => url.trim()).filter(Boolean) }
+    if (editingColorId.value) await updateVariantColor(editingColorId.value, payload)
+    else await createVariantColor(variantId, payload)
+    await reloadVariantProduct()
+    editingColorId.value = null
+    Object.assign(colorForm, { name: '', hexCode: '', quantity: 0, isActive: true, imageUrls: ['', '', '', ''] })
+  } catch (e) { showError(e instanceof Error ? e.message : t('Không thể lưu màu sắc.', 'Unable to save color.')) }
+}
+
+async function reloadVariantProduct() {
+  const id = variantProduct.value?.id
+  await load()
+  variantProduct.value = products.value.find((product) => product.id === id) ?? null
+}
 
 // Pagination state
 const currentPage = ref(1)
@@ -137,7 +199,6 @@ function reset() {
   Object.assign(form, {
     name: '',
     description: '',
-    productVersion: '',
     importPrice: 0,
     sellingPrice: 0,
     originalPrice: null,
@@ -169,7 +230,7 @@ function edit(p: Product) {
   const imageItems = (p.imageItems?.length
     ? p.imageItems
     : (p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : [])
-      .map((imageUrl) => ({ imageUrl, version: '' })))
+      .map((imageUrl) => ({ imageUrl })))
     .slice(0, detailImageCount)
   const imageUrls = imageItems.map((item) => item.imageUrl)
   detailImageUrls.value = [
@@ -179,7 +240,6 @@ function edit(p: Product) {
   Object.assign(form, {
     name: p.name,
     description: p.description || '',
-    productVersion: p.productVersion || imageItems.find((item) => item.version)?.version || '',
     importPrice: p.importPrice,
     sellingPrice: p.sellingPrice,
     originalPrice: p.originalPrice ?? null,
@@ -203,11 +263,9 @@ function normalizeDetailImages(imageUrls: string[]) {
 
 function normalizeDetailImageItems(): ProductImageItem[] {
   const seen = new Set<string>()
-  const productVersion = form.productVersion?.trim() || null
   return detailImageUrls.value
     .map((url) => ({
       imageUrl: url.trim(),
-      version: productVersion,
     }))
     .filter((item) => {
       if (!item.imageUrl) return false
@@ -294,9 +352,6 @@ onMounted(load)
             rows="3"
             :placeholder="t('Nhập mô tả ngắn cho sản phẩm', 'Enter a short product description')"
           />
-        </label>
-        <label>{{ t('Phiên bản sản phẩm', 'Product Version') }}
-          <input v-model="form.productVersion" :placeholder="t('VD: v1.1', 'Ex: v1.1')" />
         </label>
 
         <div class="form-row">

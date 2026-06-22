@@ -20,3 +20,5 @@ export function useLanguage() {
     t,
   }
 }
+
+export { currentLanguage }
