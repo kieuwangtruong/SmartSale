@@ -9,6 +9,7 @@ import { endChatSession, getChatSession, sendChatMessage, type ChatAction, type 
 import { useAuthStore } from "../stores/authStore";
 import { useLanguage } from "../services/i18n";
 import { translateProductName } from "../services/productTranslations";
+import { PRODUCT_MOCKS } from "../services/productMocks";
 
 const { t, currentLanguage, setLanguage } = useLanguage();
 function toggleLang() {
@@ -70,75 +71,25 @@ function nextImage(images: string[]) {
 function getEnrichedProductImages(product: Product): string[] {
   const baseImages = [product.imageUrl, ...(product.imageUrls ?? [])]
     .map((url) => url?.trim())
-    .filter((url): url is string => Boolean(url))
+    .filter((url): url is string => {
+      if (!url) return false;
+      if (url === '[]' || url === '""' || url === "''" || url.includes('placeholder')) return false;
+      return url.startsWith('http') || url.startsWith('/') || url.startsWith('data:');
+    })
     .filter((url, index, urls) => urls.findIndex((item) => item.toLowerCase() === url.toLowerCase()) === index);
     
-  const cat = product.categoryName || '';
-  
-  let filler: string[] = [];
-  if (cat === 'Gia dụng' || cat.toLowerCase().includes('gia dụng')) {
-    filler = [
-      'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1522336572468-97b06eca219b?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=600'
-    ];
-  } else if (cat === 'Phụ kiện' || cat.toLowerCase().includes('phụ kiện')) {
-    filler = [
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80&w=600'
-    ];
-  } else if (cat === 'Văn phòng' || cat.toLowerCase().includes('văn phòng')) {
-    filler = [
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?auto=format&fit=crop&q=80&w=600'
-    ];
-  } else {
-    filler = [
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&q=80&w=600'
-    ];
-  }
-  
-  const finalImages = [...baseImages];
-  for (const img of filler) {
-    if (finalImages.length >= 4) break;
-    if (!finalImages.includes(img)) {
-      finalImages.push(img);
-    }
-  }
-  
-  while (finalImages.length < 4) {
-    finalImages.push((filler[finalImages.length] || filler[0]) as string);
-  }
-  
-  return finalImages.slice(0, 4);
+  return baseImages.length > 0 ? baseImages : [];
 }
 
 const enrichedProductDetails = computed(() => {
   if (!selectedProduct.value) return null;
   const p = selectedProduct.value;
-  const cat = p.categoryName || '';
+  const mock = PRODUCT_MOCKS[p.id];
   const enName = translateProductName(p);
   
-  let specs = {
-    dimensions: t('30 x 30 x 40 cm', '30 x 30 x 40 cm'),
-    material: t('Nhựa ABS cao cấp & Thép không gỉ', 'Premium ABS & Stainless Steel'),
-    weight: t('1.5 kg', '1.5 kg'),
-    origin: t('Nhật Bản', 'Japan'),
-    warranty: t('12 tháng chính hãng', '12 months official warranty'),
-    code: `SS-${p.id}`
-  };
-  
-  let overview = t(
-    `Sản phẩm ${p.name} sở hữu thiết kế thông minh, hiện đại mang lại sự tiện ích và thoải mái cho không gian của bạn. Được làm từ chất liệu cao cấp bền bỉ, sản phẩm đáp ứng đầy đủ tiêu chuẩn chất lượng nghiêm ngặt nhất.`,
-    `The ${enName} features a smart, modern design that brings convenience and comfort to your space. Crafted from premium durable materials, it fully meets the most rigorous quality standards.`
+  const overview = mock?.overview[currentLanguage.value] || p.description || t(
+    `Sản phẩm ${p.name} sở hữu thiết kế thông minh, hiện đại mang lại sự tiện ích và thoải mái cho không gian của bạn.`,
+    `The ${enName} features a smart, modern design that brings convenience and comfort to your space.`
   );
   
   const usage = t(
@@ -151,59 +102,25 @@ const enrichedProductDetails = computed(() => {
     '100% genuine products commitment, free exchange within 7 days in case of manufacturer defects. 24/7 technical support.'
   );
 
-  if (cat === 'Gia dụng' || cat.toLowerCase().includes('gia dụng')) {
-    specs = {
-      dimensions: t('32 x 28 x 45 cm', '32 x 28 x 45 cm'),
-      material: t('Nhựa PP nguyên sinh & Inox 304 cao cấp', 'Premium PP Plastic & 304 Stainless Steel'),
-      weight: t('2.1 kg', '2.1 kg'),
-      origin: t('Nhật Bản', 'Japan'),
-      warranty: t('12 tháng chính hãng', '12 months official warranty'),
-      code: `GD-${p.id}`
-    };
-    overview = t(
-      `Thiết bị gia dụng hiện đại ${p.name} là giải pháp hoàn hảo tối ưu hóa không gian sống của bạn. Công nghệ tiết kiệm điện tối tân cùng kiểu dáng tối giản sang trọng sẽ nâng tầm tiện nghi cho gia đình bạn.`,
-      `The modern home appliance ${enName} is the perfect solution to optimize your living space. State-of-the-art power saving technology and elegant minimalist styling will elevate your family convenience.`
-    );
-  } else if (cat === 'Phụ kiện' || cat.toLowerCase().includes('phụ kiện')) {
-    specs = {
-      dimensions: t('12.5 x 6.5 x 1.8 cm', '12.5 x 6.5 x 1.8 cm'),
-      material: t('Hợp kim nhôm siêu nhẹ & Kính cường lực Gorilla', 'Ultralight Aluminum Alloy & Gorilla Tempered Glass'),
-      weight: t('180g', '180g'),
-      origin: t('Hàn Quốc', 'South Korea'),
-      warranty: t('6 tháng 1 đổi 1', '6 months 1-to-1 warranty'),
-      code: `PK-${p.id}`
-    };
-    overview = t(
-      `Phụ kiện cao cấp ${p.name} với công nghệ thông minh tích hợp, mang lại phong cách sống hiện đại và năng động. Thiết kế ôm khít tinh tế, bảo vệ tối ưu và tạo điểm nhấn đẳng cấp cho người sở hữu.`,
-      `The premium accessory ${enName} features integrated smart technology, bringing a modern and active lifestyle. Delicate, form-fitting design provides optimal protection and creates a high-class highlight for the owner.`
-    );
-  } else if (cat === 'Văn phòng' || cat.toLowerCase().includes('văn phòng')) {
-    specs = {
-      dimensions: t('21 x 14.8 x 1.5 cm (Khổ A5)', '21 x 14.8 x 1.5 cm (A5 size)'),
-      material: t('Giấy chống lóa Nhật Bản & Bìa da PU tự nhiên', 'Japanese Anti-glare Paper & Natural PU Leather Cover'),
-      weight: t('320g', '320g'),
-      origin: t('Việt Nam', 'Vietnam'),
-      warranty: t('Hỗ trợ đổi trả trong 7 ngày', '7 days exchange support'),
-      code: `VP-${p.id}`
-    };
-    overview = t(
-      `Văn phòng phẩm tinh tế ${p.name} là nguồn cảm hứng chuyên nghiệp cho ngày làm việc năng suất của bạn. Chất liệu giấy cao cấp chống lóa mắt và vỏ bìa sang trọng mang đến trải nghiệm ghi chép tuyệt vời.`,
-      `The exquisite office stationery ${enName} is a professional source of inspiration for your productive workday. Anti-glare premium paper and luxurious cover provide a wonderful writing experience.`
-    );
-  } else if (cat === 'Điện tử' || cat.toLowerCase().includes('điện tử')) {
-    specs = {
-      dimensions: t('15 x 8 x 1 cm', '15 x 8 x 1 cm'),
-      material: t('Hợp kim nhôm & Kính Gorilla cường lực', 'Aluminum Alloy & Gorilla Tempered Glass'),
-      weight: t('210g', '210g'),
-      origin: t('Trung Quốc', 'China'),
-      warranty: t('12 tháng chính hãng', '12 months official warranty'),
-      code: `DT-${p.id}`
-    };
-    overview = t(
-      `Thiết bị điện tử thông minh ${p.name} sở hữu cấu hình mạnh mẽ, thiết kế hiện đại mang lại trải nghiệm mượt mà và tối ưu cho người dùng.`,
-      `The smart electronic device ${p.name} features powerful configuration and modern design, providing smooth and optimal user experience.`
-    );
-  }
+  const specs = mock?.specs ? {
+    code: `SS-${p.id}`,
+    categoryName: p.categoryName || t('Chưa phân loại', 'Uncategorized'),
+    supplierName: p.supplierName || t('Nhà cung cấp trực tiếp', 'Direct Supplier'),
+    dimensions: mock.specs.dimensions,
+    material: mock.specs.material,
+    weight: mock.specs.weight,
+    origin: mock.specs.origin,
+    warranty: mock.specs.warranty,
+  } : {
+    code: `SS-${p.id}`,
+    categoryName: p.categoryName || t('Chưa phân loại', 'Uncategorized'),
+    supplierName: p.supplierName || t('Nhà cung cấp trực tiếp', 'Direct Supplier'),
+    dimensions: t('N/A', 'N/A'),
+    material: t('Cao cấp', 'Premium'),
+    weight: t('N/A', 'N/A'),
+    origin: t('Việt Nam', 'Vietnam'),
+    warranty: t('12 tháng', '12 months'),
+  };
 
   return {
     overview,
@@ -225,6 +142,7 @@ type SortOption = "featured" | "price-asc" | "price-desc" | "name";
 const products = ref<Product[]>([]);
 const cart = ref<CartLine[]>([]);
 const search = ref("");
+const searchInput = ref("");
 const showSearchDropdown = ref(false);
 const heroSearchRef = ref<HTMLElement | null>(null);
 const category = ref("");
@@ -520,7 +438,7 @@ watch(showOnlySales, () => {
 });
 
 const searchSuggestions = computed(() => {
-  const query = search.value.trim();
+  const query = searchInput.value.trim();
   if (!query) return [];
   return products.value
     .filter((product) => productMatchesSearch(product, query))
@@ -589,30 +507,17 @@ async function loadProducts() {
   error.value = "";
   try {
     const data = await getProducts();
-    // Auto-prefill sale prices if they are not defined or invalid
     products.value = data.map((product) => {
-      const hasSale = product.salePrice && product.salePrice < product.originalPrice;
-      if (!product.originalPrice || !product.salePrice || !hasSale) {
-        // Automatically put products on sale based on ID pattern
-        if (product.id % 3 === 0) {
-          const original = product.originalPrice || product.sellingPrice || 100000;
-          const discountPercent = 20 + (product.id % 4) * 10; // 20%, 30%, 40%, 50%
-          const sale = Math.round(original * (1 - discountPercent / 100) / 1000) * 1000;
-          return {
-            ...product,
-            originalPrice: original,
-            salePrice: sale,
-            sellingPrice: sale,
-          };
-        } else {
-          return {
-            ...product,
-            originalPrice: product.originalPrice || product.sellingPrice,
-            salePrice: null,
-          };
-        }
-      }
-      return product;
+      const mock = PRODUCT_MOCKS[product.id];
+      const originalPrice = mock?.originalPrice || product.originalPrice || product.sellingPrice;
+      const salePrice = mock?.salePrice !== undefined ? mock.salePrice : product.salePrice;
+      const hasSale = !!(salePrice && originalPrice && salePrice < originalPrice);
+      return {
+        ...product,
+        originalPrice: originalPrice,
+        salePrice: hasSale ? salePrice : null,
+        sellingPrice: (hasSale && typeof salePrice === 'number') ? salePrice : product.sellingPrice,
+      };
     });
   } catch (exception) {
     error.value =
@@ -677,6 +582,14 @@ async function openChatbot() {
   showChatbot.value = true;
   if (!chatbotLoaded.value) {
     await loadChatbotSession();
+  }
+}
+
+function toggleChatbot() {
+  if (showChatbot.value) {
+    showChatbot.value = false;
+  } else {
+    void openChatbot();
   }
 }
 
@@ -823,6 +736,7 @@ function closeProductDetail() {
 }
 
 function selectSearchResult(product: Product) {
+  searchInput.value = "";
   search.value = "";
   showSearchDropdown.value = false;
   openProductDetail(product);
@@ -856,6 +770,30 @@ function addToCartFromDetail() {
   }, 600);
   
   closeProductDetail();
+}
+
+function buyNowFromDetail() {
+  if (!selectedProduct.value || !selectedVariant.value || !selectedColor.value || selectedStock.value <= 0) return;
+  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id
+    && item.variant.id === selectedVariant.value!.id && item.color.id === selectedColor.value!.id);
+  const quantity = productDetailQuantity.value;
+  
+  if (line) {
+    if (line.quantity + quantity <= selectedStock.value) {
+      line.quantity += quantity;
+    }
+  } else {
+    cart.value.push({ product: selectedProduct.value, variant: selectedVariant.value, color: selectedColor.value, quantity });
+  }
+  
+  // Animate cart button
+  animateCart.value = true;
+  setTimeout(() => {
+    animateCart.value = false;
+  }, 600);
+  
+  closeProductDetail();
+  openCheckoutModal();
 }
 
 // Direct add to cart (triggered from add button, not modal)
@@ -1164,6 +1102,18 @@ function stopSlideTimer() {
   }
 }
 
+function triggerSearch() {
+  search.value = searchInput.value;
+  showSearchDropdown.value = false;
+}
+
+watch(search, (newVal) => {
+  if (newVal.trim()) {
+    showAllProducts.value = true;
+    category.value = "";
+  }
+});
+
 watch([search, category, sort, showAllProducts], () => {
   currentPage.value = 1;
 });
@@ -1332,7 +1282,7 @@ onUnmounted(() => {
         <button class="theme-toggle" type="button" @click="toggleDarkMode" :aria-label="t('Đổi giao diện', 'Switch theme')">
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
-        <button class="cart-button" :class="{ 'cart-pop': animateCart }" type="button" @click="showCart = true">
+        <button class="cart-button" :class="{ 'cart-pop': animateCart, 'has-items': cartCount > 0 }" type="button" @click="showCart = true">
           <i class="pi pi-shopping-bag" />
           <span>{{ t('Giỏ hàng', 'Cart') }}</span>
           <b>{{ cartCount }}</b>
@@ -1345,6 +1295,56 @@ onUnmounted(() => {
         <div class="hero-copy">
           <span class="eyebrow">{{ t('BỘ SƯU TẬP ĐƯỢC TUYỂN CHỌN', 'CURATED COLLECTION') }}</span>
           <h1>{{ t('Mua sắm tinh gọn.', 'Minimalist Shopping.') }}<br /><em class="fs-6">{{ t('Chọn lựa thông minh.', 'Smart Choices.') }}</em></h1>
+          
+          <div class="hero-search-wrap" ref="heroSearchRef">
+            <div class="hero-search-box">
+              <i class="pi pi-search" @click="triggerSearch" style="cursor: pointer;" />
+              <input 
+                v-model="searchInput" 
+                type="text" 
+                :placeholder="t('Tìm tên sản phẩm, thương hiệu hoặc danh mục...', 'Search products, brands or categories...')" 
+                @focus="showSearchDropdown = true"
+                @keydown.enter="triggerSearch"
+              />
+              <button 
+                v-if="searchInput" 
+                class="hero-search-clear" 
+                type="button" 
+                @click="searchInput = ''; search = '';"
+                :aria-label="t('Xóa tìm kiếm', 'Clear search')"
+              >
+                <i class="pi pi-times" />
+              </button>
+            </div>
+            
+            <!-- Suggestions Dropdown -->
+            <div v-if="showSearchDropdown && searchInput.trim()" class="hero-search-dropdown">
+              <template v-if="searchSuggestions.length">
+                <button
+                  v-for="product in searchSuggestions"
+                  :key="product.id"
+                  class="hero-search-result"
+                  type="button"
+                  @click="selectSearchResult(product)"
+                >
+                  <div class="search-result-thumb">
+                    <img v-if="product.imageUrl" :src="product.imageUrl" :alt="translateProductName(product)" />
+                    <i v-else class="pi pi-box" />
+                  </div>
+                  <div class="search-result-info">
+                    <strong>{{ translateProductName(product) }}</strong>
+                    <small>{{ formatCurrency(product.sellingPrice) }}</small>
+                  </div>
+                  <i class="pi pi-chevron-right search-result-arrow" />
+                </button>
+              </template>
+              <div v-else class="hero-search-empty">
+                <i class="pi pi-search" />
+                <span>{{ t('Không tìm thấy kết quả phù hợp', 'No matching results found') }}</span>
+              </div>
+            </div>
+          </div>
+
           <div class="hero-actions">
             <a class="primary-cta" href="#products" @click.prevent="showAllProducts = true; category = '';">
               {{ t('Xem sản phẩm', 'Explore Products') }} <i class="pi pi-arrow-right" />
@@ -1553,15 +1553,11 @@ onUnmounted(() => {
               <h2>{{ category ? translateCategory(category) : t('Tất cả sản phẩm', 'All Products') }}</h2>
               <p>{{ visibleProducts.length }} {{ t('sản phẩm phù hợp', 'matching products') }}</p>
             </div>
-            <div class="search-box">
-              <i class="pi pi-search" />
-              <input v-model="search" type="search" :placeholder="t('Tìm tên, mã hoặc danh mục...', 'Search name, code or category...')" />
-            </div>
           </div>
 
           <div class="catalog-toolbar">
             <div class="active-filters">
-              <span class="filter-tag" v-if="search">{{ t('Tìm kiếm:', 'Search:') }} "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="search = ''" /></span>
+              <span class="filter-tag" v-if="search">{{ t('Tìm kiếm:', 'Search:') }} "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="searchInput = ''; search = '';" /></span>
               <span class="filter-tag sales-tag" v-if="showOnlySales" style="background: #fef2f2; color: #be123c; border-color: #fca5a5;">{{ t('Khuyến mãi: "Ưu đãi 50%"', 'Promotion: "50% Off"') }} <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="showOnlySales = false" /></span>
             </div>
             <label class="sort-control">
@@ -1880,8 +1876,8 @@ onUnmounted(() => {
             </button>
             
             <img 
-              v-if="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
-              :src="getEnrichedProductImages(selectedProduct)[selectedImageIndex]" 
+              v-if="selectedDetailImages[selectedImageIndex]" 
+              :src="selectedDetailImages[selectedImageIndex]" 
               :alt="translateProductName(selectedProduct)"
               class="main-image-img"
             />
@@ -1896,7 +1892,7 @@ onUnmounted(() => {
           </div>
           
           <!-- Thumbnails -->
-          <div class="thumbnails">
+          <div class="thumbnails" v-if="selectedDetailImages.length > 1">
             <button 
               v-for="(image, idx) in selectedDetailImages" 
               :key="idx"
@@ -1946,7 +1942,6 @@ onUnmounted(() => {
                 <span>{{ t('Hết hàng', 'Out of stock') }}</span>
               </div>
             </div>
-          </div>
 
           <!-- Price -->
           <div class="detail-price">
@@ -2021,7 +2016,7 @@ onUnmounted(() => {
           <div class="detail-actions">
             <button 
               type="button" 
-              class="btn-add-to-cart" 
+              class="btn-add-to-cart outline-btn" 
               :disabled="selectedStock <= 0 || !selectedVariant || !selectedColor"
               @click="addToCartFromDetail"
             >
@@ -2030,13 +2025,23 @@ onUnmounted(() => {
             </button>
             <button 
               type="button" 
-              class="btn-back-to-store"
-              @click="closeProductDetail"
+              class="btn-buy-now" 
+              :disabled="selectedStock <= 0 || !selectedVariant || !selectedColor"
+              @click="buyNowFromDetail"
             >
-              <i class="pi pi-arrow-left" />
-              <span>{{ t('Quay lại cửa hàng', 'Back to Store') }}</span>
+              <i class="pi pi-bolt" />
+              <span>{{ t('Mua ngay', 'Buy Now') }}</span>
             </button>
           </div>
+          
+          <button 
+            type="button" 
+            class="link-back-to-store"
+            @click="closeProductDetail"
+          >
+            <i class="pi pi-arrow-left" />
+            <span>{{ t('Quay lại cửa hàng', 'Back to Store') }}</span>
+          </button>
 
           <!-- Product Specifications Accordion (Moved below Add to Cart) -->
           <div v-if="enrichedProductDetails" class="detail-specs-accordion">
@@ -2046,51 +2051,61 @@ onUnmounted(() => {
                 <span>{{ t('Mô tả tổng quan', 'Overview') }}</span>
                 <i class="pi" :class="isDetailOverviewOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
               </button>
-              <Transition name="accordion-slide">
-                <div v-if="isDetailOverviewOpen" class="accordion-content">
-                  <p>{{ enrichedProductDetails.overview }}</p>
-                </div>
-              </Transition>
+              <div class="accordion-content" :class="{ show: isDetailOverviewOpen }">
+                <p>{{ enrichedProductDetails.overview }}</p>
+              </div>
             </div>
 
             <!-- Specs Tab -->
             <div class="accordion-item" :class="{ open: isDetailSpecsOpen }">
               <button type="button" class="accordion-trigger" @click="isDetailSpecsOpen = !isDetailSpecsOpen">
-                <span>{{ t('Thông số kỹ thuật', 'Specifications') }}</span>
+                <span>{{ t('Thông số chi tiết', 'Product Details') }}</span>
                 <i class="pi" :class="isDetailSpecsOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
               </button>
-              <Transition name="accordion-slide">
-                <div v-if="isDetailSpecsOpen" class="accordion-content">
-                  <table class="specs-table">
-                    <tbody>
-                      <tr>
-                        <td><strong>{{ t('Mã sản phẩm', 'Product Code') }}</strong></td>
-                        <td>{{ enrichedProductDetails.specs.code }}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>{{ t('Kích thước', 'Dimensions') }}</strong></td>
-                        <td>{{ enrichedProductDetails.specs.dimensions }}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>{{ t('Chất liệu', 'Material') }}</strong></td>
-                        <td>{{ enrichedProductDetails.specs.material }}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>{{ t('Trọng lượng', 'Weight') }}</strong></td>
-                        <td>{{ enrichedProductDetails.specs.weight }}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>{{ t('Xuất xứ', 'Origin') }}</strong></td>
-                        <td>{{ enrichedProductDetails.specs.origin }}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>{{ t('Bảo hành', 'Warranty') }}</strong></td>
-                        <td>{{ enrichedProductDetails.specs.warranty }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </Transition>
+              <div class="accordion-content" :class="{ show: isDetailSpecsOpen }">
+                <table class="specs-table">
+                  <tbody>
+                    <tr>
+                      <td><strong>{{ t('Mã sản phẩm', 'Product Code') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.code }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Danh mục', 'Category') }}</strong></td>
+                      <td>{{ translateCategory(enrichedProductDetails.specs.categoryName) }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Nhà cung cấp', 'Supplier') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.supplierName }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Trạng thái tồn kho', 'Stock Status') }}</strong></td>
+                      <td>
+                        {{ selectedStock > 0 ? t('Còn hàng (' + selectedStock + ')', 'In Stock (' + selectedStock + ')') : t('Hết hàng', 'Out of stock') }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Kích thước', 'Dimensions') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.dimensions }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Chất liệu', 'Material') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.material }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Trọng lượng', 'Weight') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.weight }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Xuất xứ', 'Origin') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.origin }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>{{ t('Bảo hành', 'Warranty') }}</strong></td>
+                      <td>{{ enrichedProductDetails.specs.warranty }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <!-- Usage Tab -->
@@ -2099,11 +2114,9 @@ onUnmounted(() => {
                 <span>{{ t('Hướng dẫn sử dụng', 'Usage & Care') }}</span>
                 <i class="pi" :class="isDetailUsageOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
               </button>
-              <Transition name="accordion-slide">
-                <div v-if="isDetailUsageOpen" class="accordion-content">
-                  <p>{{ enrichedProductDetails.usage }}</p>
-                </div>
-              </Transition>
+              <div class="accordion-content" :class="{ show: isDetailUsageOpen }">
+                <p>{{ enrichedProductDetails.usage }}</p>
+              </div>
             </div>
 
             <!-- Warranty Tab -->
@@ -2112,15 +2125,14 @@ onUnmounted(() => {
                 <span>{{ t('Cam kết & Bảo hành', 'Commitment & Warranty') }}</span>
                 <i class="pi" :class="isDetailWarrantyOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
               </button>
-              <Transition name="accordion-slide">
-                <div v-if="isDetailWarrantyOpen" class="accordion-content">
-                  <p>{{ enrichedProductDetails.commitment }}</p>
-                </div>
-              </Transition>
+              <div class="accordion-content" :class="{ show: isDetailWarrantyOpen }">
+                <p>{{ enrichedProductDetails.commitment }}</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
 
     <aside class="cart-panel" :class="{ open: showCart }" :aria-label="t('Giỏ hàng', 'Cart')">
@@ -2264,81 +2276,86 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <section class="chatbot-widget" :class="{ open: showChatbot }">
-      <button class="chatbot-fab" type="button" @click="openChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')">
-        <i class="pi pi-comments" />
-      </button>
+    <section class="chatbot-widget" :class="{ open: showChatbot }" style="position: fixed !important; bottom: 20px !important; right: 20px !important; z-index: 99999 !important;">
+    <button class="chatbot-fab" type="button" @click="toggleChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')" style="width: 56px !important; height: 56px !important; border-radius: 50% !important; background: var(--teal) !important; color: white !important; border: 0 !important; cursor: pointer !important; box-shadow: 0 4px 16px rgba(15, 118, 110, 0.35) !important;">
+      <i class="pi pi-comments" style="font-size: 24px !important; color: white !important;" />
+    </button>
 
-      <aside v-if="showChatbot" class="chatbot-panel">
-        <header class="chatbot-head">
-          <div>
-            <small>{{ ('Smart Store AI') }}</small>
-          </div>
-          <button type="button" @click="showChatbot = false" :aria-label="t('Đóng', 'Close')">
-            <i class="pi pi-times" />
-          </button>
-        </header>
-
-        <div class="chatbot-suggestions" v-if="!chatbotSending">
-          <button
-            v-for="suggestion in chatbotSuggestions"
-            :key="suggestion"
-            type="button"
-            @click="sendChatbotText(suggestion)"
-          >
-            {{ suggestion }}
-          </button>
-        </div>
-
-        <div class="chatbot-body">
-          <div v-if="chatbotLoading" class="chatbot-state">
-            <i class="pi pi-spin pi-spinner" />
-            <span>{{ t('Đang tải phiên chat...', 'Loading chat session...') }}</span>
-          </div>
-          <template v-else>
-            <article
-              v-for="(message, index) in chatbotMessages"
-              :key="`${message.createdAt}-${index}`"
-              class="chat-message"
-              :class="message.role === 'user' ? 'from-user' : 'from-bot'"
-            >
-              <p>{{ message.content }}</p>
-            </article>
-            <div v-if="chatbotSending" class="chat-message from-bot loading-message">
-              <i class="pi pi-spin pi-spinner" />
-              <span>{{ t('Đang suy nghĩ...', 'Thinking...') }}</span>
+      <Transition name="chat-slide">
+      <aside v-if="showChatbot" class="chatbot-panel" style="position: fixed !important; bottom: 90px !important; right: 20px !important; width: 380px !important; height: 540px !important; z-index: 99999 !important;">
+          <header class="chatbot-head">
+            <div>
+              <strong>Smart Store AI</strong>
+              <small>{{ t('Trợ lý mua sắm thông minh', 'Smart Shopping Assistant') }}</small>
             </div>
-          </template>
-        </div>
+            <button class="chatbot-close-btn" type="button" @click="showChatbot = false" :aria-label="t('Đóng', 'Close')">
+              <i class="pi pi-times" />
+            </button>
+          </header>
 
-        <div v-if="chatbotActions.length" class="chatbot-actions">
-          <button
-            v-for="(action, index) in chatbotActions"
-            :key="`${action.type}-${action.productId}-${index}`"
-            type="button"
-            @click="handleChatAction(action)"
-          >
-            <i :class="action.type === 'add-to-cart' ? 'pi pi-shopping-bag' : 'pi pi-eye'" />
-            {{ action.label }}
-          </button>
-        </div>
+          <div class="chatbot-body">
+            <div v-if="chatbotLoading" class="chatbot-state">
+              <i class="pi pi-spin pi-spinner" />
+              <span>{{ t('Đang tải phiên chat...', 'Loading chat session...') }}</span>
+            </div>
+            <template v-else>
+              <article
+                v-for="(message, index) in chatbotMessages"
+                :key="`${message.createdAt}-${index}`"
+                class="chat-message"
+                :class="message.role === 'user' ? 'from-user' : 'from-bot'"
+              >
+                <div class="message-bubble">
+                  <p>{{ message.content }}</p>
+                </div>
+              </article>
+              <div v-if="chatbotSending" class="chat-message from-bot loading-message">
+                <i class="pi pi-spin pi-spinner" />
+                <span>{{ t('Đang suy nghĩ...', 'Thinking...') }}</span>
+              </div>
+            </template>
+          </div>
 
-        <p v-if="chatbotError" class="chatbot-error">
-          <i class="pi pi-exclamation-circle" /> {{ chatbotError }}
-        </p>
+          <div class="chatbot-suggestions" v-if="!chatbotSending && chatbotSuggestions.length">
+            <button
+              v-for="suggestion in chatbotSuggestions"
+              :key="suggestion"
+              type="button"
+              @click="sendChatbotText(suggestion)"
+            >
+              {{ suggestion }}
+            </button>
+          </div>
 
-        <form class="chatbot-input" @submit.prevent="sendChatbotText()">
-          <input
-            v-model="chatbotInput"
-            type="text"
-            :placeholder="t('Hỏi về sản phẩm, đơn hàng, tồn kho...', 'Ask about products, orders, stock...')"
-            :disabled="chatbotSending"
-          />
-          <button type="submit" :disabled="chatbotSending || !chatbotInput.trim()">
-            <i class="pi pi-send" />
-          </button>
-        </form>
-      </aside>
+          <div v-if="chatbotActions.length" class="chatbot-actions">
+            <button
+              v-for="(action, index) in chatbotActions"
+              :key="`${action.type}-${action.productId}-${index}`"
+              type="button"
+              @click="handleChatAction(action)"
+            >
+              <i :class="action.type === 'add-to-cart' ? 'pi pi-shopping-bag' : 'pi pi-eye'" />
+              {{ action.label }}
+            </button>
+          </div>
+
+          <p v-if="chatbotError" class="chatbot-error">
+            <i class="pi pi-exclamation-circle" /> {{ chatbotError }}
+          </p>
+
+          <form class="chatbot-input" @submit.prevent="sendChatbotText()">
+            <input
+              v-model="chatbotInput"
+              type="text"
+              :placeholder="t('Hỏi về sản phẩm, đơn hàng, tồn kho...', 'Ask about products, orders, stock...')"
+              :disabled="chatbotSending"
+            />
+            <button type="submit" :disabled="chatbotSending || !chatbotInput.trim()">
+              <i class="pi pi-send" />
+            </button>
+          </form>
+        </aside>
+      </Transition>
     </section>
 
     <footer id="footer">
@@ -2456,7 +2473,7 @@ onUnmounted(() => {
 }
 .store .cart-footer > button,
 .store .cart-checkout-btn,
-.store .btn-add-to-cart,
+.store .btn-buy-now,
 .store .submit-btn,
 .store .pay-button {
   min-height: 62px;
@@ -2476,36 +2493,10 @@ onUnmounted(() => {
 }
 .store .cart-footer > button:hover,
 .store .cart-checkout-btn:hover,
-.store .btn-add-to-cart:hover:not(:disabled) {
+.store .btn-buy-now:hover:not(:disabled) {
   background: var(--teal-dark) !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgb(15 118 110 / 28%);
-}
-.store .btn-add-to-cart {
-  min-height: 64px;
-  padding: 0 32px;
-  font-size: 16px;
-}
-.store .btn-back-to-store {
-  min-height: 64px;
-  padding: 0 32px;
-  border-radius: 12px;
-  font-size: 16px;
-  color: var(--ink) !important;
-  background: #fff !important;
-  border: 2px solid var(--line) !important;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-.store .btn-back-to-store:hover {
-  color: #fff !important;
-  background: var(--ink) !important;
-  border-color: var(--ink) !important;
-  transform: translateY(-1px);
 }
 .store .empty-cart button {
   min-height: 58px;
@@ -2652,10 +2643,10 @@ onUnmounted(() => {
   justify-self: end;
   min-height: 42px;
   padding: 0 13px 0 15px;
-  border: 1px solid #d9d9d2;
+  border: 1px solid #d9d9d2 !important;
+  color: var(--ink) !important;
+  background: transparent !important;
   border-radius: 99px;
-  color: var(--ink);
-  background: transparent;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -3899,7 +3890,42 @@ main {
 
 .btn-add-to-cart {
   min-height: 64px;
-  padding: 0 32px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-add-to-cart.outline-btn {
+  border: 2px solid var(--teal);
+  background: transparent;
+  color: var(--teal);
+}
+
+.btn-add-to-cart.outline-btn:hover:not(:disabled) {
+  background: rgba(15, 118, 110, 0.05);
+  border-color: var(--teal-dark);
+  color: var(--teal-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.1);
+}
+
+.btn-add-to-cart:disabled, .btn-buy-now:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-buy-now {
+  min-height: 64px;
+  padding: 0 24px;
   border: 0;
   border-radius: 12px;
   background: var(--teal);
@@ -3911,41 +3937,33 @@ main {
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.btn-add-to-cart:hover:not(:disabled) {
+.btn-buy-now:hover:not(:disabled) {
   background: var(--teal-dark);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
 }
 
-.btn-add-to-cart:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-back-to-store {
-  min-height: 64px;
-  padding: 0 32px;
-  border: 2px solid var(--line);
-  border-radius: 12px;
-  background: white;
-  color: var(--ink);
-  font-weight: 700;
-  font-size: 16px;
-  display: flex;
+.link-back-to-store {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color 0.2s;
+  width: 100%;
 }
 
-.btn-back-to-store:hover {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: white;
+.link-back-to-store:hover {
+  color: var(--ink);
 }
 
 .state-card {
@@ -4221,6 +4239,9 @@ main {
   border: 0;
   background: transparent;
   font-size: 8px;
+  background: #f1f5f9 !important;
+  color: #111827 !important;
+  border: none !important;
 }
 .quantity-control input {
   min-height: 30px;
@@ -4445,7 +4466,8 @@ footer {
   .store .hero-copy {
     text-align: center;
   }
-  .hero-copy > p {
+  .hero-copy > p,
+  .hero-search-wrap {
     margin-inline: auto;
   }
   .store .hero-actions {
@@ -4793,8 +4815,9 @@ footer {
   color: #f1f5f9;
 }
 .app-dark .cart-button {
-  border-color: #23304c;
-  color: #f1f5f9;
+border: 1px solid #23304c !important;
+  color: #f1f5f9 !important;
+  background: #151d30 !important;
 }
 .app-dark .quantity-control input {
   background: #151d30;
@@ -4802,8 +4825,9 @@ footer {
   color: #f1f5f9;
 }
 .app-dark .quantity-control button {
-  background: #23304c;
-  color: #f1f5f9;
+  background: #1e293b !important; /* Loại bỏ màu trắng */
+  color: #ffffff !important;
+  border: none !important;
 }
 .app-dark .announcement {
   background: #070a13;
@@ -4880,15 +4904,6 @@ footer {
 }
 .app-dark .search-result-info strong {
   color: #f1f5f9;
-}
-.app-dark .btn-back-to-store {
-  color: #f1f5f9 !important;
-  background: #151d30 !important;
-  border-color: #23304c !important;
-}
-.app-dark .btn-back-to-store:hover {
-  color: #0b0f19 !important;
-  background: #f1f5f9 !important;
 }
 .app-dark .cart-footer {
   background: #151d30;
@@ -5621,12 +5636,30 @@ footer {
   background: rgba(255, 255, 255, 0.02);
 }
 .detail-specs-accordion .accordion-content {
-  padding: 0 16px 16px 16px;
-  font-size: 15px; /* Increased size by 2px */
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  font-size: 15px;
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.6;
+  padding: 0 16px;
+  border-top: 0;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.3s ease, 
+              padding 0.4s ease,
+              backdrop-filter 0.3s ease;
+  backdrop-filter: blur(0px);
+}
+.detail-specs-accordion .accordion-content.show {
+  max-height: 1200px;
+  opacity: 1;
+  padding: 16px;
   border-top: 1px solid var(--line);
-  padding-top: 12px;
+  backdrop-filter: blur(10px);
+  background: rgba(248, 247, 242, 0.45) !important;
+}
+.app-dark .detail-specs-accordion .accordion-content.show {
+  background: rgba(11, 15, 25, 0.45) !important;
 }
 .detail-specs-accordion .accordion-content p {
   margin: 0;
@@ -6349,5 +6382,1344 @@ footer {
   color: #38bdf8;
   border-bottom-color: #38bdf8;
 }
+
+/* Modern Storefront Detail Layout Overrides */
+.store .main-image {
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+}
+
+.app-dark .main-image {
+  background: #1e293b !important;
+  border-color: #23304c !important;
+}
+
+.store .main-image img {
+  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.detail-specs-accordion .accordion-content p {
+  white-space: pre-wrap !important;
+  line-height: 1.6 !important;
+}
+
+.store .detail-price {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding: 24px !important;
+  border: 1px solid rgba(15, 118, 110, 0.15) !important;
+  border-radius: 12px !important;
+  background: #f0fdfa !important;
+  text-align: left !important;
+}
+
+.app-dark .detail-price {
+  background: rgba(2, 132, 199, 0.08) !important;
+  border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+.store .price-value {
+  font-family: var(--font-heading) !important;
+  font-size: 36px !important;
+  font-weight: 800 !important;
+  color: var(--teal) !important;
+}
+
+/* Variant & Color Picker Modern Styling */
+.store .variant-picker {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin: 24px 0 !important;
+  text-align: left !important;
+}
+
+.store .variant-picker label {
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  color: var(--ink) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin-bottom: 4px !important;
+}
+
+.store .variant-options {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.store .variant-options button {
+  min-height: 40px !important;
+  padding: 6px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--line) !important;
+  background: white !important;
+  color: var(--ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.app-dark .variant-options button {
+  background: #1e293b !important;
+  border-color: #23304c !important;
+  color: #cbd5e1 !important;
+}
+
+.store .variant-options button:hover:not(:disabled) {
+  border-color: var(--teal) !important;
+  color: var(--teal) !important;
+  background: rgba(15, 118, 110, 0.02) !important;
+}
+
+.store .variant-options button.active {
+  border-color: var(--teal) !important;
+  background: rgba(15, 118, 110, 0.05) !important;
+  color: var(--teal) !important;
+  box-shadow: 0 0 0 1px var(--teal) !important;
+}
+
+.store .variant-options button:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: var(--muted) !important;
+}
+
+.app-dark .variant-options button:disabled {
+  background: #0b0f19 !important;
+  border-color: #23304c !important;
+}
+
+.store .color-dot {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  display: inline-block !important;
+}
+
+/* CTA Button Specific Styles to override resets */
+.store .btn-add-to-cart {
+  min-height: 64px !important;
+  padding: 0 24px !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.store .btn-add-to-cart.outline-btn {
+  border: 2px solid var(--teal) !important;
+  background: transparent !important;
+  color: var(--teal) !important;
+}
+
+.store .btn-add-to-cart.outline-btn:hover:not(:disabled) {
+  background: rgba(15, 118, 110, 0.05) !important;
+  border-color: var(--teal-dark) !important;
+  color: var(--teal-dark) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.1) !important;
+}
+
+.store .btn-buy-now {
+  min-height: 64px !important;
+  padding: 0 24px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--teal) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.store .btn-buy-now:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3) !important;
+}
+
+/* AI Chatbot Floating Redesign Styles */
+.store .chatbot-widget {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 99999 !important;
+}
+
+.store .chatbot-fab {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background: var(--teal) !important;
+  color: white !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.35) !important;
+  border: 0 !important;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  z-index: 99999 !important;
+}
+
+.store .chatbot-fab i {
+  color: white !important;
+  font-size: 24px !important;
+  display: inline-block !important;
+}
+
+.store .chatbot-fab:hover {
+  transform: scale(1.08) rotate(5deg) !important;
+  background: var(--teal-dark) !important;
+  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.5) !important;
+}
+
+.chatbot-panel {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 380px;
+  height: 540px;
+  max-height: calc(100vh - 140px);
+  max-width: calc(100vw - 48px);
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 100;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.app-dark .chatbot-panel {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+.chatbot-head {
+  padding: 16px 20px;
+  background: var(--teal);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-dark .chatbot-head {
+  background: #1e293b;
+}
+
+.chatbot-head div {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.chatbot-head strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.chatbot-head small {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.chatbot-close-btn {
+  background: transparent !important;
+  border: 0 !important;
+  color: white !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% !important;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chatbot-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.chatbot-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #f8fafc;
+}
+
+.app-dark .chatbot-body {
+  background: #0b0f19 !important;
+}
+
+.chatbot-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.chatbot-state i {
+  font-size: 24px;
+  color: var(--teal);
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  width: fit-content;
+}
+
+.chat-message.from-user {
+  align-self: flex-end;
+}
+
+.chat-message.from-bot {
+  align-self: flex-start;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  word-break: break-word;
+}
+
+.from-user .message-bubble {
+  background: var(--teal);
+  color: white;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.15);
+}
+
+.from-bot .message-bubble {
+  background: #ffffff;
+  color: #111827;
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+}
+
+.app-dark .from-bot .message-bubble {
+  background: #1e293b !important;
+  border-color: #23304c !important;
+  color: #e2e8f0 !important;
+}
+
+.chat-message p {
+  margin: 0;
+}
+
+.loading-message {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  align-self: flex-start;
+  padding: 6px 12px;
+}
+
+/* Chat Prompt Suggestions */
+.chatbot-suggestions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+  scrollbar-width: none; /* Firefox */
+}
+
+.chatbot-suggestions::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.app-dark .chatbot-suggestions {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+}
+
+.chatbot-suggestions button {
+  background: transparent !important;
+  border: 1px solid var(--teal) !important;
+  color: var(--teal) !important;
+  border-radius: 20px !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chatbot-suggestions button:hover {
+  background: var(--teal) !important;
+  color: white !important;
+  transform: translateY(-1px);
+}
+
+/* Chat Action Buttons (e.g. Add to Cart inside chat) */
+.chatbot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.app-dark .chatbot-actions {
+  background: #0b0f19;
+  border-color: #23304c;
+}
+
+.chatbot-actions button {
+  background: var(--teal) !important;
+  color: white !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chatbot-actions button:hover {
+  background: var(--teal-dark) !important;
+}
+
+.chatbot-error {
+  margin: 0;
+  padding: 8px 16px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid #fee2e2;
+}
+
+.app-dark .chatbot-error {
+  background: rgba(220, 38, 38, 0.1);
+  color: #fca5a5;
+  border-top-color: rgba(220, 38, 38, 0.2);
+}
+
+/* Chat Input Bar */
+.chatbot-input {
+  display: flex;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+  gap: 10px;
+}
+
+.app-dark .chatbot-input {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+}
+
+.chatbot-input input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 8px 16px;
+  font-size: 13px;
+  outline: none;
+  background: #f8fafc;
+  transition: all 0.2s;
+}
+
+.app-dark .chatbot-input input {
+  background: #0b0f19;
+  border-color: #23304c;
+  color: #cbd5e1;
+}
+
+.chatbot-input input:focus {
+  border-color: var(--teal);
+  background: white;
+}
+
+.app-dark .chatbot-input input:focus {
+  background: #0b0f19;
+}
+
+.chatbot-input button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% !important;
+  background: var(--teal) !important;
+  color: white !important;
+  border: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.chatbot-input button:hover:not(:disabled) {
+  background: var(--teal-dark) !important;
+  transform: scale(1.05);
+}
+
+.chatbot-input button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Smooth Entrance Slide transition */
+.chat-slide-enter-active,
+.chat-slide-leave-active {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-slide-enter-from,
+.chat-slide-leave-to {
+  transform: translateY(30px) scale(0.92);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Cart Button & Icon Adaptive Theme Styling */
+.store .cart-button {
+  background: #f1f5f9 !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  border-radius: 99px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  z-index: 100 !important;
+}
+
+.store .cart-button i {
+  color: var(--ink) !important;
+}
+
+.store .cart-button:hover {
+  background: var(--line) !important;
+  transform: translateY(-1px);
+}
+
+/* Highlight state when cart has items */
+.store .cart-button.has-items {
+  background: var(--teal) !important;
+  border-color: var(--teal) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
+}
+
+.store .cart-button.has-items i {
+  color: #ffffff !important;
+}
+
+.store .cart-button.has-items:hover {
+  background: var(--teal-dark) !important;
+  border-color: var(--teal-dark) !important;
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.3) !important;
+}
+
+/* Dark Mode Overrides for Cart Button */
+.app-dark .store .cart-button {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.app-dark .store .cart-button i {
+  color: #f1f5f9 !important;
+}
+
+.app-dark .store .cart-button:hover {
+  background: #334155 !important;
+}
+
+.app-dark .store .cart-button.has-items {
+  background: var(--teal) !important;
+  border-color: var(--teal) !important;
+  color: #0b0f19 !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+}
+
+.app-dark .store .cart-button.has-items i {
+  color: #0b0f19 !important;
+}
+
+.app-dark .store .cart-button.has-items:hover {
+  background: var(--teal-dark) !important;
+  border-color: var(--teal-dark) !important;
+}
+
+/* Cart Panel Text Contrast Overrides */
+.store .cart-panel {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+}
+
+.app-dark .store .cart-panel {
+  background: #151d30 !important;
+  color: #f1f5f9 !important;
+}
+
+.store .cart-panel p,
+.store .cart-panel span,
+.store .cart-panel strong,
+.store .cart-panel small,
+.store .cart-panel i,
+.store .cart-panel h2 {
+  color: inherit !important;
+}
+
+.store .cart-info > small {
+  color: var(--teal) !important;
+}
+
+/* Chatbot Floating Widget & Panel Styling */
+.store .chatbot-panel {
+  background: #ffffff !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15) !important;
+  z-index: 99999 !important;
+  color: #1e293b !important;
+}
+
+.app-dark .store .chatbot-panel {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+  color: #cbd5e1 !important;
+}
+
+.store .chatbot-panel p,
+.store .chatbot-panel span,
+.store .chatbot-panel strong,
+.store .chatbot-panel small,
+.store .chatbot-panel i {
+  color: inherit !important;
+}
+
+/* Chat Header */
+.store .chatbot-head {
+  background: var(--teal) !important;
+}
+
+.store .chatbot-head,
+.store .chatbot-head strong,
+.store .chatbot-head small,
+.store .chatbot-head button,
+.store .chatbot-head button i {
+  color: #ffffff !important;
+}
+
+.app-dark .store .chatbot-head {
+  background: #1e293b !important;
+}
+
+/* Chat Body Backgrounds */
+.store .chatbot-body {
+  background: #f8fafc !important;
+}
+
+.app-dark .store .chatbot-body {
+  background: #0b0f19 !important;
+}
+
+/* User Message Bubble */
+.store .chat-message.from-user .message-bubble,
+.store .chat-message.from-user .message-bubble p,
+.store .chat-message.from-user .message-bubble span {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+}
+
+.app-dark .store .chat-message.from-user .message-bubble,
+.app-dark .store .chat-message.from-user .message-bubble p,
+.app-dark .store .chat-message.from-user .message-bubble span {
+  background: var(--teal) !important;
+  color: #0b0f19 !important; /* Dark text for contrast against sky blue */
+}
+
+/* Bot Message Bubble */
+.store .chat-message.from-bot .message-bubble,
+.store .chat-message.from-bot .message-bubble p,
+.store .chat-message.from-bot .message-bubble span {
+  background: #ffffff !important;
+  color: #111827 !important; /* text-gray-900 */
+  border: 1px solid var(--line) !important;
+}
+
+.app-dark .store .chat-message.from-bot .message-bubble,
+.app-dark .store .chat-message.from-bot .message-bubble p,
+.app-dark .store .chat-message.from-bot .message-bubble span {
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+  border-color: #23304c !important;
+}
+
+/* Chat Input bar */
+.store .chatbot-input {
+  background: #ffffff !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+.app-dark .store .chatbot-input {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+}
+
+.store .chatbot-input input {
+  background: #f8fafc !important;
+  border: 1px solid var(--line) !important;
+  color: #1e293b !important;
+}
+
+.app-dark .store .chatbot-input input {
+  background: #0b0f19 !important;
+  border-color: #23304c !important;
+  color: #cbd5e1 !important;
+}
+
+/* Chatbot Suggestion Chips */
+.store .chatbot-suggestions {
+  background: #ffffff !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+.app-dark .store .chatbot-suggestions {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+}
+
+.store .chatbot-suggestions button,
+.store .chatbot-suggestions button span {
+  background: transparent !important;
+  border: 1.5px solid var(--teal) !important;
+  color: var(--teal) !important;
+  font-weight: 700 !important;
+}
+
+.app-dark .store .chatbot-suggestions button,
+.app-dark .store .chatbot-suggestions button span {
+  color: var(--teal) !important;
+  border-color: var(--teal) !important;
+}
+
+.store .chatbot-suggestions button:hover,
+.store .chatbot-suggestions button:hover span {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+}
+
+.app-dark .store .chatbot-suggestions button:hover,
+.app-dark .store .chatbot-suggestions button:hover span {
+  background: var(--teal) !important;
+  color: #0b0f19 !important;
+}
+
+/* Cart Quantity Controls - High Contrast */
+.store .quantity-control {
+  border: 1.5px solid var(--line) !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+.store .quantity-control button {
+  background: #f1f5f9 !important;
+  color: var(--ink) !important;
+  font-weight: 750 !important;
+  font-size: 11px !important;
+  transition: background 0.15s !important;
+}
+
+.store .quantity-control button:hover {
+  background: var(--line) !important;
+}
+
+.store .quantity-control input {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+  font-weight: 750 !important;
+  border-right: 1.5px solid var(--line) !important;
+  border-left: 1.5px solid var(--line) !important;
+}
+
+/* Cart Trash Button - High Contrast */
+.store .remove-line {
+  border: 1px solid #fee2e2 !important;
+  background: #fef2f2 !important;
+  color: #ef4444 !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.store .remove-line:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+}
+
+/* Cart Drawer Close Button */
+.store .cart-head button {
+  border: 1.5px solid var(--line) !important;
+  background: #f8fafc !important;
+  color: var(--ink) !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.store .cart-head button:hover {
+  background: var(--line) !important;
+}
+
+/* Cart Drawer Checkout Button */
+.store .cart-checkout-btn {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
+}
+
+.store .cart-checkout-btn:hover {
+  background: var(--teal-dark) !important;
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.3) !important;
+}
+
+/* Dark Mode Overrides for Cart Elements */
+.app-dark .store .quantity-control {
+  border-color: #334155 !important;
+}
+
+.app-dark .store .quantity-control button {
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+.app-dark .store .quantity-control button:hover {
+  background: #334155 !important;
+}
+
+.app-dark .store .quantity-control input {
+  background: #0b0f19 !important;
+  color: #f1f5f9 !important;
+  border-right-color: #334155 !important;
+  border-left-color: #334155 !important;
+}
+
+.app-dark .store .remove-line {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+}
+
+.app-dark .store .remove-line:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #ef4444 !important;
+}
+
+.app-dark .store .cart-head button {
+  border-color: #334155 !important;
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.app-dark .store .cart-head button:hover {
+  background: #334155 !important;
+}
+
+.app-dark .store .cart-checkout-btn {
+  background: var(--teal) !important;
+  color: #0b0f19 !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+}
+
+.app-dark .store .cart-checkout-btn:hover {
+  background: var(--teal-dark) !important;
+}
+
+/* Product Grid 'Add' Button Overrides */
+.store .product-footer > button {
+  min-height: 40px !important;
+  padding: 0 16px !important;
+  border: 1.5px solid var(--teal) !important;
+  border-radius: 10px !important;
+  color: var(--teal) !important;
+  background: rgba(15, 118, 110, 0.05) !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.store .product-footer > button:hover:not(:disabled) {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25) !important;
+}
+
+.app-dark .store .product-footer > button {
+  background: rgba(56, 189, 248, 0.1) !important;
+  border-color: var(--teal) !important;
+  color: var(--teal) !important;
+}
+
+.app-dark .store .product-footer > button:hover:not(:disabled) {
+  background: var(--teal) !important;
+  color: #0b0f19 !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35) !important;
+}
 </style>
+
+<style>
+/* =========================================================================
+   GLOBAL OVERRIDES FOR STOREFRONT UI (BUILT-IN CONTRAST & SPECIFICITY FIXES)
+   ========================================================================= */
+
+/* Floating Chatbot Widget Launcher & Panel Positioning (Anchored bottom-right) */
+.chatbot-widget {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  left: auto !important;
+  width: 0px !important;
+  height: 0px !important;
+  z-index: 99999 !important;
+}
+
+.chatbot-fab {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  left: auto !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background: var(--teal) !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.35) !important;
+  border: 0 !important;
+  z-index: 99999 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.chatbot-fab i {
+  color: #ffffff !important;
+  font-size: 24px !important;
+}
+
+.chatbot-fab:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.45) !important;
+}
+
+.chatbot-panel {
+  position: absolute !important;
+  bottom: 70px !important; /* Floats perfectly above the FAB button */
+  right: 0 !important;
+  left: auto !important;
+  width: 380px !important;
+  height: 540px !important;
+  max-height: calc(100vh - 140px) !important;
+  max-width: calc(100vw - 40px) !important;
+  background: #ffffff !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  z-index: 99999 !important;
+  color: #111827 !important;
+}
+
+/* Dark mode chatbot panel */
+.app-dark .chatbot-panel {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Force all general text elements inside chatbot and cart panel to inherit theme colors */
+.chatbot-panel p,
+.chatbot-panel span,
+.chatbot-panel strong,
+.chatbot-panel small,
+.chatbot-panel i,
+.cart-panel p,
+.cart-panel span,
+.cart-panel strong,
+.cart-panel small,
+.cart-panel i,
+.cart-panel h2 {
+  color: inherit !important;
+}
+
+/* User Message Bubble */
+.chat-message.from-user .message-bubble,
+.chat-message.from-user .message-bubble p,
+.chat-message.from-user .message-bubble span {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+}
+
+.app-dark .chat-message.from-user .message-bubble,
+.app-dark .chat-message.from-user .message-bubble p,
+.app-dark .chat-message.from-user .message-bubble span {
+  background: var(--teal) !important;
+  color: #0b0f19 !important; /* Dark text for contrast against sky blue */
+}
+
+/* Bot Message Bubble */
+.chat-message.from-bot .message-bubble,
+.chat-message.from-bot .message-bubble p,
+.chat-message.from-bot .message-bubble span {
+  background: #ffffff !important;
+  color: #111827 !important; /* text-gray-900 */
+  border: 1px solid var(--line) !important;
+}
+
+.app-dark .chat-message.from-bot .message-bubble,
+.app-dark .chat-message.from-bot .message-bubble p,
+.app-dark .chat-message.from-bot .message-bubble span {
+  background: #1e293b !important;
+  color: #ffffff !important; /* text-white */
+  border-color: #23304c !important;
+}
+
+/* Suggestions button styling */
+.chatbot-suggestions button,
+.chatbot-suggestions button span {
+  background: transparent !important;
+  border: 1.5px solid var(--teal) !important;
+  color: var(--teal) !important;
+  font-weight: 700 !important;
+}
+
+.chatbot-suggestions button:hover,
+.chatbot-suggestions button:hover span {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+}
+
+.app-dark .chatbot-suggestions button,
+.app-dark .chatbot-suggestions button span {
+  color: var(--teal) !important; /* sky blue */
+  border-color: var(--teal) !important;
+}
+
+.app-dark .chatbot-suggestions button:hover,
+.app-dark .chatbot-suggestions button:hover span {
+  background: var(--teal) !important;
+  color: #0b0f19 !important;
+}
+
+/* Chat Input styling */
+.chatbot-input {
+  background: #ffffff !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+.app-dark .chatbot-input {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+}
+
+.chatbot-input input {
+  background: #f8fafc !important;
+  border: 1px solid var(--line) !important;
+  color: #111827 !important; /* text-gray-900 */
+}
+
+.app-dark .chatbot-input input {
+  background: #0b0f19 !important;
+  border-color: #23304c !important;
+  color: #ffffff !important; /* text-white */
+}
+
+/* =========================================================================
+   CART DRAWER CONTROLS & CONTRAST OVERRIDES (LIGHT & DARK MODE)
+   ========================================================================= */
+
+/* Cart Panel container */
+.cart-panel {
+  background: #ffffff !important;
+  color: #111827 !important; /* text-gray-900 */
+  z-index: 99999 !important;
+}
+
+.app-dark .cart-panel {
+  background: #151d30 !important;
+  color: #ffffff !important; /* text-white */
+}
+
+/* Quantity controls container */
+.quantity-control {
+  border: 1.5px solid var(--line) !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.app-dark .quantity-control {
+  border-color: #334155 !important;
+}
+
+/* Input box in quantity controls */
+.quantity-control input {
+  background: #ffffff !important;
+  color: #111827 !important; /* text-gray-900 */
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  border-right: 1.5px solid var(--line) !important;
+  border-left: 1.5px solid var(--line) !important;
+  border-radius: 0 !important;
+  font-weight: 750 !important;
+  width: 40px !important;
+  height: 32px !important;
+  text-align: center !important;
+  padding: 0 !important;
+}
+
+.app-dark .quantity-control input {
+background: #0b0f19 !important; /* Nền tối cho input */
+  color: #ffffff !important;
+  border-right-color: #334155 !important;
+  border-left-color: #334155 !important;
+}
+
+/* Quantity Control Buttons (Plus/Minus) */
+.quantity-control button {
+  background: #f1f5f9 !important; /* Light background for clear buttons */
+  color: #111827 !important; /* text-gray-900 */
+  border: 0 !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  font-weight: 750 !important;
+  transition: background 0.15s ease !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.quantity-control button i {
+  color: #111827 !important; /* force icon color to be text-gray-900 in light mode */
+}
+
+.quantity-control button:hover {
+  background: var(--line) !important;
+}
+
+/* Dark mode quantity control buttons - REMOVE white background completely */
+.app-dark .quantity-control button {
+  background: #1e293b !important; /* Slate dark background */
+  color: #ffffff !important; /* text-white */
+}
+
+.app-dark .quantity-control button i {
+  color: #ffffff !important; /* force icon color to be text-white in dark mode */
+}
+
+.app-dark .quantity-control button:hover {
+  background: #334155 !important;
+}
+
+/* Trash remove button */
+.remove-line {
+  border: 1px solid #fee2e2 !important;
+  background: #fef2f2 !important;
+  color: #ef4444 !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.remove-line i {
+  color: #ef4444 !important;
+}
+
+.remove-line:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+}
+
+.app-dark .remove-line {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+}
+
+.app-dark .remove-line i {
+  color: #fca5a5 !important;
+}
+
+.app-dark .remove-line:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #ef4444 !important;
+}
+
+/* Checkout Button */
+.cart-checkout-btn {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
+}
+
+.cart-checkout-btn i {
+  color: #ffffff !important;
+}
+
+.cart-checkout-btn:hover {
+  background: var(--teal-dark) !important;
+}
+
+.app-dark .cart-checkout-btn {
+  background: var(--teal) !important; /* sky blue in dark mode */
+  color: #0b0f19 !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+}
+
+.app-dark .cart-checkout-btn i {
+  color: #0b0f19 !important;
+}
+
+.app-dark .cart-checkout-btn:hover {
+  background: var(--teal-dark) !important;
+}
+
+/* Product Card Add Button styling */
+.product-footer > button {
+  min-height: 40px !important;
+  padding: 0 16px !important;
+  background: rgba(15, 118, 110, 0.05) !important;
+  border: 1.5px solid var(--teal) !important;
+  color: var(--teal) !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.product-footer > button i {
+  color: var(--teal) !important;
+}
+
+.product-footer > button:hover:not(:disabled) {
+  background: var(--teal) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25) !important;
+}
+
+.product-footer > button:hover:not(:disabled) i {
+  color: #ffffff !important;
+}
+
+.app-dark .product-footer > button {
+background: rgba(56, 189, 248, 0.1) !important;
+  border: 1.5px solid var(--teal) !important;
+  color: var(--teal) !important;
+}
+
+.app-dark .product-footer > button i {
+  color: var(--teal) !important;
+}
+
+.app-dark .product-footer > button:hover:not(:disabled) {
+  background: var(--teal) !important;
+  color: #0b0f19 !important;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35) !important;
+}
+
+.app-dark .product-footer > button:hover:not(:disabled) i {
+  color: #0b0f19 !important;
+}
+</style>
+
 
