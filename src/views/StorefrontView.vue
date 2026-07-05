@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from "../services/orderApi";
+import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, requestOrderCancellation, type Order, type OrderStatus } from "../services/orderApi";
 import { getProducts, type Product, type ProductVariant, type ProductVariantColor } from "../services/productApi";
 import { getMyProfile, updateUser, type UserDto } from "../services/userApi";
 import { saveSession } from "../services/apiClient";
@@ -265,12 +265,15 @@ function statusRank(status: OrderStatus) {
     Shipped: 4,
     Completed: 5,
     Cancelled: 0,
+    RefundRequested: 0,
+    Refunded: 0,
+    RefundRejected: 0,
   };
   return ranks[status] ?? 0;
 }
 
 function getOrderTimeline(order: Order): TimelineStep[] {
-  const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status);
+  const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed', 'RefundRequested', 'Refunded', 'RefundRejected'].includes(order.status);
   const isPayOs = (order.paymentMethod || '').toLowerCase() === 'payos';
   const rank = statusRank(order.status);
   const cashConfirmed = !isPayOs && rank >= 2 && !cancelled;
@@ -362,7 +365,7 @@ const filteredCustomerOrders = computed(() => {
   } else if (activeOrderTab.value === 'completed') {
     list = list.filter((order) => order.status === 'Completed');
   } else if (activeOrderTab.value === 'cancelled') {
-    list = list.filter((order) => ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status));
+    list = list.filter((order) => ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed', 'RefundRequested', 'Refunded', 'RefundRejected'].includes(order.status));
   }
 
   if (query) {
@@ -387,6 +390,35 @@ const selectedCustomerOrder = computed(() => {
   }
   return filteredCustomerOrders.value[0] || null;
 });
+
+function canRequestOrderCancellation(order: Order) {
+  const paymentMethod = (order.paymentMethod || 'Cash').toLowerCase();
+  if (paymentMethod === 'payos') {
+    return ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status);
+  }
+  return ['Pending', 'Processing'].includes(order.status);
+}
+
+async function requestCancellation(order: Order) {
+  const reason = window.prompt(
+    (order.paymentMethod || '').toLowerCase() === 'payos'
+      ? t('Nhập lý do yêu cầu hoàn tiền:', 'Enter refund request reason:')
+      : t('Nhập lý do hủy đơn:', 'Enter cancellation reason:'),
+  );
+  if (!reason?.trim()) return;
+
+  try {
+    const updated = await requestOrderCancellation(order.id, reason.trim());
+    const index = customerOrders.value.findIndex((item) => item.id === updated.id);
+    if (index >= 0) customerOrders.value[index] = updated;
+    else customerOrders.value.unshift(updated);
+    selectedOrderId.value = updated.id;
+  } catch (exception) {
+    customerPanelError.value = exception instanceof Error
+      ? exception.message
+      : t('Không thể gửi yêu cầu hủy/hoàn tiền.', 'Unable to submit cancellation/refund request.');
+  }
+}
 
 // Product Detail Modal state
 const selectedProduct = ref<Product | null>(null);
@@ -1825,6 +1857,22 @@ onUnmounted(() => {
                 <i class="pi pi-credit-card" />
                 <span>{{ getPaymentMethodLabel(selectedCustomerOrder.paymentMethod) }}</span>
               </div>
+              <div v-if="selectedCustomerOrder.refundReason" class="refund-note">
+                <strong>{{ t('Lý do hủy/hoàn tiền', 'Cancellation/refund reason') }}</strong>
+                <span>{{ selectedCustomerOrder.refundReason }}</span>
+              </div>
+              <div v-if="selectedCustomerOrder.refundAmount" class="refund-note">
+                <strong>{{ t('Số tiền hoàn', 'Refund amount') }}</strong>
+                <span>{{ formatCurrency(selectedCustomerOrder.refundAmount) }}</span>
+              </div>
+              <button
+                v-if="canRequestOrderCancellation(selectedCustomerOrder)"
+                type="button"
+                class="order-cancel-request-btn"
+                @click="requestCancellation(selectedCustomerOrder)"
+              >
+                {{ (selectedCustomerOrder.paymentMethod || '').toLowerCase() === 'payos' ? t('Yêu cầu hủy & hoàn tiền', 'Request cancellation & refund') : t('Hủy đơn hàng', 'Cancel order') }}
+              </button>
             </div>
             <div class="timeline-stepper">
               <article
@@ -6003,6 +6051,29 @@ border: 1px solid #23304c !important;
 .timeline-payment-line {
   margin-top: 8px;
 }
+.refund-note {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+}
+.refund-note strong {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.order-cancel-request-btn {
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+  font-weight: 800;
+}
 .order-card-body {
   display: flex;
   flex-direction: column;
@@ -6129,6 +6200,15 @@ border: 1px solid #23304c !important;
 .app-dark .order-payment-line {
   background: rgba(16, 185, 129, 0.16);
   color: #6ee7b7;
+}
+.app-dark .refund-note {
+  background: rgba(251, 146, 60, 0.14);
+  color: #fdba74;
+}
+.app-dark .order-cancel-request-btn {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(251, 113, 133, 0.35);
+  color: #fda4af;
 }
 .app-dark .order-card-body {
   background: #0b0f19;
@@ -7733,5 +7813,3 @@ background: rgba(56, 189, 248, 0.1) !important;
   color: #0b0f19 !important;
 }
 </style>
-
-

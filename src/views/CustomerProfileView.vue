@@ -90,12 +90,15 @@ function statusRank(status: OrderStatus) {
     Shipped: 4,
     Completed: 5,
     Cancelled: 0,
+    RefundRequested: 0,
+    Refunded: 0,
+    RefundRejected: 0,
   }
   return ranks[status] ?? 0
 }
 
 function getOrderTimeline(order: Order): TimelineStep[] {
-  const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status)
+  const cancelled = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed', 'RefundRequested', 'Refunded', 'RefundRejected'].includes(order.status)
   const isPayOs = (order.paymentMethod || '').toLowerCase() === 'payos'
   const rank = statusRank(order.status)
   const cashConfirmed = !isPayOs && rank >= 2 && !cancelled

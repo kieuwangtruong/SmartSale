@@ -12,6 +12,7 @@ import {
   deleteOrderAnyStatus,
   formatCurrency,
   canChangeOrderStatus,
+  confirmOrderRefund,
   getCustomers,
   getOrderStatusLabel,
   getOrderStatusOptions,
@@ -303,7 +304,11 @@ async function submit() {
 }
 
 function getEditableStatusOptions(order: Order) {
-  return getOrderStatusOptions(order.status)
+  const options = getOrderStatusOptions(order.status)
+  if ((order.paymentMethod || '').toLowerCase() === 'payos') {
+    return options.filter((option) => option.value !== 'Cancelled')
+  }
+  return options
 }
 
 /** Tăng key để dropdown reset về trạng thái gốc khi đổi thất bại */
@@ -334,6 +339,37 @@ async function changeStatus(order: Order, status: OrderStatus | null) {
   } catch (e) {
     resetStatusDraft(order)
     showError(getErrorMessage(e, t('Không thể cập nhật trạng thái.', 'Unable to update status.')))
+  }
+}
+
+async function confirmRefund(order: Order) {
+  const defaultAmount = order.refundAmount ?? order.amountPaid ?? order.total
+  const amountValue = window.prompt(
+    t(`Nhập số tiền đã hoàn cho đơn #${order.id}:`, `Enter refunded amount for order #${order.id}:`),
+    String(defaultAmount),
+  )
+  if (!amountValue) return
+  const refundAmount = Number(amountValue)
+  if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+    showError(t('Số tiền hoàn không hợp lệ.', 'Invalid refund amount.'))
+    return
+  }
+
+  const reference = window.prompt(
+    t('Nhập mã giao dịch/ghi chú hoàn tiền:', 'Enter refund transaction reference/note:'),
+    order.refundTransactionReference || '',
+  )
+  if (reference === null) return
+
+  try {
+    await confirmOrderRefund(order.id, {
+      refundAmount,
+      refundReason: order.refundReason,
+      refundTransactionReference: reference.trim() || null,
+    })
+    await load()
+  } catch (e) {
+    showError(getErrorMessage(e, t('Không thể xác nhận hoàn tiền.', 'Unable to confirm refund.')))
   }
 }
 
@@ -534,10 +570,35 @@ onMounted(load)
             <span>{{ t('Công nợ', 'Debt') }}</span>
             <strong>{{ formatCurrency(selectedOrder.debtAmount) }}</strong>
           </div>
+          <div v-if="selectedOrder.paymentOrderCode">
+            <span>{{ t('Mã thanh toán PayOS', 'PayOS order code') }}</span>
+            <strong>{{ selectedOrder.paymentOrderCode }}</strong>
+          </div>
+          <div v-if="selectedOrder.payOsTransactionReference">
+            <span>{{ t('Mã giao dịch PayOS', 'PayOS reference') }}</span>
+            <strong>{{ selectedOrder.payOsTransactionReference }}</strong>
+          </div>
+          <div v-if="selectedOrder.refundAmount">
+            <span>{{ t('Số tiền hoàn', 'Refund amount') }}</span>
+            <strong>{{ formatCurrency(selectedOrder.refundAmount) }}</strong>
+          </div>
+          <div v-if="selectedOrder.refundReason">
+            <span>{{ t('Lý do hoàn tiền', 'Refund reason') }}</span>
+            <strong>{{ selectedOrder.refundReason }}</strong>
+          </div>
+          <div v-if="selectedOrder.refundTransactionReference">
+            <span>{{ t('Mã hoàn tiền', 'Refund reference') }}</span>
+            <strong>{{ selectedOrder.refundTransactionReference }}</strong>
+          </div>
           <div class="grand-total">
             <span>{{ t('Tổng tiền', 'Total') }}</span>
             <strong>{{ formatCurrency(selectedOrder.total) }}</strong>
           </div>
+        </div>
+        <div v-if="selectedOrder.status === 'RefundRequested'" class="detail-actions">
+          <button type="button" class="primary" @click="confirmRefund(selectedOrder)">
+            {{ t('Xác nhận đã hoàn tiền', 'Confirm refund completed') }}
+          </button>
         </div>
       </div>
     </aside>
@@ -576,6 +637,9 @@ onMounted(load)
               <span v-else :class="['status-badge', order.status.toLowerCase()]">{{ getOrderStatusLabel(order.status) }}</span>
             </td>
             <td @click.stop>
+              <button v-if="order.status === 'RefundRequested'" class="primary" @click="confirmRefund(order)">
+                {{ t('Xác nhận hoàn tiền', 'Confirm refund') }}
+              </button>
               <button v-if="isAdmin" class="danger" @click="remove(order)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
