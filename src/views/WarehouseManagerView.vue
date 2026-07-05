@@ -18,7 +18,9 @@ import ExportExcelModal from '../components/ExportExcelModal.vue'
 import { exportToExcel, importFromExcel } from '../utils/excelUtils'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '../stores/authStore'
 
+const auth = useAuthStore()
 const products = ref<Product[]>([])
 const suppliers = ref<Supplier[]>([])
 const receipts = ref<StockReceipt[]>([])
@@ -49,6 +51,22 @@ const search = ref('')
 const showReceiptForm = ref(false)
 const showExportModal = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const isAdmin = computed(() => auth.role === 'Admin')
+
+function getReceiptStatusLabel(status: StockReceipt['status']) {
+  if (status === 'Draft') return t('Bản nháp', 'Draft')
+  if (status === 'PendingApproval') return t('Chờ duyệt', 'Pending approval')
+  if (status === 'Approved' || status === 'Confirmed') return t('Đã duyệt', 'Approved')
+  if (status === 'Rejected' || status === 'Cancelled') return t('Đã từ chối', 'Rejected')
+  return status
+}
+
+function getReceiptStatusClass(status: StockReceipt['status']) {
+  if (status === 'PendingApproval') return 'pending'
+  if (status === 'Approved' || status === 'Confirmed') return 'approved'
+  if (status === 'Rejected' || status === 'Cancelled') return 'rejected'
+  return 'draft'
+}
 
 function handleExport(dates: { startDate: string; endDate: string }) {
   let dataToExport = receipts.value
@@ -66,7 +84,7 @@ function handleExport(dates: { startDate: string; endDate: string }) {
     'Mã hóa đơn': r.invoiceNumber,
     'Ngày nhập': r.importDate,
     'Ghi chú': r.note,
-    'Trạng thái': r.status === 'Draft' ? 'Bản nháp' : r.status === 'PendingApproval' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Confirmed' ? 'Hoàn tất' : 'Đã hủy',
+    'Trạng thái': getReceiptStatusLabel(r.status),
     'Tổng tiền': r.totalAmount,
   }))
   
@@ -373,11 +391,25 @@ onMounted(load)
               <td>#{{ item.id }}<small>{{ new Date(item.createdAt).toLocaleString('vi-VN') }}</small></td>
               <td>{{ item.supplierName }}</td>
               <td>{{ item.items.map((x) => `${x.productName} x${x.quantity}`).join(', ') }}</td>
-              <td>{{ item.status }}</td>
+              <td>
+                <span :class="['receipt-status', getReceiptStatusClass(item.status)]">
+                  {{ getReceiptStatusLabel(item.status) }}
+                </span>
+                <small v-if="item.status === 'PendingApproval'">
+                  {{ t('Đang chờ admin duyệt', 'Waiting for admin approval') }}
+                </small>
+                <small v-else-if="item.status === 'Approved' || item.status === 'Confirmed'">
+                  {{ t('Đã cộng vào tồn kho', 'Added to inventory') }}
+                </small>
+              </td>
               <td class="actions">
                 <button v-if="item.status === 'Draft'" class="primary" @click="submitReceiptForApproval(item)">{{ t('Gửi duyệt', 'Submit') }}</button>
-                <button v-if="item.status === 'PendingApproval'" class="primary" @click="confirmReceipt(item)">{{ t('Duyệt', 'Approve') }}</button>
-                <button v-if="item.status === 'PendingApproval'" class="danger" @click="cancelReceipt(item)">{{ t('Từ chối', 'Reject') }}</button>
+                <template v-if="item.status === 'PendingApproval'">
+                  <button v-if="isAdmin" class="primary" @click="confirmReceipt(item)">{{ t('Duyệt', 'Approve') }}</button>
+                  <button v-if="isAdmin" class="danger" @click="cancelReceipt(item)">{{ t('Từ chối', 'Reject') }}</button>
+                  <span v-else class="muted-action">{{ t('Chờ admin duyệt', 'Waiting for admin') }}</span>
+                </template>
+                <span v-if="item.status === 'Approved' || item.status === 'Confirmed'" class="muted-action">{{ t('Đã duyệt', 'Approved') }}</span>
               </td>
             </tr>
           </tbody>
@@ -452,6 +484,24 @@ onMounted(load)
 }
 .full-width-tables-container {
   margin-top: 24px;
+}
+.receipt-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.receipt-status.draft { color: #475569; background: #f1f5f9; }
+.receipt-status.pending { color: #92400e; background: #fef3c7; }
+.receipt-status.approved { color: #047857; background: #d1fae5; }
+.receipt-status.rejected { color: #b91c1c; background: #fee2e2; }
+.muted-action {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 /* Pagination Styles */
