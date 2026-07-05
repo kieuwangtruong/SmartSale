@@ -23,6 +23,9 @@ export type OrderStatus =
   | 'Shipped'
   | 'Completed'
   | 'Cancelled'
+  | 'RefundRequested'
+  | 'Refunded'
+  | 'RefundRejected'
 
 export type OrderPaymentMethod = 'Cash' | 'PayOS'
 
@@ -56,6 +59,15 @@ export interface Order {
   total: number
   amountPaid: number
   debtAmount: number
+  paymentOrderCode?: number | null
+  payOsTransactionReference?: string | null
+  refundAmount?: number | null
+  refundReason?: string | null
+  refundRequestedAt?: string | null
+  refundedAt?: string | null
+  refundedByUserId?: number | null
+  refundTransactionReference?: string | null
+  refundSourceStatus?: string | null
   createdAt: string
   lastModifiedAt?: string | null
   orderItems: OrderItem[]
@@ -169,6 +181,9 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'Shipped',
   'Completed',
   'Cancelled',
+  'RefundRequested',
+  'Refunded',
+  'RefundRejected',
 ]
 
 import { useLanguage } from './i18n'
@@ -185,6 +200,9 @@ export const ORDER_STATUS_LABELS_VI: Record<OrderStatus, string> = {
   Shipped: 'Đã giao hàng',
   Completed: 'Hoàn thành',
   Cancelled: 'Đã hủy',
+  RefundRequested: 'Chờ hoàn tiền',
+  Refunded: 'Đã hoàn tiền',
+  RefundRejected: 'Từ chối hoàn tiền',
 }
 
 export const ORDER_STATUS_LABELS_EN: Record<OrderStatus, string> = {
@@ -199,6 +217,9 @@ export const ORDER_STATUS_LABELS_EN: Record<OrderStatus, string> = {
   Shipped: 'Shipped',
   Completed: 'Completed',
   Cancelled: 'Cancelled',
+  RefundRequested: 'Refund Requested',
+  Refunded: 'Refunded',
+  RefundRejected: 'Refund Rejected',
 }
 
 // Keep this for backward compatibility or direct imports if any
@@ -215,14 +236,17 @@ export const ORDER_STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]
   Pending: ['PendingPayment', 'Processing', 'Cancelled'],
   PendingPayment: ['ProcessingPayment', 'Paid', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed', 'Cancelled'],
   ProcessingPayment: ['Paid', 'PaymentFailed', 'Cancelled'],
-  Paid: ['Processing', 'Cancelled'],
+  Paid: ['Processing'],
   PaymentCancelled: [],
   PaymentExpired: [],
   PaymentFailed: ['PendingPayment', 'Cancelled'],
   Processing: ['Shipped', 'Cancelled'],
-  Shipped: ['Completed', 'Cancelled'],
+  Shipped: ['Completed'],
   Completed: [],
   Cancelled: [],
+  RefundRequested: [],
+  Refunded: [],
+  RefundRejected: [],
 }
 
 export function getAllowedOrderStatuses(current: OrderStatus): OrderStatus[] {
@@ -302,6 +326,25 @@ export function updateOrderStatus(id: number, status: OrderStatus) {
     method: 'PUT',
     auth: true,
     body: JSON.stringify({ id, status }),
+  }).then(normalizeOrder)
+}
+
+export function requestOrderCancellation(id: number, reason: string) {
+  return apiRequest<OrderApiResponse>(API_URLS.order, `/api/Order/${id}/cancel-request`, {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify({ reason }),
+  }).then(normalizeOrder)
+}
+
+export function confirmOrderRefund(
+  id: number,
+  payload: { refundAmount?: number | null; refundReason?: string | null; refundTransactionReference?: string | null },
+) {
+  return apiRequest<OrderApiResponse>(API_URLS.order, `/api/Order/${id}/confirm-refund`, {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify(payload),
   }).then(normalizeOrder)
 }
 

@@ -12,6 +12,9 @@ const ORDER_STATUS_LABELS_VI: Record<string, string> = {
   Shipped: 'Đã giao hàng',
   Completed: 'Hoàn thành',
   Cancelled: 'Đã hủy',
+  RefundRequested: 'Chờ hoàn tiền',
+  Refunded: 'Đã hoàn tiền',
+  RefundRejected: 'Từ chối hoàn tiền',
 }
 
 const ORDER_STATUS_LABELS_EN: Record<string, string> = {
@@ -26,6 +29,9 @@ const ORDER_STATUS_LABELS_EN: Record<string, string> = {
   Shipped: 'Shipped',
   Completed: 'Completed',
   Cancelled: 'Cancelled',
+  RefundRequested: 'Refund Requested',
+  Refunded: 'Refunded',
+  RefundRejected: 'Refund Rejected',
 }
 
 const EXACT_MESSAGES_VI: Record<string, string> = {
@@ -124,4 +130,3 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
-
