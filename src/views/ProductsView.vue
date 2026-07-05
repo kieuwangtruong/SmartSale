@@ -68,8 +68,10 @@ async function handleImportProducts(data: any[]) {
         continue
       }
       
-      const categoryId = categories.value.length > 0 ? categories.value[0].id : 0
-      const supplierId = suppliers.value.length > 0 ? suppliers.value[0].id : 0
+      const firstCategory = categories.value[0]
+      const firstSupplier = suppliers.value[0]
+      const categoryId = firstCategory?.id ?? 0
+      const supplierId = firstSupplier?.id ?? 0
 
       await createProduct({
         name: String(name),
