@@ -2322,13 +2322,13 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <section class="chatbot-widget" :class="{ open: showChatbot }" style="position: fixed !important; bottom: 20px !important; right: 20px !important; z-index: 99999 !important;">
-    <button class="chatbot-fab" type="button" @click="toggleChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')" style="width: 56px !important; height: 56px !important; border-radius: 50% !important; background: var(--teal) !important; color: white !important; border: 0 !important; cursor: pointer !important; box-shadow: 0 4px 16px rgba(15, 118, 110, 0.35) !important;">
-      <i class="pi pi-comments" style="font-size: 24px !important; color: white !important;" />
+    <section class="chatbot-widget" :class="{ open: showChatbot }">
+    <button class="chatbot-fab" type="button" @click="toggleChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')">
+      <i class="pi pi-comments" />
     </button>
 
       <Transition name="chat-slide">
-      <aside v-if="showChatbot" class="chatbot-panel" style="position: fixed !important; bottom: 90px !important; right: 20px !important; width: 380px !important; height: 540px !important; z-index: 99999 !important;">
+      <aside v-if="showChatbot" class="chatbot-panel">
           <header class="chatbot-head">
             <div>
               <strong>Smart Store AI</strong>
@@ -7811,5 +7811,299 @@ background: rgba(56, 189, 248, 0.1) !important;
 
 .app-dark .product-footer > button:hover:not(:disabled) i {
   color: #0b0f19 !important;
+}
+
+/* Final UI polish for account controls, order tabs, cart drawer, and chatbot */
+.store .header-right {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.store .header-right > button,
+.store .header-right > a,
+.store .customer-avatar {
+  min-width: 40px !important;
+  height: 40px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease !important;
+}
+
+.store .customer-avatar {
+  background: #0f766e !important;
+  color: #ffffff !important;
+}
+
+.store .header-right > button:hover,
+.store .header-right > a:hover,
+.store .customer-menu:hover .customer-avatar,
+.store .customer-avatar:hover {
+  background: #f0fdfa !important;
+  border-color: rgba(15, 118, 110, 0.22) !important;
+  color: #0f766e !important;
+  transform: translateY(-1px) !important;
+}
+
+.store .customer-menu:hover .customer-avatar,
+.store .customer-avatar:hover {
+  background: #0f766e !important;
+  color: #ffffff !important;
+}
+
+.store .customer-panel {
+  width: min(430px, calc(100vw - 24px)) !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(15, 118, 110, 0.16) !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22) !important;
+}
+
+.store .customer-panel-buttons .panel-btn {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+}
+
+.store .customer-panel-buttons .panel-btn:hover {
+  border-color: rgba(15, 118, 110, 0.28) !important;
+  background: #f0fdfa !important;
+  color: #0f766e !important;
+}
+
+.modal-order-tabs {
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+}
+
+.modal-order-tabs .tab-btn {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #475569 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  border-bottom: 0 !important;
+}
+
+.modal-order-tabs .tab-btn:hover {
+  background: #ffffff !important;
+  border-color: #dbe4ee !important;
+  color: #0f172a !important;
+}
+
+.modal-order-tabs .tab-btn.active {
+  background: #0f766e !important;
+  border-color: #0f766e !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18) !important;
+}
+
+.cart-panel {
+  width: min(420px, 100vw) !important;
+}
+
+.cart-head {
+  min-height: 74px !important;
+  padding: 16px 18px !important;
+}
+
+.cart-head h2 {
+  font-size: 20px !important;
+}
+
+.cart-body {
+  padding: 0 18px !important;
+}
+
+.cart-line {
+  grid-template-columns: 64px 1fr 34px !important;
+  gap: 12px !important;
+  padding: 14px 0 !important;
+}
+
+.cart-image {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 8px !important;
+}
+
+.cart-info > strong {
+  margin: 3px 0 !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+}
+
+.cart-footer {
+  padding: 16px 18px 18px !important;
+}
+
+.cart-footer > div strong {
+  font-size: 20px !important;
+}
+
+.cart-checkout-btn {
+  min-height: 50px !important;
+  border-radius: 10px !important;
+}
+
+.chatbot-widget {
+  right: 18px !important;
+  bottom: 18px !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.chatbot-fab {
+  position: relative !important;
+  width: 52px !important;
+  height: 52px !important;
+}
+
+.chatbot-panel {
+  position: fixed !important;
+  right: 18px !important;
+  bottom: 82px !important;
+  width: min(380px, calc(100vw - 36px)) !important;
+  height: min(540px, calc(100vh - 110px)) !important;
+  border-radius: 18px !important;
+}
+
+@media (max-width: 640px) {
+  .store .header-right {
+    gap: 4px !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+  }
+
+  .store .header-right > button,
+  .store .header-right > a,
+  .store .customer-avatar {
+    min-width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+  }
+
+  .store .cart-button span {
+    display: none !important;
+  }
+
+  .cart-panel {
+    inset: 8px 8px 8px auto !important;
+    width: min(360px, calc(100vw - 16px)) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.24) !important;
+  }
+
+  .cart-head {
+    min-height: 62px !important;
+    padding: 12px 14px !important;
+  }
+
+  .cart-head h2 {
+    font-size: 16px !important;
+  }
+
+  .cart-body {
+    padding: 0 14px !important;
+  }
+
+  .cart-line {
+    grid-template-columns: 54px minmax(0, 1fr) 32px !important;
+    gap: 10px !important;
+    padding: 12px 0 !important;
+  }
+
+  .cart-image {
+    width: 54px !important;
+    height: 54px !important;
+  }
+
+  .quantity-control {
+    height: 28px !important;
+    grid-template-columns: 28px 34px 28px !important;
+  }
+
+  .quantity-control input {
+    min-height: 26px !important;
+  }
+
+  .remove-line {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .cart-footer {
+    padding: 12px 14px 14px !important;
+  }
+
+  .cart-footer p {
+    margin: 8px 0 !important;
+    padding: 8px !important;
+    font-size: 9px !important;
+  }
+
+  .cart-checkout-btn {
+    min-height: 46px !important;
+    font-size: 14px !important;
+  }
+
+  .chatbot-widget {
+    right: 14px !important;
+    bottom: 14px !important;
+  }
+
+  .chatbot-panel {
+    right: 10px !important;
+    bottom: 76px !important;
+    width: calc(100vw - 20px) !important;
+    height: min(560px, calc(100vh - 96px)) !important;
+    border-radius: 16px !important;
+  }
+
+  .chatbot-suggestions {
+    max-height: 92px !important;
+  }
+}
+
+.app-dark .store .header-right {
+  background: rgba(15, 23, 42, 0.86) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+.app-dark .store .header-right > button,
+.app-dark .store .header-right > a {
+  color: #e2e8f0 !important;
+}
+
+.app-dark .modal-order-tabs {
+  background: #0b0f19 !important;
+  border-color: #23304c !important;
+}
+
+.app-dark .modal-order-tabs .tab-btn:hover {
+  background: #151d30 !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.app-dark .modal-order-tabs .tab-btn.active {
+  background: #14b8a6 !important;
+  border-color: #14b8a6 !important;
+  color: #082f2d !important;
 }
 </style>
