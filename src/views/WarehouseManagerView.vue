@@ -53,6 +53,12 @@ const showExportModal = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const isAdmin = computed(() => auth.role === 'Admin')
 
+function generateInvoiceNumber() {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `PN-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+}
+
 function getReceiptStatusLabel(status: StockReceipt['status']) {
   if (status === 'Draft') return t('Bản nháp', 'Draft')
   if (status === 'PendingApproval') return t('Chờ duyệt', 'Pending approval')
@@ -99,11 +105,14 @@ async function handleImportExcel(event: Event) {
     const file = target.files?.[0]
     if (!file) return
     const data = await importFromExcel(file)
+    const availableProducts = receipt.supplierId
+      ? products.value.filter((p) => p.supplierId === receipt.supplierId)
+      : products.value
     
     const newItems = data.map((row: any) => {
       let productId = row['ID Sản phẩm'] || row['ID'] || 0
       if (!productId && row['Tên sản phẩm']) {
-        const product = products.value.find(p => p.name.toLowerCase() === String(row['Tên sản phẩm']).toLowerCase())
+        const product = availableProducts.find(p => p.name.toLowerCase() === String(row['Tên sản phẩm']).toLowerCase())
         if (product) productId = product.id
       }
       return {
@@ -141,9 +150,19 @@ const supplierOptions = computed(() => [
   ...suppliers.value.map((s) => ({ label: s.name, value: s.id })),
 ])
 
-const productOptions = computed(() => [
-  { label: t('Chọn sản phẩm', 'Select product'), value: 0 },
-  ...products.value.map((p) => ({ label: p.name, value: p.id })),
+const supplierProducts = computed(() => {
+  if (!receipt.supplierId) return []
+  return products.value.filter((p) => p.supplierId === receipt.supplierId)
+})
+
+const receiptProductOptions = computed(() => [
+  {
+    label: receipt.supplierId
+      ? t('Chọn sản phẩm', 'Select product')
+      : t('Chọn nhà cung cấp trước', 'Select supplier first'),
+    value: 0,
+  },
+  ...supplierProducts.value.map((p) => ({ label: p.name, value: p.id })),
 ])
 
 const filteredProducts = computed(() => {
@@ -177,6 +196,10 @@ watch(search, () => {
   currentPage.value = 1
 })
 
+watch(() => receipt.supplierId, () => {
+  receipt.items = [{ productId: 0, quantity: 1, importPrice: 0 }]
+})
+
 function resetReceipt() {
   showReceiptForm.value = false
   Object.assign(receipt, {
@@ -186,6 +209,17 @@ function resetReceipt() {
     note: '',
     items: [{ productId: 0, quantity: 1, importPrice: 0 }],
   })
+}
+
+function openReceiptForm() {
+  Object.assign(receipt, {
+    supplierId: 0,
+    invoiceNumber: generateInvoiceNumber(),
+    importDate: new Date().toISOString().slice(0, 10),
+    note: '',
+    items: [{ productId: 0, quantity: 1, importPrice: 0 }],
+  })
+  showReceiptForm.value = true
 }
 
 async function load() {
@@ -258,7 +292,7 @@ onMounted(load)
         <button type="button" class="excel-btn" @click="showExportModal = true">
           <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
         </button>
-        <button type="button" class="primary" @click="showReceiptForm = true">
+        <button type="button" class="primary" @click="openReceiptForm">
           <i class="pi pi-plus" /> {{ t('Tạo phiếu nhập', 'Create Import Receipt') }}
         </button>
       </div>
@@ -281,7 +315,7 @@ onMounted(load)
         <label>{{ t('Nhà cung cấp', 'Supplier') }}
           <SearchableSelect v-model="receipt.supplierId" :options="supplierOptions" :placeholder="t('Tìm nhà cung cấp...', 'Search suppliers...')" />
         </label>
-        <label>{{ t('Mã hóa đơn', 'Invoice Number') }}<input v-model="receipt.invoiceNumber" /></label>
+        <label>{{ t('Mã hóa đơn', 'Invoice Number') }}<input v-model="receipt.invoiceNumber" readonly /></label>
         <label>{{ t('Ngày nhập', 'Import Date') }}<input v-model="receipt.importDate" type="date" /></label>
         <label>{{ t('Ghi chú', 'Note') }}<input v-model="receipt.note" /></label>
         
@@ -295,7 +329,11 @@ onMounted(load)
           </div>
         </div>
         <div v-for="(item, index) in receipt.items" :key="index" class="receipt-item">
-          <SearchableSelect v-model="item.productId" :options="productOptions" :placeholder="t('Tìm sản phẩm...', 'Search products...')" />
+          <SearchableSelect
+            v-model="item.productId"
+            :options="receiptProductOptions"
+            :placeholder="receipt.supplierId ? t('Tìm sản phẩm...', 'Search products...') : t('Chọn nhà cung cấp trước', 'Select supplier first')"
+          />
           <input v-model.number="item.quantity" type="number" min="1" placeholder="SL" />
           <input v-model.number="item.importPrice" type="number" min="0" :placeholder="t('Giá nhập', 'Import price')" />
           <button type="button" class="danger" @click="removeReceiptItem(index)"><i class="pi pi-trash" /></button>
