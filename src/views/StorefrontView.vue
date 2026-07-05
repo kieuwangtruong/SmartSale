@@ -463,7 +463,11 @@ const visibleProducts = computed(() => {
       return second.sellingPrice - first.sellingPrice;
     if (sort.value === "name")
       return first.name.localeCompare(second.name, "vi");
-    return 0;
+    
+    // Default featured sort: prioritize sale items
+    const firstIsSale = first.salePrice && first.salePrice < first.originalPrice ? 1 : 0;
+    const secondIsSale = second.salePrice && second.salePrice < second.originalPrice ? 1 : 0;
+    return secondIsSale - firstIsSale;
   });
 });
 const cartCount = computed(() =>
@@ -508,9 +512,8 @@ async function loadProducts() {
   try {
     const data = await getProducts();
     products.value = data.map((product) => {
-      const mock = PRODUCT_MOCKS[product.id];
-      const originalPrice = mock?.originalPrice || product.originalPrice || product.sellingPrice;
-      const salePrice = mock?.salePrice !== undefined ? mock.salePrice : product.salePrice;
+      const originalPrice = product.originalPrice || product.sellingPrice;
+      const salePrice = product.salePrice;
       const hasSale = !!(salePrice && originalPrice && salePrice < originalPrice);
       return {
         ...product,
