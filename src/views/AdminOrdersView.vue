@@ -218,8 +218,9 @@ function syncStatusDrafts(list: Order[] = orders.value) {
 async function load() {
   loading.value = true
   try {
+    const userPromise = isAdmin.value ? getUsers() : Promise.resolve([])
     ;[orders.value, products.value, customers.value, staffUsers.value] = await Promise.all([
-      getOrders(), getProducts(), getCustomers(), getUsers(),
+      getOrders(), getProducts(), getCustomers(), userPromise,
     ])
     orders.value = filterVisibleOrders(orders.value)
     syncStatusDrafts()
