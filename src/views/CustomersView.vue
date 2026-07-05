@@ -16,6 +16,9 @@ import {
   type Customer,
 } from '../services/orderApi'
 import { getUsers, updateUser, deleteUser, type UserDto } from '../services/userApi'
+import ExportExcelModal from '../components/ExportExcelModal.vue'
+import ImportExcelModal from '../components/ImportExcelModal.vue'
+import { exportToExcel } from '../utils/excelUtils'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
@@ -53,8 +56,94 @@ const form = reactive({
 
 const search = ref('')
 const showForm = ref(false)
+const showExportModal = ref(false)
+const showImportModal = ref(false)
 const currentPage = ref(1)
 const itemsPerPage = 10
+
+const customerTemplateData = [
+  {
+    'Họ tên': 'Nguyễn Văn A',
+    'Số điện thoại': '0901234567',
+    'Email': 'nguyenvana@example.com',
+    'Địa chỉ': '123 Đường ABC, Quận 1',
+    'Giới tính': 'Nam',
+    'CCCD': '079123456789',
+    'Tuổi': 30
+  }
+]
+
+async function handleImportCustomers(data: any[]) {
+  let successCount = 0
+  let errorCount = 0
+
+  for (const row of data) {
+    try {
+      const fullName = row['Họ tên']
+      const phone = row['Số điện thoại'] ? String(row['Số điện thoại']) : ''
+      if (!fullName || !phone) {
+        errorCount++
+        continue
+      }
+
+      const genderStr = String(row['Giới tính'] || '').trim().toLowerCase()
+      let gender = 2 // Khác
+      if (genderStr === 'nam') gender = 0
+      else if (genderStr === 'nữ' || genderStr === 'nu') gender = 1
+
+      const extras = normalizeCustomerFormExtras({
+        gender,
+        cccd: String(row['CCCD'] || ''),
+        age: row['Tuổi'] ? Number(row['Tuổi']) : null,
+      })
+
+      await createCustomer({
+        fullName: String(fullName),
+        phone: phone,
+        email: row['Email'] ? String(row['Email']) : '',
+        address: row['Địa chỉ'] ? String(row['Địa chỉ']) : '',
+        ...extras
+      })
+      successCount++
+    } catch (e) {
+      errorCount++
+    }
+  }
+
+  await load()
+  toast.add({
+    severity: 'info',
+    summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
+    detail: t(`Thành công: ${successCount}, Lỗi/Bỏ qua: ${errorCount}`, `Success: ${successCount}, Error/Skipped: ${errorCount}`),
+    life: 5000,
+  })
+}
+
+function handleExport(dates: { startDate: string; endDate: string }) {
+  let dataToExport = customers.value
+  if (dates.startDate) {
+    dataToExport = dataToExport.filter(c => c.createdAt && c.createdAt >= dates.startDate)
+  }
+  if (dates.endDate) {
+    const end = new Date(dates.endDate)
+    end.setHours(23, 59, 59, 999)
+    dataToExport = dataToExport.filter(c => c.createdAt && new Date(c.createdAt) <= end)
+  }
+  
+  const formattedData = dataToExport.map(c => ({
+    'ID Khách hàng': c.id,
+    'Họ tên': c.fullName,
+    'Số điện thoại': c.phone,
+    'Email': c.email || '',
+    'Địa chỉ': c.address || '',
+    'Hạng': c.tier || 'Standard',
+    'Tổng chi tiêu': c.totalSpent || 0,
+    'Công nợ': c.currentDebt || 0,
+    'Ngày tạo': c.createdAt ? new Date(c.createdAt).toLocaleString('vi-VN') : '',
+  }))
+  
+  exportToExcel(formattedData, `Khach_Hang_${new Date().toISOString().split('T')[0]}`)
+}
 
 const genderOptions = computed(() =>
   GENDER_OPTIONS.map((g) => ({
@@ -239,6 +328,12 @@ onMounted(load)
       </div>
       <div class="page-head-actions">
         <input v-model="search" :placeholder="t('Tìm khách hàng...', 'Search customers...')" class="search-input" />
+        <button type="button" class="excel-btn" @click="showImportModal = true">
+          <i class="pi pi-upload" /> {{ t('Nhập Excel', 'Import Excel') }}
+        </button>
+        <button type="button" class="excel-btn" @click="showExportModal = true">
+          <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
+        </button>
         <button type="button" class="primary" @click="showForm = true">
           <i class="pi pi-plus" /> {{ t('Thêm khách hàng', 'Add Customer') }}
         </button>
@@ -317,6 +412,9 @@ onMounted(load)
         </div>
       </div>
     </article>
+
+    <ExportExcelModal :show="showExportModal" :title="t('Xuất Excel Khách hàng', 'Export Customers to Excel')" @close="showExportModal = false" @export="handleExport" />
+    <ImportExcelModal :show="showImportModal" :title="t('Nhập Excel Khách hàng', 'Import Customers from Excel')" :template-data="customerTemplateData" template-file-name="Khach_Hang_Template" @close="showImportModal = false" @import="handleImportCustomers" />
   </section>
 </template>
 

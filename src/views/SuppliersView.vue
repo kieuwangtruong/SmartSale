@@ -4,6 +4,9 @@ import { createSupplier, deleteSupplier, getSuppliers, updateSupplier, type Supp
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
+import ExportExcelModal from '../components/ExportExcelModal.vue'
+import ImportExcelModal from '../components/ImportExcelModal.vue'
+import { exportToExcel } from '../utils/excelUtils'
 
 const auth = useAuthStore()
 const canManageSuppliers = computed(
@@ -26,6 +29,70 @@ function showError(msg: string) {
 
 const search = ref('')
 const showForm = ref(false)
+const showExportModal = ref(false)
+const showImportModal = ref(false)
+
+const supplierTemplateData = [
+  {
+    'Tên nhà cung cấp': 'Công ty ABC',
+    'Người liên hệ': 'Nguyễn Văn A',
+    'Số điện thoại': '0901234567',
+    'Email': 'contact@abc.com',
+    'Địa chỉ': '123 Đường XYZ, TP HCM',
+    'Ghi chú': 'Nhà cung cấp uy tín'
+  }
+]
+
+function handleExport() {
+  const formattedData = suppliers.value.map(s => ({
+    'ID': s.id,
+    'Tên nhà cung cấp': s.name,
+    'Người liên hệ': s.contactName,
+    'Số điện thoại': s.phone,
+    'Email': s.email || '',
+    'Địa chỉ': s.address || '',
+    'Ghi chú': s.notes || ''
+  }))
+  exportToExcel(formattedData, `Nha_Cung_Cap_${new Date().toISOString().split('T')[0]}`)
+}
+
+async function handleImportSuppliers(data: any[]) {
+  let successCount = 0
+  let errorCount = 0
+
+  for (const row of data) {
+    try {
+      const name = row['Tên nhà cung cấp']
+      const contactName = row['Người liên hệ']
+      const phone = row['Số điện thoại']
+      
+      if (!name || !contactName || !phone) {
+        errorCount++
+        continue
+      }
+
+      await createSupplier({
+        name: String(name),
+        contactName: String(contactName),
+        phone: String(phone),
+        email: row['Email'] ? String(row['Email']) : '',
+        address: row['Địa chỉ'] ? String(row['Địa chỉ']) : '',
+        notes: row['Ghi chú'] ? String(row['Ghi chú']) : ''
+      })
+      successCount++
+    } catch (e) {
+      errorCount++
+    }
+  }
+
+  await load()
+  toast.add({
+    severity: 'info',
+    summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
+    detail: t(`Thành công: ${successCount}, Lỗi/Bỏ qua: ${errorCount}`, `Success: ${successCount}, Error/Skipped: ${errorCount}`),
+    life: 5000,
+  })
+}
 
 // Pagination state
 const currentPage = ref(1)
@@ -117,6 +184,12 @@ onMounted(load)
       </div>
       <div class="page-head-actions">
         <input v-model="search" :placeholder="t('Tìm nhà cung cấp...', 'Search suppliers...')" class="search-input" />
+        <button type="button" class="excel-btn" @click="showImportModal = true">
+          <i class="pi pi-upload" /> {{ t('Nhập Excel', 'Import Excel') }}
+        </button>
+        <button type="button" class="excel-btn" @click="showExportModal = true">
+          <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
+        </button>
         <button
           v-if="canManageSuppliers"
           type="button"
@@ -217,6 +290,9 @@ onMounted(load)
         </div>
       </div>
     </article>
+    
+    <ExportExcelModal :show="showExportModal" :title="t('Xuất Excel Nhà cung cấp', 'Export Suppliers to Excel')" @close="showExportModal = false" @export="handleExport" />
+    <ImportExcelModal :show="showImportModal" :title="t('Nhập Excel Nhà cung cấp', 'Import Suppliers from Excel')" :template-data="supplierTemplateData" template-file-name="Nha_Cung_Cap_Template" @close="showImportModal = false" @import="handleImportSuppliers" />
   </section>
 </template>
 

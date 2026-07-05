@@ -14,6 +14,8 @@ import {
   type Product,
   type StockReceipt,
 } from '../services/productApi'
+import ExportExcelModal from '../components/ExportExcelModal.vue'
+import { exportToExcel, importFromExcel } from '../utils/excelUtils'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
 
@@ -45,6 +47,70 @@ const receipt = reactive({
 
 const search = ref('')
 const showReceiptForm = ref(false)
+const showExportModal = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+function handleExport(dates: { startDate: string; endDate: string }) {
+  let dataToExport = receipts.value
+  if (dates.startDate) {
+    dataToExport = dataToExport.filter(r => r.importDate && r.importDate >= dates.startDate)
+  }
+  if (dates.endDate) {
+    const end = dates.endDate
+    dataToExport = dataToExport.filter(r => r.importDate && r.importDate <= end)
+  }
+  
+  const formattedData = dataToExport.map(r => ({
+    'Mã Phiếu': r.id,
+    'Nhà cung cấp': suppliers.value.find(s => s.id === r.supplierId)?.name || '',
+    'Mã hóa đơn': r.invoiceNumber,
+    'Ngày nhập': r.importDate,
+    'Ghi chú': r.note,
+    'Trạng thái': r.status === 'Draft' ? 'Bản nháp' : r.status === 'PendingApproval' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Confirmed' ? 'Hoàn tất' : 'Đã hủy',
+    'Tổng tiền': r.totalAmount,
+  }))
+  
+  exportToExcel(formattedData, `Phieu_Nhap_Kho_${new Date().toISOString().split('T')[0]}`)
+}
+
+async function handleImportExcel(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+  
+  try {
+    const file = target.files?.[0]
+    if (!file) return
+    const data = await importFromExcel(file)
+    
+    const newItems = data.map((row: any) => {
+      let productId = row['ID Sản phẩm'] || row['ID'] || 0
+      if (!productId && row['Tên sản phẩm']) {
+        const product = products.value.find(p => p.name.toLowerCase() === String(row['Tên sản phẩm']).toLowerCase())
+        if (product) productId = product.id
+      }
+      return {
+        productId: Number(productId) || 0,
+        quantity: Number(row['Số lượng'] || row['SL'] || 1),
+        importPrice: Number(row['Giá nhập'] || 0)
+      }
+    })
+    
+    if (newItems.length > 0) {
+      if (receipt.items.length === 1 && receipt.items[0]?.productId === 0) {
+        receipt.items = newItems
+      } else {
+        receipt.items.push(...newItems)
+      }
+      toast.add({ severity: 'success', summary: t('Thành công', 'Success'), detail: t(`Đã import ${newItems.length} mặt hàng`, `Imported ${newItems.length} items`), life: 3000 })
+    } else {
+      showError(t('File không chứa dữ liệu hợp lệ', 'File contains no valid data'))
+    }
+  } catch (error) {
+    showError(t('Không thể import file Excel', 'Unable to import Excel file'))
+  } finally {
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
+}
 
 // Pagination state
 const currentPage = ref(1)
@@ -171,6 +237,9 @@ onMounted(load)
       </div>
       <div class="page-head-actions">
         <input v-model="search" :placeholder="t('Tìm sản phẩm tồn kho...', 'Search inventory products...')" class="search-input" />
+        <button type="button" class="excel-btn" @click="showExportModal = true">
+          <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
+        </button>
         <button type="button" class="primary" @click="showReceiptForm = true">
           <i class="pi pi-plus" /> {{ t('Tạo phiếu nhập', 'Create Import Receipt') }}
         </button>
@@ -198,7 +267,15 @@ onMounted(load)
         <label>{{ t('Ngày nhập', 'Import Date') }}<input v-model="receipt.importDate" type="date" /></label>
         <label>{{ t('Ghi chú', 'Note') }}<input v-model="receipt.note" /></label>
         
-        <div class="form-section-title">{{ t('Danh sách mặt hàng nhập', 'Items to Import') }}</div>
+        <div class="form-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+          {{ t('Danh sách mặt hàng nhập', 'Items to Import') }}
+          <div>
+            <input type="file" ref="fileInputRef" accept=".xlsx, .xls" style="display: none" @change="handleImportExcel" />
+            <button type="button" class="outline-btn" style="padding: 4px 12px; font-size: 12px; border-radius: 6px; background: white; border: 1px solid var(--line);" @click="fileInputRef?.click()">
+              <i class="pi pi-file-excel" style="color: #10b981;" /> {{ t('Import Excel', 'Import Excel') }}
+            </button>
+          </div>
+        </div>
         <div v-for="(item, index) in receipt.items" :key="index" class="receipt-item">
           <SearchableSelect v-model="item.productId" :options="productOptions" :placeholder="t('Tìm sản phẩm...', 'Search products...')" />
           <input v-model.number="item.quantity" type="number" min="1" placeholder="SL" />
@@ -307,6 +384,8 @@ onMounted(load)
         </table>
       </article>
     </div>
+
+    <ExportExcelModal :show="showExportModal" :title="t('Xuất Excel Phiếu nhập kho', 'Export Receipts to Excel')" @close="showExportModal = false" @export="handleExport" />
   </section>
 </template>
 

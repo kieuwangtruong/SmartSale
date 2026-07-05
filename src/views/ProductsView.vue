@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
+import ExportExcelModal from '../components/ExportExcelModal.vue'
+import ImportExcelModal from '../components/ImportExcelModal.vue'
+import { exportToExcel } from '../utils/excelUtils'
 import { formatCurrency } from '../services/orderApi'
 import { getSuppliers, type Supplier } from '../services/orderApi'
 import {
@@ -38,6 +41,80 @@ const categoryName = ref('')
 const { t } = useLanguage()
 const toast = useToast()
 const detailImageCount = 4
+
+const showExportModal = ref(false)
+const showImportModal = ref(false)
+
+const productTemplateData = [
+  {
+    'Tên sản phẩm': 'Sản phẩm mẫu A',
+    'Mô tả': 'Mô tả chi tiết',
+    'Giá nhập': 50000,
+    'Giá bán gốc': 100000,
+    'Tồn kho': 10,
+    'Ngưỡng báo động': 5
+  }
+]
+
+async function handleImportProducts(data: any[]) {
+  let successCount = 0
+  let errorCount = 0
+
+  for (const row of data) {
+    try {
+      const name = row['Tên sản phẩm']
+      if (!name) {
+        errorCount++
+        continue
+      }
+      
+      const categoryId = categories.value.length > 0 ? categories.value[0].id : 0
+      const supplierId = suppliers.value.length > 0 ? suppliers.value[0].id : 0
+
+      await createProduct({
+        name: String(name),
+        description: row['Mô tả'] ? String(row['Mô tả']) : '',
+        importPrice: Number(row['Giá nhập']) || 0,
+        sellingPrice: Number(row['Giá bán gốc']) || 0,
+        originalPrice: Number(row['Giá bán gốc']) || null,
+        salePrice: null,
+        quantity: Number(row['Tồn kho']) || 0,
+        reserveStock: Number(row['Ngưỡng báo động']) || 0,
+        categoryId,
+        supplierId,
+        imageUrl: '',
+        imageUrls: []
+      })
+      successCount++
+    } catch (e) {
+      errorCount++
+    }
+  }
+
+  await load()
+  toast.add({
+    severity: 'info',
+    summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
+    detail: t(`Thành công: ${successCount}, Lỗi/Bỏ qua: ${errorCount}`, `Success: ${successCount}, Error/Skipped: ${errorCount}`),
+    life: 5000,
+  })
+}
+
+function handleExport() {
+  const formattedData = products.value.map(p => ({
+    'ID Sản phẩm': p.id,
+    'Tên sản phẩm': p.name,
+    'Mô tả': p.description || '',
+    'Danh mục': p.categoryName || '',
+    'Nhà cung cấp': p.supplierName || '',
+    'Giá nhập': p.importPrice,
+    'Giá bán gốc': p.originalPrice,
+    'Giá bán khuyến mãi': p.salePrice || '',
+    'Tồn kho': p.quantity,
+    'Ngưỡng báo động': p.reserveStock,
+  }))
+  exportToExcel(formattedData, `San_Pham_${new Date().toISOString().split('T')[0]}`)
+}
 
 function showError(msg: string) {
   toast.add({
@@ -321,6 +398,14 @@ onMounted(load)
       <div class="page-head-actions">
         <input v-model="search" :placeholder="t('Tìm sản phẩm...', 'Search products...')" class="search-input" />
         
+        <button type="button" class="excel-btn" @click="showImportModal = true">
+          <i class="pi pi-upload" /> {{ t('Nhập Excel', 'Import Excel') }}
+        </button>
+        
+        <button type="button" class="excel-btn" @click="showExportModal = true">
+          <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
+        </button>
+        
         <div v-if="canManageProducts" class="add-dropdown-container">
           <button type="button" class="primary" @click="toggleAddMenu">
             <i class="pi pi-plus" /> {{ t('Thêm mới', 'Add new') }} <i class="pi pi-angle-down" />
@@ -496,6 +581,9 @@ onMounted(load)
         </div>
       </div>
     </article>
+    
+    <ExportExcelModal :show="showExportModal" :title="t('Xuất Excel Sản phẩm', 'Export Products to Excel')" @close="showExportModal = false" @export="handleExport" />
+    <ImportExcelModal :show="showImportModal" :title="t('Nhập Excel Sản phẩm', 'Import Products from Excel')" :template-data="productTemplateData" template-file-name="San_Pham_Template" @close="showImportModal = false" @import="handleImportProducts" />
   </section>
 </template>
 

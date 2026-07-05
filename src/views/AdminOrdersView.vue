@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
+import ExportExcelModal from '../components/ExportExcelModal.vue'
+import { exportToExcel } from '../utils/excelUtils'
 import { normalizeCustomerFormExtras } from '../services/customerExtraStorage'
 import { getErrorMessage } from '../services/apiClient'
 import { useAuthStore } from '../stores/authStore'
@@ -58,6 +60,34 @@ const form = reactive({
 
 const search = ref('')
 const showForm = ref(false)
+const showExportModal = ref(false)
+
+function handleExport(dates: { startDate: string; endDate: string }) {
+  let dataToExport = orders.value
+  if (dates.startDate) {
+    dataToExport = dataToExport.filter(o => o.createdAt && o.createdAt >= dates.startDate)
+  }
+  if (dates.endDate) {
+    const end = new Date(dates.endDate)
+    end.setHours(23, 59, 59, 999)
+    dataToExport = dataToExport.filter(o => o.createdAt && new Date(o.createdAt) <= end)
+  }
+  
+  const formattedData = dataToExport.map(o => ({
+    'Mã Đơn': o.id,
+    'Khách hàng': o.customerName || 'Khách vãng lai',
+    'Nhân viên bán': o.salesStaffName || o.createdByUserName || '',
+    'Trạng thái': getOrderStatusLabel(o.status),
+    'Phương thức thanh toán': getPaymentMethodLabel(o.paymentMethod || ''),
+    'Tổng tiền': o.total,
+    'Đã thanh toán': o.amountPaid,
+    'Công nợ': o.debtAmount,
+    'Ngày tạo': o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : '',
+  }))
+  
+  exportToExcel(formattedData, `Don_Hang_${new Date().toISOString().split('T')[0]}`)
+}
+
 const showCustomerForm = ref(false)
 const selectedOrder = ref<Order | null>(null)
 const customerForm = reactive({
@@ -335,9 +365,12 @@ onMounted(load)
           :placeholder="t('Lọc trạng thái', 'Filter status')"
           class="filter-select-wrap"
         />
-        <input v-model="search" :placeholder="t('Tìm đơn, khách hàng...', 'Search orders, customers...')" class="search-input" />
+        <input v-model="search" :placeholder="t('Tìm mã đơn/khách...', 'Search order/customer...')" class="search-input" />
+        <button type="button" class="excel-btn" @click="showExportModal = true">
+          <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
+        </button>
         <button type="button" class="primary" @click="showForm = true">
-          <i class="pi pi-plus" /> {{ t('Tạo đơn mới', 'Create Order') }}
+          <i class="pi pi-plus" /> {{ t('Tạo đơn', 'Create Order') }}
         </button>
       </div>
     </div>
@@ -560,6 +593,7 @@ onMounted(load)
         </div>
       </div>
     </article>
+    <ExportExcelModal :show="showExportModal" :title="t('Xuất Excel Đơn hàng', 'Export Orders to Excel')" @close="showExportModal = false" @export="handleExport" />
   </section>
 </template>
 
