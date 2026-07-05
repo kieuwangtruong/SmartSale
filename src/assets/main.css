@@ -241,6 +241,21 @@ button:not(.p-button):not(.sidebar-backdrop):hover { border-color: #b8c0ce; back
 button.primary { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: 0 5px 12px rgb(99 102 241 / 18%); }
 button.primary:hover { border-color: var(--primary-dark); background: var(--primary-dark); }
 button.danger { border-color: #fee2e2; background: #fff1f2; color: #be123c; }
+button:not(.p-button):not(.sidebar-backdrop).excel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  white-space: nowrap;
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #10b981;
+}
+button:not(.p-button):not(.sidebar-backdrop).excel-btn:hover {
+  background: #d1fae5;
+  border-color: #059669;
+}
 .actions { display: flex; gap: 7px; justify-content: flex-end; align-items: center; }
 .inline-form { margin-top: 15px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .item-row { display: grid; grid-template-columns: 1fr 90px auto; gap: 8px; }
@@ -346,6 +361,15 @@ td small { display: block; margin-top: 4px; color: #9199aa; }
 .app-dark button:not(.p-button):not(.sidebar-backdrop):hover {
   background: #1d263b;
   border-color: #384f7a;
+}
+.app-dark button:not(.p-button):not(.sidebar-backdrop).excel-btn {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+.app-dark button:not(.p-button):not(.sidebar-backdrop).excel-btn:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
 }
 .app-dark .store-shortcut {
   background: #151d30;

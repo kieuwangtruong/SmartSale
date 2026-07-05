@@ -1,6 +1,8 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
+import ExportExcelModal from '../components/ExportExcelModal.vue'
+import { exportToExcel } from '../utils/excelUtils'
 import {
   createUser,
   deleteUser,
@@ -42,11 +44,38 @@ const form = reactive<CreateUserPayload>({
 
 const search = ref('')
 const showForm = ref(false)
+const showExportModal = ref(false)
 const INTERNAL_ROLE_ORDER: UserRole[] = ['Admin', 'SalesStaff', 'WarehouseKeeper']
 
 // Pagination state
 const currentPage = ref(1)
-const itemsPerPage = 10
+const itemsPerPage = 8
+
+function handleExport(dates: { startDate: string; endDate: string }) {
+  let dataToExport = users.value
+  if (dates.startDate) {
+    dataToExport = dataToExport.filter(u => u.createdAt && u.createdAt >= dates.startDate)
+  }
+  if (dates.endDate) {
+    const end = new Date(dates.endDate)
+    end.setHours(23, 59, 59, 999)
+    dataToExport = dataToExport.filter(u => u.createdAt && new Date(u.createdAt) <= end)
+  }
+  
+  const formattedData = dataToExport.map(u => ({
+    'ID Nhân viên': u.id,
+    'Họ tên': u.fullName,
+    'Tên đăng nhập': u.userName,
+    'Email': u.email,
+    'Vai trò': u.role,
+    'SĐT/Căn cước': u.address,
+    'Ngày sinh': u.dateOfBirth ? new Date(u.dateOfBirth).toLocaleDateString('vi-VN') : '',
+    'Giới tính': u.sex === 0 ? 'Nam' : u.sex === 1 ? 'Nữ' : 'Khác',
+    'Ngày tạo': u.createdAt ? new Date(u.createdAt).toLocaleString('vi-VN') : '',
+  }))
+  
+  exportToExcel(formattedData, `Nhan_Vien_${new Date().toISOString().split('T')[0]}`)
+}
 
 // Filter logic
 const filtered = computed(() => {
@@ -185,9 +214,12 @@ onMounted(load)
         <p>{{ t('Admin tạo và phân quyền nhân viên.', 'Admin creation and role assignment for staff.') }}</p>
       </div>
       <div class="page-head-actions">
-        <input v-model="search" :placeholder="t('Tìm tài khoản...', 'Search accounts...')" class="search-input" />
-        <button type="button" class="primary" @click="showForm = true">
-          <i class="pi pi-plus" /> {{ t('Tạo tài khoản', 'Create Account') }}
+        <input v-model="search" :placeholder="t('Tìm nhân viên...', 'Search employees...')" class="search-input" />
+        <button type="button" class="excel-btn" @click="showExportModal = true">
+          <i class="pi pi-file-excel" /> {{ t('Xuất Excel', 'Export Excel') }}
+        </button>
+        <button type="button" class="primary" @click="showForm = true; editingId = null">
+          <i class="pi pi-user-plus" /> {{ t('Thêm nhân viên', 'Add Employee') }}
         </button>
       </div>
     </div>
@@ -292,6 +324,8 @@ onMounted(load)
         </div>
       </div>
     </article>
+
+    <ExportExcelModal :show="showExportModal" :title="t('Xuất Excel Nhân viên', 'Export Employees to Excel')" @close="showExportModal = false" @export="handleExport" />
   </section>
 </template>
 
