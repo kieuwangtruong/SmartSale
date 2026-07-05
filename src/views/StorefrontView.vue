@@ -2191,7 +2191,7 @@ onUnmounted(() => {
         </div>
         <p><i class="pi pi-info-circle" /> {{ t('Bạn sẽ xác nhận thông tin giao hàng trước khi đặt đơn.', 'You will confirm shipping details before placing the order.') }}</p>
         <button type="button" class="cart-checkout-btn" @click="openCheckoutModal">
-          {{ t('Mua hàng', 'Buy Now') }} <i class="pi pi-arrow-right" />
+          {{ t('Mua ngay', 'Buy Now') }} <i class="pi pi-arrow-right" />
         </button>
       </div>
     </aside>
@@ -2442,7 +2442,7 @@ onUnmounted(() => {
 .store .state-card {
   min-height: 220px;
   padding: 30px;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 6px;
   background: #fff;
   box-shadow: none;
@@ -2481,7 +2481,7 @@ onUnmounted(() => {
   border-radius: 12px;
   font-size: 16px;
   color: #fff !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
   border: 0 !important;
   font-weight: 750;
   cursor: pointer;
@@ -2494,7 +2494,7 @@ onUnmounted(() => {
 .store .cart-footer > button:hover,
 .store .cart-checkout-btn:hover,
 .store .btn-buy-now:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgb(15 118 110 / 28%);
 }
@@ -2511,13 +2511,13 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8px;
   color: #fff !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
   border: 0 !important;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.15s ease;
 }
 .store .empty-cart button:hover {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
   transform: translateY(-1px);
 }
 .store .state-card button {
@@ -2531,7 +2531,7 @@ onUnmounted(() => {
 }
 .store .primary-cta:hover {
   color: #fff !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
 }
 .announcement {
   min-height: 34px;
@@ -2582,7 +2582,7 @@ onUnmounted(() => {
   height: 40px;
   border-radius: 50%;
   color: white;
-  background: var(--teal);
+  background: #0f766e;
   display: grid;
   place-items: center;
 }
@@ -2628,7 +2628,7 @@ onUnmounted(() => {
   bottom: -9px;
   left: 50%;
   height: 1px;
-  background: var(--teal);
+  background: #0f766e;
   transition: 0.2s ease;
 }
 .main-nav a:hover::after,
@@ -2637,7 +2637,7 @@ onUnmounted(() => {
   left: 0;
 }
 .main-nav a.active {
-  color: var(--teal);
+  color: #0f766e;
 }
 .cart-button {
   justify-self: end;
@@ -2659,7 +2659,7 @@ onUnmounted(() => {
   padding: 0 6px;
   border-radius: 50%;
   color: white;
-  background: var(--teal);
+  background: #0f766e;
   display: grid;
   place-items: center;
   font-size: 10px;
@@ -2688,7 +2688,7 @@ main {
   gap: clamp(50px, 8vw, 110px);
 }
 .eyebrow {
-  color: var(--teal);
+  color: #0f766e;
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.22em;
@@ -2698,7 +2698,7 @@ main {
 }
 .hero h1 em {
   display: inline-block;
-  color: var(--teal);
+  color: #0f766e;
   font-weight: 800;
   font-style: normal;
   white-space: nowrap;
@@ -2725,7 +2725,7 @@ main {
   transition: 0.18s ease;
 }
 .primary-cta:hover {
-  background: var(--teal);
+  background: #0f766e;
   transform: translateY(-2px);
 }
 .hero-actions > span {
@@ -2736,7 +2736,7 @@ main {
   font-size: 12px;
 }
 .hero-actions > span i {
-  color: var(--teal);
+  color: #0f766e;
 }
 .hero-search-wrap {
   position: relative;
@@ -2757,7 +2757,7 @@ main {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .hero-search-box:focus-within {
-  border-color: var(--teal);
+  border-color: #0f766e;
   box-shadow: 0 10px 30px rgb(15 118 110 / 14%);
 }
 .hero-search-box > i {
@@ -2798,7 +2798,7 @@ main {
   right: 0;
   max-height: 380px;
   overflow-y: auto;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 18px 40px rgb(20 33 61 / 14%);
@@ -2860,7 +2860,7 @@ main {
   font-size: 12px;
 }
 .search-result-arrow {
-  color: var(--teal);
+  color: #0f766e;
   font-size: 12px;
 }
 .hero-search-empty {
@@ -2966,7 +2966,7 @@ main {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  color: var(--teal);
+  color: #0f766e;
   background: #e6f2ef;
   display: grid;
   place-items: center;
@@ -3032,7 +3032,7 @@ main {
 .slide-badge {
   display: inline-block;
   padding: 6px 14px;
-  background: var(--teal);
+  background: #0f766e;
   color: #ffffff;
   font-size: 11px;
   font-weight: 850;
@@ -3179,13 +3179,13 @@ main {
   gap: 15px;
   margin-top: 50px;
   padding: 20px 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
 }
 .pag-btn {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   background: white;
   color: var(--ink);
   display: grid;
@@ -3195,8 +3195,8 @@ main {
   box-sizing: border-box;
 }
 .pag-btn:hover:not(:disabled) {
-  border-color: var(--teal) !important;
-  color: var(--teal);
+  border-color: #0f766e !important;
+  color: #0f766e;
   background: #f0fdfa;
 }
 .pag-btn:disabled {
@@ -3255,7 +3255,7 @@ main {
 .catalog-toolbar {
   margin: 34px 0 30px;
   padding-bottom: 17px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid #e8e7e1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3281,7 +3281,7 @@ main {
 }
 .category-list button.active {
   color: white;
-  background: var(--teal);
+  background: #0f766e;
 }
 .sort-control {
   flex: 0 0 auto;
@@ -3295,7 +3295,7 @@ main {
   width: auto;
   min-height: 36px;
   padding: 0 30px 0 10px;
-  border-color: var(--line);
+  border-color: #e8e7e1;
   background-color: transparent;
   font-size: 11px;
 }
@@ -3405,7 +3405,7 @@ main {
   transform: translateY(0);
 }
 .quick-add:hover {
-  background: var(--teal);
+  background: #0f766e;
 }
 .quick-add:disabled {
   display: none;
@@ -3421,7 +3421,7 @@ main {
 }
 .product-labels span {
   overflow: hidden;
-  color: var(--teal);
+  color: #0f766e;
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.11em;
@@ -3499,7 +3499,7 @@ main {
   font-size: 9px;
 }
 .product-footer small i {
-  color: var(--teal);
+  color: #0f766e;
 }
 .product-footer .unavailable {
   color: #9f4d4d;
@@ -3522,9 +3522,9 @@ main {
   transition: all 0.2s;
 }
 .product-footer > button:hover:not(:disabled) {
-  border-color: var(--teal);
+  border-color: #0f766e;
   color: white;
-  background: var(--teal);
+  background: #0f766e;
 }
 .product-footer > button:disabled {
   opacity: 0.42;
@@ -3560,7 +3560,7 @@ main {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 50%;
   background: var(--cream);
   color: var(--ink);
@@ -3602,7 +3602,7 @@ main {
   border-radius: 12px;
   background: var(--cream);
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3642,7 +3642,7 @@ main {
   position: relative;
   aspect-ratio: 1 / 1;
   padding: 0;
-  border: 2px solid var(--line);
+  border: 2px solid #e8e7e1;
   border-radius: 8px;
   background: var(--cream);
   cursor: pointer;
@@ -3651,12 +3651,12 @@ main {
 }
 
 .thumbnails button:hover {
-  border-color: var(--teal);
+  border-color: #0f766e;
 }
 
 .thumbnails button.active {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 1px var(--teal);
+  border-color: #0f766e;
+  box-shadow: 0 0 0 1px #0f766e;
 }
 
 .thumbnails button img {
@@ -3668,7 +3668,7 @@ main {
 .detail-description-section {
   margin-top: 8px;
   padding-top: 24px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
 }
 
 .detail-description-title {
@@ -3694,7 +3694,7 @@ main {
 }
 
 .detail-category {
-  color: var(--teal);
+  color: #0f766e;
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.15em;
@@ -3798,7 +3798,7 @@ main {
   flex-direction: column;
   gap: 8px;
   padding: 24px;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 8px;
   background: var(--cream);
 }
@@ -3835,7 +3835,7 @@ main {
   display: grid;
   grid-template-columns: 44px 80px 44px;
   gap: 0;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -3843,7 +3843,7 @@ main {
 .qty-controls button {
   padding: 0;
   border: 0;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid #e8e7e1;
   background: var(--cream);
   font-size: 12px;
   cursor: pointer;
@@ -3852,12 +3852,12 @@ main {
 
 .qty-controls button:last-child {
   border-right: 0;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid #e8e7e1;
 }
 
 .qty-controls button:hover {
   background: rgba(56, 189, 248, 0.1);
-  color: var(--teal);
+  color: #0f766e;
 }
 
 .qty-controls input {
@@ -3903,15 +3903,15 @@ main {
 }
 
 .btn-add-to-cart.outline-btn {
-  border: 2px solid var(--teal);
+  border: 2px solid #0f766e;
   background: transparent;
-  color: var(--teal);
+  color: #0f766e;
 }
 
 .btn-add-to-cart.outline-btn:hover:not(:disabled) {
   background: rgba(15, 118, 110, 0.05);
-  border-color: var(--teal-dark);
-  color: var(--teal-dark);
+  border-color: #0b5f59;
+  color: #0b5f59;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.1);
 }
@@ -3928,7 +3928,7 @@ main {
   padding: 0 24px;
   border: 0;
   border-radius: 12px;
-  background: var(--teal);
+  background: #0f766e;
   color: white;
   font-weight: 700;
   font-size: 16px;
@@ -3941,7 +3941,7 @@ main {
 }
 
 .btn-buy-now:hover:not(:disabled) {
-  background: var(--teal-dark);
+  background: #0b5f59;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
 }
@@ -3977,7 +3977,7 @@ main {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  color: var(--teal);
+  color: #0f766e;
   background: #e8f1ee;
   display: grid;
   place-items: center;
@@ -4095,13 +4095,13 @@ main {
 .cart-head {
   min-height: 92px;
   padding: 22px 26px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid #e8e7e1;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .cart-head span {
-  color: var(--teal);
+  color: #0f766e;
   font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.15em;
@@ -4117,7 +4117,7 @@ main {
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 50%;
   color: var(--ink);
   background: transparent;
@@ -4130,9 +4130,9 @@ main {
 
 .cart-head button:hover,
 .remove-line:hover {
-  border-color: var(--teal);
+  border-color: #0f766e;
   background: #f0fdfa;
-  color: var(--teal);
+  color: #0f766e;
 }
 .empty-cart {
   margin: auto;
@@ -4144,7 +4144,7 @@ main {
   height: 76px;
   margin: 0 auto 22px;
   border-radius: 50%;
-  color: var(--teal);
+  color: #0f766e;
   background: #e8f1ee;
   display: grid;
   place-items: center;
@@ -4170,7 +4170,7 @@ main {
   font-size: 14px;
   font-weight: 750;
   color: white;
-  background: var(--teal);
+  background: #0f766e;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4183,7 +4183,7 @@ main {
 .cart-line {
   position: relative;
   padding: 20px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid #e8e7e1;
   display: grid;
   grid-template-columns: 84px 1fr 34px;
   gap: 15px;
@@ -4211,7 +4211,7 @@ main {
   align-items: flex-start;
 }
 .cart-info > small {
-  color: var(--teal);
+  color: #0f766e;
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -4264,7 +4264,7 @@ main {
 }
 .cart-footer {
   padding: 23px 26px 26px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
   background: white;
 }
 .cart-footer > div {
@@ -4295,7 +4295,7 @@ main {
   border: 0;
   border-radius: 12px;
   color: white;
-  background: var(--teal);
+  background: #0f766e;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4325,7 +4325,7 @@ footer {
   color: white;
 }
 .footer-brand .brand-mark {
-  background: var(--teal);
+  background: #0f766e;
   color: white;
 }
 .brand-desc {
@@ -4351,7 +4351,7 @@ footer {
   transition: all 0.2s;
 }
 .social-links a:hover {
-  background: var(--teal);
+  background: #0f766e;
   color: white;
   transform: translateY(-2px);
 }
@@ -4379,7 +4379,7 @@ footer {
   transition: color 0.2s;
 }
 .footer-links a:hover {
-  color: var(--teal);
+  color: #0f766e;
 }
 .staff-login-btn {
   padding: 8px 12px;
@@ -4392,8 +4392,8 @@ footer {
   font-weight: 600;
 }
 .staff-login-btn:hover {
-  background: var(--teal);
-  border-color: var(--teal);
+  background: #0f766e;
+  border-color: #0f766e;
 }
 .footer-bottom {
   max-width: 1240px;
@@ -4767,7 +4767,7 @@ footer {
 .submit-btn {
   margin-top: 8px;
   min-height: 44px;
-  background: var(--teal);
+  background: #0f766e;
   color: white;
   border: none;
   border-radius: 6px;
@@ -4781,7 +4781,7 @@ footer {
   cursor: pointer;
 }
 .submit-btn:hover {
-  background: var(--teal-dark);
+  background: #0b5f59;
 }
 .submit-btn:disabled {
   opacity: 0.7;
@@ -4881,11 +4881,11 @@ border: 1px solid #23304c !important;
 }
 .app-dark .primary-cta {
   color: #fff !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
 }
 .app-dark .primary-cta:hover {
   color: #fff !important;
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
 }
 .app-dark .hero-search-box {
   background: #151d30;
@@ -4962,7 +4962,7 @@ border: 1px solid #23304c !important;
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: var(--teal);
+  background: #0f766e;
   color: white;
   font-weight: 900;
   cursor: pointer;
@@ -5017,7 +5017,7 @@ border: 1px solid #23304c !important;
 .customer-tier-card small,
 .customer-history-title {
   font-weight: 800;
-  color: var(--teal);
+  color: #0f766e;
 }
 .customer-tier-card strong {
   color: #0f172a;
@@ -5275,8 +5275,8 @@ border: 1px solid #23304c !important;
 }
 .app-dark .brand-mark {
   background: transparent;
-  border: 1.5px solid var(--teal);
-  color: var(--teal);
+  border: 1.5px solid #0f766e;
+  color: #0f766e;
 }
 
 /* Promo Flash Banner Slider Styles */
@@ -5594,7 +5594,7 @@ border: 1px solid #23304c !important;
 /* Product Specifications Accordion Styles */
 .detail-specs-accordion {
   margin-top: 30px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
   padding-top: 24px;
   display: flex;
   flex-direction: column;
@@ -5602,7 +5602,7 @@ border: 1px solid #23304c !important;
   text-align: left;
 }
 .detail-specs-accordion .accordion-item {
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 10px;
   overflow: hidden;
   background: white;
@@ -5612,7 +5612,7 @@ border: 1px solid #23304c !important;
   background: #1e293b;
 }
 .detail-specs-accordion .accordion-item.open {
-  border-color: var(--teal);
+  border-color: #0f766e;
 }
 .detail-specs-accordion .accordion-trigger {
   width: 100%;
@@ -5654,7 +5654,7 @@ border: 1px solid #23304c !important;
   max-height: 1200px;
   opacity: 1;
   padding: 16px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
   backdrop-filter: blur(10px);
   background: rgba(248, 247, 242, 0.45) !important;
 }
@@ -5670,7 +5670,7 @@ border: 1px solid #23304c !important;
 }
 .specs-table td {
   padding: 8px 0;
-  border-bottom: 1px dashed var(--line);
+  border-bottom: 1px dashed #e8e7e1;
   font-size: 15px; /* Increased size by 2px */
 }
 .specs-table tr:last-child td {
@@ -6386,7 +6386,7 @@ border: 1px solid #23304c !important;
 /* Modern Storefront Detail Layout Overrides */
 .store .main-image {
   background: #ffffff !important;
-  border-color: var(--line) !important;
+  border-color: #e8e7e1 !important;
 }
 
 .app-dark .main-image {
@@ -6425,7 +6425,7 @@ border: 1px solid #23304c !important;
   font-family: var(--font-heading) !important;
   font-size: 36px !important;
   font-weight: 800 !important;
-  color: var(--teal) !important;
+  color: #0f766e !important;
 }
 
 /* Variant & Color Picker Modern Styling */
@@ -6457,7 +6457,7 @@ border: 1px solid #23304c !important;
   min-height: 40px !important;
   padding: 6px 16px !important;
   border-radius: 8px !important;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   background: white !important;
   color: var(--ink) !important;
   font-size: 13px !important;
@@ -6477,16 +6477,16 @@ border: 1px solid #23304c !important;
 }
 
 .store .variant-options button:hover:not(:disabled) {
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
+  border-color: #0f766e !important;
+  color: #0f766e !important;
   background: rgba(15, 118, 110, 0.02) !important;
 }
 
 .store .variant-options button.active {
-  border-color: var(--teal) !important;
+  border-color: #0f766e !important;
   background: rgba(15, 118, 110, 0.05) !important;
-  color: var(--teal) !important;
-  box-shadow: 0 0 0 1px var(--teal) !important;
+  color: #0f766e !important;
+  box-shadow: 0 0 0 1px #0f766e !important;
 }
 
 .store .variant-options button:disabled {
@@ -6526,15 +6526,15 @@ border: 1px solid #23304c !important;
 }
 
 .store .btn-add-to-cart.outline-btn {
-  border: 2px solid var(--teal) !important;
+  border: 2px solid #0f766e !important;
   background: transparent !important;
-  color: var(--teal) !important;
+  color: #0f766e !important;
 }
 
 .store .btn-add-to-cart.outline-btn:hover:not(:disabled) {
   background: rgba(15, 118, 110, 0.05) !important;
-  border-color: var(--teal-dark) !important;
-  color: var(--teal-dark) !important;
+  border-color: #0b5f59 !important;
+  color: #0b5f59 !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.1) !important;
 }
@@ -6544,7 +6544,7 @@ border: 1px solid #23304c !important;
   padding: 0 24px !important;
   border: 0 !important;
   border-radius: 12px !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: white !important;
   font-weight: 700 !important;
   font-size: 16px !important;
@@ -6557,7 +6557,7 @@ border: 1px solid #23304c !important;
 }
 
 .store .btn-buy-now:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3) !important;
 }
@@ -6574,7 +6574,7 @@ border: 1px solid #23304c !important;
   width: 56px !important;
   height: 56px !important;
   border-radius: 50% !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: white !important;
   display: flex !important;
   align-items: center !important;
@@ -6594,7 +6594,7 @@ border: 1px solid #23304c !important;
 
 .store .chatbot-fab:hover {
   transform: scale(1.08) rotate(5deg) !important;
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
   box-shadow: 0 6px 20px rgba(15, 118, 110, 0.5) !important;
 }
 
@@ -6608,7 +6608,7 @@ border: 1px solid #23304c !important;
   max-width: calc(100vw - 48px);
   background: #ffffff;
   color: #111827;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
   display: flex;
@@ -6627,7 +6627,7 @@ border: 1px solid #23304c !important;
 
 .chatbot-head {
   padding: 16px 20px;
-  background: var(--teal);
+  background: #0f766e;
   color: white;
   display: flex;
   justify-content: space-between;
@@ -6701,7 +6701,7 @@ border: 1px solid #23304c !important;
 
 .chatbot-state i {
   font-size: 24px;
-  color: var(--teal);
+  color: #0f766e;
 }
 
 .chat-message {
@@ -6729,7 +6729,7 @@ border: 1px solid #23304c !important;
 }
 
 .from-user .message-bubble {
-  background: var(--teal);
+  background: #0f766e;
   color: white;
   border-bottom-right-radius: 4px;
   box-shadow: 0 4px 10px rgba(15, 118, 110, 0.15);
@@ -6739,7 +6739,7 @@ border: 1px solid #23304c !important;
   background: #ffffff;
   color: #111827;
   border-bottom-left-radius: 4px;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
 }
 
@@ -6770,7 +6770,7 @@ border: 1px solid #23304c !important;
   gap: 8px;
   padding: 12px 16px;
   overflow-x: auto;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
   background: #ffffff;
   scrollbar-width: none; /* Firefox */
 }
@@ -6786,8 +6786,8 @@ border: 1px solid #23304c !important;
 
 .chatbot-suggestions button {
   background: transparent !important;
-  border: 1px solid var(--teal) !important;
-  color: var(--teal) !important;
+  border: 1px solid #0f766e !important;
+  color: #0f766e !important;
   border-radius: 20px !important;
   padding: 6px 14px !important;
   font-size: 12px !important;
@@ -6798,7 +6798,7 @@ border: 1px solid #23304c !important;
 }
 
 .chatbot-suggestions button:hover {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: white !important;
   transform: translateY(-1px);
 }
@@ -6809,7 +6809,7 @@ border: 1px solid #23304c !important;
   flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
   background: #f8fafc;
 }
 
@@ -6819,7 +6819,7 @@ border: 1px solid #23304c !important;
 }
 
 .chatbot-actions button {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: white !important;
   border: 0 !important;
   border-radius: 8px !important;
@@ -6835,7 +6835,7 @@ border: 1px solid #23304c !important;
 }
 
 .chatbot-actions button:hover {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
 }
 
 .chatbot-error {
@@ -6861,7 +6861,7 @@ border: 1px solid #23304c !important;
 .chatbot-input {
   display: flex;
   padding: 12px 16px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #e8e7e1;
   background: #ffffff;
   gap: 10px;
 }
@@ -6873,7 +6873,7 @@ border: 1px solid #23304c !important;
 
 .chatbot-input input {
   flex: 1;
-  border: 1px solid var(--line);
+  border: 1px solid #e8e7e1;
   border-radius: 99px;
   padding: 8px 16px;
   font-size: 13px;
@@ -6889,7 +6889,7 @@ border: 1px solid #23304c !important;
 }
 
 .chatbot-input input:focus {
-  border-color: var(--teal);
+  border-color: #0f766e;
   background: white;
 }
 
@@ -6901,7 +6901,7 @@ border: 1px solid #23304c !important;
   width: 36px;
   height: 36px;
   border-radius: 50% !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: white !important;
   border: 0 !important;
   display: flex;
@@ -6912,7 +6912,7 @@ border: 1px solid #23304c !important;
 }
 
 .chatbot-input button:hover:not(:disabled) {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
   transform: scale(1.05);
 }
 
@@ -6937,7 +6937,7 @@ border: 1px solid #23304c !important;
 /* Cart Button & Icon Adaptive Theme Styling */
 .store .cart-button {
   background: #f1f5f9 !important;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   color: var(--ink) !important;
   display: flex !important;
   align-items: center !important;
@@ -6955,14 +6955,14 @@ border: 1px solid #23304c !important;
 }
 
 .store .cart-button:hover {
-  background: var(--line) !important;
+  background: #e8e7e1 !important;
   transform: translateY(-1px);
 }
 
 /* Highlight state when cart has items */
 .store .cart-button.has-items {
-  background: var(--teal) !important;
-  border-color: var(--teal) !important;
+  background: #0f766e !important;
+  border-color: #0f766e !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
 }
@@ -6972,8 +6972,8 @@ border: 1px solid #23304c !important;
 }
 
 .store .cart-button.has-items:hover {
-  background: var(--teal-dark) !important;
-  border-color: var(--teal-dark) !important;
+  background: #0b5f59 !important;
+  border-color: #0b5f59 !important;
   box-shadow: 0 6px 16px rgba(15, 118, 110, 0.3) !important;
 }
 
@@ -6993,8 +6993,8 @@ border: 1px solid #23304c !important;
 }
 
 .app-dark .store .cart-button.has-items {
-  background: var(--teal) !important;
-  border-color: var(--teal) !important;
+  background: #0f766e !important;
+  border-color: #0f766e !important;
   color: #0b0f19 !important;
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
 }
@@ -7004,8 +7004,8 @@ border: 1px solid #23304c !important;
 }
 
 .app-dark .store .cart-button.has-items:hover {
-  background: var(--teal-dark) !important;
-  border-color: var(--teal-dark) !important;
+  background: #0b5f59 !important;
+  border-color: #0b5f59 !important;
 }
 
 /* Cart Panel Text Contrast Overrides */
@@ -7029,13 +7029,13 @@ border: 1px solid #23304c !important;
 }
 
 .store .cart-info > small {
-  color: var(--teal) !important;
+  color: #0f766e !important;
 }
 
 /* Chatbot Floating Widget & Panel Styling */
 .store .chatbot-panel {
   background: #ffffff !important;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15) !important;
   z-index: 99999 !important;
   color: #1e293b !important;
@@ -7058,7 +7058,7 @@ border: 1px solid #23304c !important;
 
 /* Chat Header */
 .store .chatbot-head {
-  background: var(--teal) !important;
+  background: #0f766e !important;
 }
 
 .store .chatbot-head,
@@ -7086,15 +7086,15 @@ border: 1px solid #23304c !important;
 .store .chat-message.from-user .message-bubble,
 .store .chat-message.from-user .message-bubble p,
 .store .chat-message.from-user .message-bubble span {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
 }
 
 .app-dark .store .chat-message.from-user .message-bubble,
 .app-dark .store .chat-message.from-user .message-bubble p,
 .app-dark .store .chat-message.from-user .message-bubble span {
-  background: var(--teal) !important;
-  color: #0b0f19 !important; /* Dark text for contrast against sky blue */
+  background: #14b8a6 !important;
+  color: #ffffff !important;
 }
 
 /* Bot Message Bubble */
@@ -7103,7 +7103,7 @@ border: 1px solid #23304c !important;
 .store .chat-message.from-bot .message-bubble span {
   background: #ffffff !important;
   color: #111827 !important; /* text-gray-900 */
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
 }
 
 .app-dark .store .chat-message.from-bot .message-bubble,
@@ -7117,7 +7117,7 @@ border: 1px solid #23304c !important;
 /* Chat Input bar */
 .store .chatbot-input {
   background: #ffffff !important;
-  border-top: 1px solid var(--line) !important;
+  border-top: 1px solid #e8e7e1 !important;
 }
 
 .app-dark .store .chatbot-input {
@@ -7127,7 +7127,7 @@ border: 1px solid #23304c !important;
 
 .store .chatbot-input input {
   background: #f8fafc !important;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   color: #1e293b !important;
 }
 
@@ -7140,7 +7140,7 @@ border: 1px solid #23304c !important;
 /* Chatbot Suggestion Chips */
 .store .chatbot-suggestions {
   background: #ffffff !important;
-  border-top: 1px solid var(--line) !important;
+  border-top: 1px solid #e8e7e1 !important;
 }
 
 .app-dark .store .chatbot-suggestions {
@@ -7151,32 +7151,33 @@ border: 1px solid #23304c !important;
 .store .chatbot-suggestions button,
 .store .chatbot-suggestions button span {
   background: transparent !important;
-  border: 1.5px solid var(--teal) !important;
-  color: var(--teal) !important;
+  border: 1.5px solid #0f766e !important;
+  color: #0f766e !important;
   font-weight: 700 !important;
 }
 
 .app-dark .store .chatbot-suggestions button,
 .app-dark .store .chatbot-suggestions button span {
-  color: var(--teal) !important;
-  border-color: var(--teal) !important;
+  color: #14b8a6 !important;
+  border-color: #14b8a6 !important;
 }
 
 .store .chatbot-suggestions button:hover,
 .store .chatbot-suggestions button:hover span {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
 }
 
 .app-dark .store .chatbot-suggestions button:hover,
 .app-dark .store .chatbot-suggestions button:hover span {
-  background: var(--teal) !important;
-  color: #0b0f19 !important;
+  background: #14b8a6 !important;
+  color: #ffffff !important;
+  border-color: #14b8a6 !important;
 }
 
 /* Cart Quantity Controls - High Contrast */
 .store .quantity-control {
-  border: 1.5px solid var(--line) !important;
+  border: 1.5px solid #e8e7e1 !important;
   border-radius: 6px !important;
   overflow: hidden !important;
 }
@@ -7190,15 +7191,15 @@ border: 1px solid #23304c !important;
 }
 
 .store .quantity-control button:hover {
-  background: var(--line) !important;
+  background: #e8e7e1 !important;
 }
 
 .store .quantity-control input {
   background: #ffffff !important;
   color: var(--ink) !important;
   font-weight: 750 !important;
-  border-right: 1.5px solid var(--line) !important;
-  border-left: 1.5px solid var(--line) !important;
+  border-right: 1.5px solid #e8e7e1 !important;
+  border-left: 1.5px solid #e8e7e1 !important;
 }
 
 /* Cart Trash Button - High Contrast */
@@ -7221,7 +7222,7 @@ border: 1px solid #23304c !important;
 
 /* Cart Drawer Close Button */
 .store .cart-head button {
-  border: 1.5px solid var(--line) !important;
+  border: 1.5px solid #e8e7e1 !important;
   background: #f8fafc !important;
   color: var(--ink) !important;
   border-radius: 50% !important;
@@ -7232,21 +7233,26 @@ border: 1px solid #23304c !important;
 }
 
 .store .cart-head button:hover {
-  background: var(--line) !important;
+  background: #e8e7e1 !important;
 }
 
 /* Cart Drawer Checkout Button */
 .store .cart-checkout-btn {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
   font-weight: 750 !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
+  border: none !important;
+}
+
+.store .cart-checkout-btn i {
+  color: #ffffff !important;
 }
 
 .store .cart-checkout-btn:hover {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
   box-shadow: 0 6px 16px rgba(15, 118, 110, 0.3) !important;
 }
 
@@ -7293,22 +7299,27 @@ border: 1px solid #23304c !important;
 }
 
 .app-dark .store .cart-checkout-btn {
-  background: var(--teal) !important;
-  color: #0b0f19 !important;
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+  background: #14b8a6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3) !important;
+  border: none !important;
+}
+
+.app-dark .store .cart-checkout-btn i {
+  color: #ffffff !important;
 }
 
 .app-dark .store .cart-checkout-btn:hover {
-  background: var(--teal-dark) !important;
+  background: #0d9488 !important;
 }
 
 /* Product Grid 'Add' Button Overrides */
 .store .product-footer > button {
   min-height: 40px !important;
   padding: 0 16px !important;
-  border: 1.5px solid var(--teal) !important;
+  border: 1.5px solid #0f766e !important;
   border-radius: 10px !important;
-  color: var(--teal) !important;
+  color: #0f766e !important;
   background: rgba(15, 118, 110, 0.05) !important;
   font-size: 13px !important;
   font-weight: 750 !important;
@@ -7320,19 +7331,19 @@ border: 1px solid #23304c !important;
 }
 
 .store .product-footer > button:hover:not(:disabled) {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
   box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25) !important;
 }
 
 .app-dark .store .product-footer > button {
   background: rgba(56, 189, 248, 0.1) !important;
-  border-color: var(--teal) !important;
-  color: var(--teal) !important;
+  border-color: #0f766e !important;
+  color: #0f766e !important;
 }
 
 .app-dark .store .product-footer > button:hover:not(:disabled) {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #0b0f19 !important;
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35) !important;
 }
@@ -7362,7 +7373,7 @@ border: 1px solid #23304c !important;
   width: 56px !important;
   height: 56px !important;
   border-radius: 50% !important;
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
   display: flex !important;
   align-items: center !important;
@@ -7394,7 +7405,7 @@ border: 1px solid #23304c !important;
   max-height: calc(100vh - 140px) !important;
   max-width: calc(100vw - 40px) !important;
   background: #ffffff !important;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   border-radius: 16px !important;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15) !important;
   display: flex !important;
@@ -7431,15 +7442,15 @@ border: 1px solid #23304c !important;
 .chat-message.from-user .message-bubble,
 .chat-message.from-user .message-bubble p,
 .chat-message.from-user .message-bubble span {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
 }
 
 .app-dark .chat-message.from-user .message-bubble,
 .app-dark .chat-message.from-user .message-bubble p,
 .app-dark .chat-message.from-user .message-bubble span {
-  background: var(--teal) !important;
-  color: #0b0f19 !important; /* Dark text for contrast against sky blue */
+  background: #14b8a6 !important;
+  color: #ffffff !important;
 }
 
 /* Bot Message Bubble */
@@ -7448,7 +7459,7 @@ border: 1px solid #23304c !important;
 .chat-message.from-bot .message-bubble span {
   background: #ffffff !important;
   color: #111827 !important; /* text-gray-900 */
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
 }
 
 .app-dark .chat-message.from-bot .message-bubble,
@@ -7463,33 +7474,34 @@ border: 1px solid #23304c !important;
 .chatbot-suggestions button,
 .chatbot-suggestions button span {
   background: transparent !important;
-  border: 1.5px solid var(--teal) !important;
-  color: var(--teal) !important;
+  border: 1.5px solid #0f766e !important;
+  color: #0f766e !important;
   font-weight: 700 !important;
 }
 
 .chatbot-suggestions button:hover,
 .chatbot-suggestions button:hover span {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
 }
 
 .app-dark .chatbot-suggestions button,
 .app-dark .chatbot-suggestions button span {
-  color: var(--teal) !important; /* sky blue */
-  border-color: var(--teal) !important;
+  color: #14b8a6 !important;
+  border-color: #14b8a6 !important;
 }
 
 .app-dark .chatbot-suggestions button:hover,
 .app-dark .chatbot-suggestions button:hover span {
-  background: var(--teal) !important;
-  color: #0b0f19 !important;
+  background: #14b8a6 !important;
+  color: #ffffff !important;
+  border-color: #14b8a6 !important;
 }
 
 /* Chat Input styling */
 .chatbot-input {
   background: #ffffff !important;
-  border-top: 1px solid var(--line) !important;
+  border-top: 1px solid #e8e7e1 !important;
 }
 
 .app-dark .chatbot-input {
@@ -7499,7 +7511,7 @@ border: 1px solid #23304c !important;
 
 .chatbot-input input {
   background: #f8fafc !important;
-  border: 1px solid var(--line) !important;
+  border: 1px solid #e8e7e1 !important;
   color: #111827 !important; /* text-gray-900 */
 }
 
@@ -7527,7 +7539,7 @@ border: 1px solid #23304c !important;
 
 /* Quantity controls container */
 .quantity-control {
-  border: 1.5px solid var(--line) !important;
+  border: 1.5px solid #e8e7e1 !important;
   border-radius: 6px !important;
   overflow: hidden !important;
   background: transparent !important;
@@ -7545,8 +7557,8 @@ border: 1px solid #23304c !important;
   color: #111827 !important; /* text-gray-900 */
   border-top: 0 !important;
   border-bottom: 0 !important;
-  border-right: 1.5px solid var(--line) !important;
-  border-left: 1.5px solid var(--line) !important;
+  border-right: 1.5px solid #e8e7e1 !important;
+  border-left: 1.5px solid #e8e7e1 !important;
   border-radius: 0 !important;
   font-weight: 750 !important;
   width: 40px !important;
@@ -7584,7 +7596,7 @@ background: #0b0f19 !important; /* Nền tối cho input */
 }
 
 .quantity-control button:hover {
-  background: var(--line) !important;
+  background: #e8e7e1 !important;
 }
 
 /* Dark mode quantity control buttons - REMOVE white background completely */
@@ -7640,12 +7652,13 @@ background: #0b0f19 !important; /* Nền tối cho input */
 
 /* Checkout Button */
 .cart-checkout-btn {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
   font-weight: 750 !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
+  border: none !important;
 }
 
 .cart-checkout-btn i {
@@ -7653,21 +7666,22 @@ background: #0b0f19 !important; /* Nền tối cho input */
 }
 
 .cart-checkout-btn:hover {
-  background: var(--teal-dark) !important;
+  background: #0b5f59 !important;
 }
 
 .app-dark .cart-checkout-btn {
-  background: var(--teal) !important; /* sky blue in dark mode */
-  color: #0b0f19 !important;
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+  background: #14b8a6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3) !important;
+  border: none !important;
 }
 
 .app-dark .cart-checkout-btn i {
-  color: #0b0f19 !important;
+  color: #ffffff !important;
 }
 
 .app-dark .cart-checkout-btn:hover {
-  background: var(--teal-dark) !important;
+  background: #0d9488 !important;
 }
 
 /* Product Card Add Button styling */
@@ -7675,8 +7689,8 @@ background: #0b0f19 !important; /* Nền tối cho input */
   min-height: 40px !important;
   padding: 0 16px !important;
   background: rgba(15, 118, 110, 0.05) !important;
-  border: 1.5px solid var(--teal) !important;
-  color: var(--teal) !important;
+  border: 1.5px solid #0f766e !important;
+  color: #0f766e !important;
   border-radius: 10px !important;
   font-size: 13px !important;
   font-weight: 750 !important;
@@ -7688,11 +7702,11 @@ background: #0b0f19 !important; /* Nền tối cho input */
 }
 
 .product-footer > button i {
-  color: var(--teal) !important;
+  color: #0f766e !important;
 }
 
 .product-footer > button:hover:not(:disabled) {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #ffffff !important;
   box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25) !important;
 }
@@ -7703,16 +7717,16 @@ background: #0b0f19 !important; /* Nền tối cho input */
 
 .app-dark .product-footer > button {
 background: rgba(56, 189, 248, 0.1) !important;
-  border: 1.5px solid var(--teal) !important;
-  color: var(--teal) !important;
+  border: 1.5px solid #0f766e !important;
+  color: #0f766e !important;
 }
 
 .app-dark .product-footer > button i {
-  color: var(--teal) !important;
+  color: #0f766e !important;
 }
 
 .app-dark .product-footer > button:hover:not(:disabled) {
-  background: var(--teal) !important;
+  background: #0f766e !important;
   color: #0b0f19 !important;
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35) !important;
 }
@@ -7721,5 +7735,6 @@ background: rgba(56, 189, 248, 0.1) !important;
   color: #0b0f19 !important;
 }
 </style>
+
 
 
