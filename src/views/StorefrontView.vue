@@ -8106,4 +8106,127 @@ background: rgba(56, 189, 248, 0.1) !important;
   border-color: #14b8a6 !important;
   color: #082f2d !important;
 }
+
+/* Customer profile polish */
+.store .customer-panel-buttons {
+  gap: 8px !important;
+  margin-top: 14px !important;
+}
+
+.store .customer-panel-buttons .panel-btn {
+  min-height: 46px !important;
+  padding: 0 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid #dbe7f0 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%) !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03) !important;
+}
+
+.store .customer-panel-buttons .panel-btn i {
+  width: 26px !important;
+  height: 26px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: #e6fffb !important;
+  color: #0f766e !important;
+  font-size: 14px !important;
+}
+
+.store .customer-panel-buttons .panel-btn span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.store .customer-panel-buttons .panel-btn:hover {
+  border-color: rgba(15, 118, 110, 0.34) !important;
+  background: #f0fdfa !important;
+  color: #0f766e !important;
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.12) !important;
+}
+
+.store .customer-panel-buttons .panel-btn:hover i {
+  background: #0f766e !important;
+  color: #ffffff !important;
+}
+
+.order-cancel-request-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 38px !important;
+  max-width: 100% !important;
+  margin-top: 10px !important;
+  padding: 0 16px !important;
+  border-radius: 999px !important;
+  border: 1px solid #fecaca !important;
+  background: #fff1f2 !important;
+  color: #be123c !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  box-shadow: 0 6px 16px rgba(190, 18, 60, 0.08) !important;
+  cursor: pointer !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease !important;
+}
+
+.order-cancel-request-btn:hover {
+  transform: translateY(-1px) !important;
+  border-color: #f43f5e !important;
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(225, 29, 72, 0.2) !important;
+}
+
+.order-cancel-request-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.14) !important;
+}
+
+@media (max-width: 640px) {
+  .store .customer-panel-buttons .panel-btn {
+    min-height: 44px !important;
+    padding: 0 10px !important;
+    font-size: 13px !important;
+  }
+
+  .order-cancel-request-btn {
+    width: 100% !important;
+    min-height: 40px !important;
+    font-size: 12px !important;
+  }
+}
+
+.app-dark .store .customer-panel-buttons .panel-btn {
+  background: #111827 !important;
+  border-color: #263348 !important;
+  color: #e5e7eb !important;
+}
+
+.app-dark .store .customer-panel-buttons .panel-btn i {
+  background: rgba(20, 184, 166, 0.14) !important;
+  color: #5eead4 !important;
+}
+
+.app-dark .store .customer-panel-buttons .panel-btn:hover {
+  background: rgba(20, 184, 166, 0.12) !important;
+  border-color: rgba(45, 212, 191, 0.34) !important;
+  color: #99f6e4 !important;
+}
+
+.app-dark .order-cancel-request-btn {
+  background: rgba(190, 18, 60, 0.16) !important;
+  border-color: rgba(251, 113, 133, 0.34) !important;
+  color: #fda4af !important;
+}
+
+.app-dark .order-cancel-request-btn:hover {
+  background: #e11d48 !important;
+  border-color: #fb7185 !important;
+  color: #ffffff !important;
+}
 </style>
