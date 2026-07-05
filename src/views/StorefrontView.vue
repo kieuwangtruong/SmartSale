@@ -490,12 +490,7 @@ const customerInitials = computed(() => {
 });
 const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
 const purchasedCustomerOrders = computed(() =>
-  customerOrders.value.filter((order) => {
-    const isPayOs = (order.paymentMethod || "Cash").toLowerCase() === "payos";
-    return isPayOs
-      ? ["Paid", "Processing", "Shipped", "Completed"].includes(order.status)
-      : order.status === "Completed";
-  }),
+  customerOrders.value.filter((order) => order.status === "Completed"),
 );
 const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
 const displayedCustomerTierLabel = computed(() => {
@@ -7738,6 +7733,5 @@ background: rgba(56, 189, 248, 0.1) !important;
   color: #0b0f19 !important;
 }
 </style>
-
 
 
