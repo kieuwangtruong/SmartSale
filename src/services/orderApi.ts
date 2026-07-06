@@ -2,7 +2,6 @@ import { apiRequest } from './apiClient'
 import { currentLanguage } from './i18n'
 import { API_URLS } from './config'
 import {
-  encodeAddressWithExtras,
   mergeCustomerExtras,
   normalizeCustomerFormExtras,
   removeCustomerExtras,
@@ -416,7 +415,10 @@ export function createCustomer(payload: CustomerFormPayload) {
     fullName: payload.fullName,
     phone: payload.phone,
     email: payload.email ?? null,
-    address: encodeAddressWithExtras(payload.address, extras),
+    address: payload.address ?? null,
+    gender: extras.gender,
+    cccd: extras.cccd,
+    age: extras.age,
   }
   return apiRequest<Customer>(API_URLS.order, '/api/customers', {
     method: 'POST',
@@ -440,12 +442,10 @@ export function updateCustomer(payload: Customer) {
     fullName: payload.fullName,
     phone: payload.phone,
     email: payload.email ?? null,
-    address: encodeAddressWithExtras(payload.address, extras),
-    totalSpent: payload.totalSpent,
-    currentDebt: payload.currentDebt,
-    orderCount: payload.orderCount,
-    createdAt: payload.createdAt,
-    lastModifiedAt: payload.lastModifiedAt,
+    address: payload.address ?? null,
+    gender: extras.gender,
+    cccd: extras.cccd,
+    age: extras.age,
   }
   return apiRequest<Customer>(API_URLS.order, `/api/customers/${payload.id}`, {
     method: 'PUT',
