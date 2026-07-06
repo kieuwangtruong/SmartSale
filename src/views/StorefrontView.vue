@@ -176,6 +176,44 @@ const chatbotSuggestions = computed(() => [
   t("Gợi ý sản phẩm còn hàng dưới 500.000đ", "Suggest in-stock products under 500,000đ"),
 ]);
 
+interface ChatProductItem {
+  id: number;
+  name: string;
+  salePrice: number;
+  originalPrice: number;
+  stock: number;
+}
+
+function getChatProductList(content: string): { title: string; products: ChatProductItem[] } {
+  if (!content.includes("*") || !content.includes("#")) {
+    return { title: "", products: [] };
+  }
+
+  const products: ChatProductItem[] = [];
+  const productPattern = /\*\s*([^#*]+?)\s*#(\d+)\s*\(giá bán\s*([\d.]+),\s*giá gốc\s*([\d.]+),\s*còn\s*(\d+)\s*sản phẩm\)/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = productPattern.exec(content)) !== null) {
+    products.push({
+      name: match[1].trim(),
+      id: Number(match[2]),
+      salePrice: Number(match[3].replace(/\./g, "")),
+      originalPrice: Number(match[4].replace(/\./g, "")),
+      stock: Number(match[5]),
+    });
+  }
+
+  if (!products.length) {
+    return { title: "", products: [] };
+  }
+
+  const title = content.slice(0, content.indexOf("*")).replace(/[:：]\s*$/, "").trim();
+  return {
+    title: title || t("Danh sách sản phẩm", "Product list"),
+    products,
+  };
+}
+
 const showProfileModal = ref(false);
 const showOrdersModal = ref(false);
 const editingAddress = ref("");
@@ -2352,8 +2390,40 @@ onUnmounted(() => {
                 class="chat-message"
                 :class="message.role === 'user' ? 'from-user' : 'from-bot'"
               >
-                <div class="message-bubble">
-                  <p>{{ message.content }}</p>
+                <div
+                  class="message-bubble"
+                  :class="{ 'product-list-bubble': getChatProductList(message.content).products.length }"
+                >
+                  <div v-if="getChatProductList(message.content).products.length" class="chat-product-list">
+                    <strong>{{ getChatProductList(message.content).title }}</strong>
+                    <article
+                      v-for="product in getChatProductList(message.content).products"
+                      :key="product.id"
+                      class="chat-product-row"
+                    >
+                      <div>
+                        <b>{{ product.name }}</b>
+                        <small>#{{ product.id }}</small>
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>{{ t('Giá bán', 'Sale') }}</dt>
+                          <dd>{{ formatCurrency(product.salePrice) }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ t('Giá gốc', 'Original') }}</dt>
+                          <dd>{{ formatCurrency(product.originalPrice) }}</dd>
+                        </div>
+                        <div>
+                          <dt>{{ t('Tồn kho', 'Stock') }}</dt>
+                          <dd :class="{ empty: product.stock <= 0 }">
+                            {{ product.stock > 0 ? `${product.stock} ${t('sản phẩm', 'items')}` : t('Hết hàng', 'Out of stock') }}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
+                  </div>
+                  <p v-else>{{ message.content }}</p>
                 </div>
               </article>
               <div v-if="chatbotSending" class="chat-message from-bot loading-message">
@@ -8973,5 +9043,137 @@ background: rgba(56, 189, 248, 0.1) !important;
 
 .app-dark .chat-response-actions button:hover {
   background: #2dd4bf !important;
+}
+
+.message-bubble.product-list-bubble {
+  width: min(100%, 330px) !important;
+  max-width: 92% !important;
+  padding: 12px !important;
+  background: #f8fafc !important;
+}
+
+.chat-product-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.chat-product-list > strong {
+  color: #0f766e !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+  line-height: 1.35 !important;
+}
+
+.chat-product-row {
+  display: grid !important;
+  gap: 8px !important;
+  padding: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+}
+
+.chat-product-row > div:first-child {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  align-items: flex-start !important;
+}
+
+.chat-product-row b {
+  color: #1e293b !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.chat-product-row small {
+  flex: 0 0 auto !important;
+  padding: 2px 7px !important;
+  border-radius: 999px !important;
+  background: #e6fffb !important;
+  color: #0f766e !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.chat-product-row dl {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+
+.chat-product-row dl div {
+  min-width: 0 !important;
+  padding: 6px 7px !important;
+  border-radius: 6px !important;
+  background: #f8fafc !important;
+}
+
+.chat-product-row dt,
+.chat-product-row dd {
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.chat-product-row dt {
+  color: #64748b !important;
+  font-size: 10px !important;
+  font-weight: 750 !important;
+}
+
+.chat-product-row dd {
+  margin-top: 2px !important;
+  color: #0f172a !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.chat-product-row dd.empty {
+  color: #dc2626 !important;
+}
+
+@media (max-width: 640px) {
+  .message-bubble.product-list-bubble {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .chat-product-row dl {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .chat-product-row dl div:last-child {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+.app-dark .message-bubble.product-list-bubble {
+  background: #111827 !important;
+}
+
+.app-dark .chat-product-list > strong {
+  color: #5eead4 !important;
+}
+
+.app-dark .chat-product-row {
+  background: #1f2937 !important;
+  border-color: #334155 !important;
+}
+
+.app-dark .chat-product-row b,
+.app-dark .chat-product-row dd {
+  color: #e5e7eb !important;
+}
+
+.app-dark .chat-product-row small {
+  background: rgba(20, 184, 166, 0.16) !important;
+  color: #99f6e4 !important;
+}
+
+.app-dark .chat-product-row dl div {
+  background: #111827 !important;
 }
 </style>
