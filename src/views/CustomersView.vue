@@ -161,6 +161,9 @@ function handleExport(dates: { startDate: string; endDate: string }) {
     'Số điện thoại': c.phone,
     'Email': c.email || '',
     'Địa chỉ': c.address || '',
+    'Giới tính': translateGender(c.gender),
+    'CCCD': c.cccd || '',
+    'Tuổi': c.age ?? '',
     'Hạng': c.tier || 'Standard',
     'Tổng chi tiêu': c.totalSpent || 0,
     'Công nợ': c.currentDebt || 0,
@@ -261,6 +264,9 @@ async function load() {
         return {
           ...c,
           tier: decoded.extras.tier || 'Standard',
+          gender: c.gender ?? decoded.extras.gender ?? 0,
+          cccd: c.cccd ?? decoded.extras.cccd ?? null,
+          age: c.age ?? decoded.extras.age ?? null,
         }
       }
       return c

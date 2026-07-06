@@ -108,16 +108,16 @@ export function normalizeCustomerFormExtras(form: {
 }
 
 export function mergeCustomerExtras<T extends { id: number; phone: string; address?: string | null }>(
-  customer: T,
+  customer: T & CustomerExtras,
 ): T & CustomerExtras & { address?: string | null } {
   const decoded = decodeAddressWithExtras(customer.address)
   const stored = getCustomerExtras(customer.id, customer.phone)
   return {
     ...customer,
     address: decoded.plainAddress || null,
-    gender: stored.gender ?? decoded.extras.gender ?? 0,
-    cccd: stored.cccd ?? decoded.extras.cccd ?? null,
-    age: stored.age ?? decoded.extras.age ?? null,
+    gender: customer.gender ?? stored.gender ?? decoded.extras.gender ?? 0,
+    cccd: customer.cccd ?? stored.cccd ?? decoded.extras.cccd ?? null,
+    age: customer.age ?? stored.age ?? decoded.extras.age ?? null,
     tier: stored.tier ?? decoded.extras.tier ?? null,
   }
 }
