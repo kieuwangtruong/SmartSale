@@ -8701,4 +8701,86 @@ background: rgba(56, 189, 248, 0.1) !important;
   border: 0 !important;
   color: #f8fafc !important;
 }
+
+/* Chat messages aligned like a classic conversation */
+.chatbot-head {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%) !important;
+}
+
+.chatbot-body {
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+
+.chat-message {
+  display: flex !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.chat-message.from-bot {
+  justify-content: flex-start !important;
+}
+
+.chat-message.from-user {
+  justify-content: flex-end !important;
+}
+
+.message-bubble {
+  width: fit-content !important;
+  max-width: 78% !important;
+  padding: 10px 12px !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+.chat-message.from-bot .message-bubble {
+  margin-right: auto !important;
+  background: #f6f7f6 !important;
+  color: #334155 !important;
+}
+
+.chat-message.from-user .message-bubble {
+  margin-left: auto !important;
+  background: #dff3f0 !important;
+  color: #1e293b !important;
+}
+
+.message-bubble p {
+  font-size: 13px !important;
+  line-height: 1.42 !important;
+}
+
+.chatbot-suggestions button {
+  border-color: #0f766e !important;
+  color: #0f766e !important;
+}
+
+.chatbot-suggestions button:hover,
+.chatbot-input button,
+.chatbot-input button:hover:not(:disabled) {
+  background: #0f766e !important;
+  border-color: #0f766e !important;
+  color: #ffffff !important;
+}
+
+.chatbot-input button {
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.26) !important;
+}
+
+@media (max-width: 640px) {
+  .message-bubble {
+    max-width: 82% !important;
+  }
+}
+
+.app-dark .chat-message.from-bot .message-bubble {
+  background: #1f2937 !important;
+  color: #e5e7eb !important;
+}
+
+.app-dark .chat-message.from-user .message-bubble {
+  background: rgba(20, 184, 166, 0.22) !important;
+  color: #ccfbf1 !important;
+}
 </style>
