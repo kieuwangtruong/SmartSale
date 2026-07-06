@@ -69,7 +69,11 @@ const customerTemplateData = [
     'Địa chỉ': '123 Đường ABC, Quận 1',
     'Giới tính': 'Nam',
     'CCCD': '079123456789',
-    'Tuổi': 30
+    'Tuổi': 30,
+    'Hạng': 'Vàng',
+    'Tổng chi tiêu': 50000000,
+    'Đơn hàng': 65,
+    'Công nợ': 0
   }
 ]
 
@@ -91,19 +95,40 @@ async function handleImportCustomers(data: any[]) {
       if (genderStr === 'nam') gender = 0
       else if (genderStr === 'nữ' || genderStr === 'nu') gender = 1
 
+      const tierStr = String(row['Hạng'] || row['Hạng thành viên'] || '').trim()
+      let tier = 'Standard'
+      if (tierStr.toLowerCase() === 'bạc' || tierStr.toLowerCase() === 'silver') tier = 'Silver'
+      else if (tierStr.toLowerCase() === 'vàng' || tierStr.toLowerCase() === 'gold') tier = 'Gold'
+      else if (tierStr.toLowerCase() === 'kim cương' || tierStr.toLowerCase() === 'platinum' || tierStr.toLowerCase() === 'diamond') tier = 'Platinum'
+
       const extras = normalizeCustomerFormExtras({
         gender,
         cccd: String(row['CCCD'] || ''),
         age: row['Tuổi'] ? Number(row['Tuổi']) : null,
+        tier: tier,
       })
 
-      await createCustomer({
+      const created = await createCustomer({
         fullName: String(fullName),
         phone: phone,
         email: row['Email'] ? String(row['Email']) : '',
         address: row['Địa chỉ'] ? String(row['Địa chỉ']) : '',
         ...extras
       })
+
+      const totalSpent = row['Tổng chi tiêu'] || row['Đã mua'] ? Number(row['Tổng chi tiêu'] || row['Đã mua']) : null
+      const currentDebt = row['Công nợ'] || row['Nợ'] ? Number(row['Công nợ'] || row['Nợ']) : null
+      const orderCount = row['Số đơn hàng'] || row['Đơn hàng'] ? Number(row['Số đơn hàng'] || row['Đơn hàng']) : null
+
+      if (totalSpent !== null || currentDebt !== null || orderCount !== null) {
+        await updateCustomer({
+          ...created,
+          totalSpent: totalSpent !== null ? totalSpent : created.totalSpent,
+          currentDebt: currentDebt !== null ? currentDebt : created.currentDebt,
+          orderCount: orderCount !== null ? orderCount : created.orderCount,
+          tier: extras.tier || created.tier,
+        })
+      }
       successCount++
     } catch (e) {
       errorCount++

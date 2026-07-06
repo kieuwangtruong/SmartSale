@@ -221,6 +221,19 @@ function getChatProductList(content: string): { title: string; products: ChatPro
 
 const showProfileModal = ref(false);
 const showOrdersModal = ref(false);
+const cancelOrderModalShow = ref(false);
+const cancelOrderActive = ref<Order | null>(null);
+const cancelReasonText = ref("");
+const selectedCancelReason = ref("thay_doi_y_dinh");
+
+const cancelReasonOptions = computed(() => [
+  { value: 'thay_doi_y_dinh', label: t('Thay đổi ý định mua hàng', 'Change of mind') },
+  { value: 'tim_thay_gia_tot_hon', label: t('Tìm thấy sản phẩm có giá tốt hơn', 'Found a better price elsewhere') },
+  { value: 'dat_trung_lap', label: t('Đặt trùng đơn / Đặt nhầm sản phẩm', 'Duplicate order / Wrong item selected') },
+  { value: 'giao_hang_lau', label: t('Thời gian giao hàng quá lâu', 'Delivery time is too long') },
+  { value: 'khac', label: t('Lý do khác', 'Other reason') },
+]);
+
 const editingAddress = ref("");
 const savingAddress = ref(false);
 const saveAddressError = ref("");
@@ -443,15 +456,30 @@ function canRequestOrderCancellation(order: Order) {
 }
 
 async function requestCancellation(order: Order) {
-  const reason = window.prompt(
-    (order.paymentMethod || '').toLowerCase() === 'payos'
-      ? t('Nhập lý do yêu cầu hoàn tiền:', 'Enter refund request reason:')
-      : t('Nhập lý do hủy đơn:', 'Enter cancellation reason:'),
-  );
-  if (!reason?.trim()) return;
+  cancelOrderActive.value = order;
+  cancelReasonText.value = '';
+  selectedCancelReason.value = 'thay_doi_y_dinh';
+  cancelOrderModalShow.value = true;
+}
+
+async function submitCancellationRequest() {
+  if (!cancelOrderActive.value) return;
+
+  let finalReason = '';
+  if (selectedCancelReason.value === 'khac') {
+    finalReason = cancelReasonText.value.trim();
+  } else {
+    const selectedOpt = cancelReasonOptions.value.find(o => o.value === selectedCancelReason.value);
+    finalReason = selectedOpt ? selectedOpt.label : '';
+  }
+
+  if (!finalReason) return;
+
+  const order = cancelOrderActive.value;
+  cancelOrderModalShow.value = false;
 
   try {
-    const updated = await requestOrderCancellation(order.id, reason.trim());
+    const updated = await requestOrderCancellation(order.id, finalReason);
     const index = customerOrders.value.findIndex((item) => item.id === updated.id);
     if (index >= 0) customerOrders.value[index] = updated;
     else customerOrders.value.unshift(updated);
@@ -2527,6 +2555,52 @@ onUnmounted(() => {
         <span class="system-status"><i class="pi pi-circle-fill" /> {{ t('Hệ thống trực tuyến', 'System Online') }}</span>
       </div>
     </footer>
+
+    <!-- Custom Cancel Order Reason Modal -->
+    <div v-if="cancelOrderModalShow" class="cancel-order-overlay" @click="cancelOrderModalShow = false" />
+    <aside v-if="cancelOrderModalShow" class="cancel-order-modal" role="dialog" aria-modal="true" :aria-label="t('Nhập lý do hủy đơn', 'Enter cancellation reason')">
+      <div class="modal-head">
+        <h2>
+          {{ (cancelOrderActive?.paymentMethod || '').toLowerCase() === 'payos'
+            ? t('Yêu cầu hủy & hoàn tiền', 'Request cancellation & refund')
+            : t('Hủy đơn hàng', 'Cancel order') }}
+        </h2>
+        <button type="button" @click="cancelOrderModalShow = false" class="close-btn"><i class="pi pi-times" /></button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-intro">
+          {{ (cancelOrderActive?.paymentMethod || '').toLowerCase() === 'payos'
+            ? t('Vui lòng chọn lý do yêu cầu hủy đơn và hoàn tiền cho đơn hàng này:', 'Please select a reason for order cancellation and refund request:')
+            : t('Vui lòng chọn lý do hủy đơn hàng của bạn:', 'Please select a reason for cancelling your order:') }}
+        </p>
+        
+        <div class="reason-options">
+          <label v-for="option in cancelReasonOptions" :key="option.value" class="reason-radio">
+            <input type="radio" name="cancelReason" :value="option.value" v-model="selectedCancelReason" />
+            <span class="radio-label">{{ option.label }}</span>
+          </label>
+        </div>
+
+        <div v-if="selectedCancelReason === 'khac'" class="custom-reason-wrapper">
+          <textarea
+            v-model="cancelReasonText"
+            required
+            :placeholder="t('Vui lòng nhập lý do cụ thể...', 'Please specify your reason...')"
+            rows="3"
+            class="custom-reason-textarea"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" @click="cancelOrderModalShow = false">
+            {{ t('Hủy bỏ', 'Cancel') }}
+          </button>
+          <button type="button" class="btn-danger" :disabled="selectedCancelReason === 'khac' && !cancelReasonText.trim()" @click="submitCancellationRequest">
+            {{ t('Xác nhận', 'Confirm') }}
+          </button>
+        </div>
+      </div>
+    </aside>
 </template>
 
 <style scoped>
@@ -2540,6 +2614,243 @@ onUnmounted(() => {
   min-height: 100vh;
   color: var(--ink);
   background: var(--cream);
+}
+
+/* Custom Cancel Order Modal Styles */
+.cancel-order-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 33, 61, 0.4);
+  z-index: 150;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.cancel-order-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  z-index: 151;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.app-dark .cancel-order-modal {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.cancel-order-modal .modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-dark .cancel-order-modal .modal-head {
+  border-bottom-color: #334155;
+}
+
+.cancel-order-modal .modal-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.app-dark .cancel-order-modal .modal-head h2 {
+  color: #f8fafc;
+}
+
+.cancel-order-modal .close-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.cancel-order-modal .close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink);
+}
+
+.app-dark .cancel-order-modal .close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.cancel-order-modal .modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.cancel-order-modal .modal-intro {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.cancel-order-modal .reason-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cancel-order-modal .reason-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.app-dark .cancel-order-modal .reason-radio {
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.cancel-order-modal .reason-radio:hover {
+  background: rgba(15, 118, 110, 0.04);
+  border-color: var(--teal);
+}
+
+.app-dark .cancel-order-modal .reason-radio:hover {
+  background: rgba(15, 118, 110, 0.1);
+  border-color: #14b8a6;
+}
+
+.cancel-order-modal .reason-radio input[type="radio"] {
+  accent-color: var(--teal);
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.app-dark .cancel-order-modal .reason-radio input[type="radio"] {
+  accent-color: #14b8a6;
+}
+
+.cancel-order-modal .custom-reason-textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  background: #ffffff;
+  color: var(--ink);
+  transition: border-color 0.2s;
+}
+
+.app-dark .cancel-order-modal .custom-reason-textarea {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.cancel-order-modal .custom-reason-textarea:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
+.app-dark .cancel-order-modal .custom-reason-textarea:focus {
+  border-color: #14b8a6;
+}
+
+.cancel-order-modal .modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancel-order-modal .modal-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.cancel-order-modal .btn-secondary {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.app-dark .cancel-order-modal .btn-secondary {
+  border-color: #334155;
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.cancel-order-modal .btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.app-dark .cancel-order-modal .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cancel-order-modal .btn-danger {
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.cancel-order-modal .btn-danger:hover {
+  background: #dc2626;
+}
+
+.cancel-order-modal .btn-danger:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+}
+
+.app-dark .cancel-order-modal .btn-danger:disabled {
+  background: #7f1d1d;
+  color: #ef4444;
+  opacity: 0.5;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: translate(-50%, -50%) scale(0.95); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 .store .hero-copy {
   min-width: 0;
