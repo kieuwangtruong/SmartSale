@@ -660,6 +660,7 @@ async function sendChatbotText(text = chatbotInput.value) {
 
   chatbotInput.value = "";
   chatbotError.value = "";
+  chatbotActions.value = [];
   chatbotSending.value = true;
   chatbotMessages.value.push({
     role: "user",
@@ -2363,6 +2364,17 @@ onUnmounted(() => {
                 </span>
                 <small>{{ t('Đang trả lời', 'Typing') }}</small>
               </div>
+              <div v-if="chatbotActions.length && !chatbotSending" class="chat-message from-bot chat-response-actions">
+                <button
+                  v-for="(action, index) in chatbotActions"
+                  :key="`${action.type}-${action.productId}-${index}`"
+                  type="button"
+                  @click="handleChatAction(action)"
+                >
+                  <i :class="action.type === 'add-to-cart' ? 'pi pi-shopping-bag' : 'pi pi-eye'" />
+                  <span>{{ action.label }}</span>
+                </button>
+              </div>
             </template>
           </div>
 
@@ -2374,18 +2386,6 @@ onUnmounted(() => {
               @click="sendChatbotText(suggestion)"
             >
               {{ suggestion }}
-            </button>
-          </div>
-
-          <div v-if="chatbotActions.length" class="chatbot-actions">
-            <button
-              v-for="(action, index) in chatbotActions"
-              :key="`${action.type}-${action.productId}-${index}`"
-              type="button"
-              @click="handleChatAction(action)"
-            >
-              <i :class="action.type === 'add-to-cart' ? 'pi pi-shopping-bag' : 'pi pi-eye'" />
-              {{ action.label }}
             </button>
           </div>
 
@@ -8898,5 +8898,80 @@ background: rgba(56, 189, 248, 0.1) !important;
 
 .app-dark .typing-dots span {
   background: #5eead4 !important;
+}
+
+.chat-response-actions {
+  display: grid !important;
+  width: min(100%, 330px) !important;
+  max-width: 92% !important;
+  gap: 8px !important;
+  justify-content: stretch !important;
+  align-self: flex-start !important;
+  margin-top: 2px !important;
+}
+
+.chat-response-actions button {
+  min-height: 38px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: #0f766e !important;
+  color: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12) !important;
+  transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease !important;
+}
+
+.chat-response-actions button:hover {
+  background: #0b5f59 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.18) !important;
+}
+
+.chat-response-actions button span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.chat-response-actions button i {
+  color: inherit !important;
+  font-size: 14px !important;
+}
+
+.chatbot-suggestions {
+  min-height: 54px !important;
+  align-items: center !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  border-top: 1px solid #edf2f1 !important;
+}
+
+.chatbot-suggestions button {
+  min-height: 34px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 640px) {
+  .chat-response-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+.app-dark .chat-response-actions button {
+  background: #14b8a6 !important;
+  color: #062c2a !important;
+}
+
+.app-dark .chat-response-actions button:hover {
+  background: #2dd4bf !important;
 }
 </style>
