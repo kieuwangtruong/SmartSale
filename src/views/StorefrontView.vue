@@ -2356,8 +2356,12 @@ onUnmounted(() => {
                 </div>
               </article>
               <div v-if="chatbotSending" class="chat-message from-bot loading-message">
-                <i class="pi pi-spin pi-spinner" />
-                <span>{{ t('Đang suy nghĩ...', 'Thinking...') }}</span>
+                <span class="typing-dots" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+                <small>{{ t('Đang trả lời', 'Typing') }}</small>
               </div>
             </template>
           </div>
@@ -8796,5 +8800,103 @@ background: rgba(56, 189, 248, 0.1) !important;
   background: transparent !important;
   box-shadow: none !important;
   color: inherit !important;
+}
+
+.chatbot-suggestions {
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 10px 16px 12px !important;
+  gap: 8px !important;
+  scrollbar-width: none !important;
+}
+
+.chatbot-suggestions::-webkit-scrollbar {
+  display: none !important;
+}
+
+.chatbot-suggestions button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 210px !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 640px) {
+  .chatbot-suggestions {
+    padding: 10px 12px 12px !important;
+  }
+
+  .chatbot-suggestions button {
+    max-width: 190px !important;
+  }
+}
+
+.loading-message {
+  justify-content: flex-start !important;
+  width: fit-content !important;
+  max-width: 170px !important;
+  min-height: 34px !important;
+  padding: 8px 11px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: #f6f7f6 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  gap: 8px !important;
+}
+
+.loading-message small {
+  color: inherit !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+}
+
+.typing-dots {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+}
+
+.typing-dots span {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  background: #0f766e !important;
+  opacity: 0.35 !important;
+  animation: typingPulse 1s infinite ease-in-out !important;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.15s !important;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.3s !important;
+}
+
+@keyframes typingPulse {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.app-dark .loading-message {
+  background: #1f2937 !important;
+  color: #cbd5e1 !important;
+}
+
+.app-dark .typing-dots span {
+  background: #5eead4 !important;
 }
 </style>
