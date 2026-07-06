@@ -8783,4 +8783,18 @@ background: rgba(56, 189, 248, 0.1) !important;
   background: rgba(20, 184, 166, 0.22) !important;
   color: #ccfbf1 !important;
 }
+
+.chat-message.from-bot .message-bubble p,
+.chat-message.from-bot .message-bubble span,
+.chat-message.from-user .message-bubble p,
+.chat-message.from-user .message-bubble span {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+}
 </style>
