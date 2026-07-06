@@ -194,12 +194,17 @@ function getChatProductList(content: string): { title: string; products: ChatPro
   let match: RegExpExecArray | null;
 
   while ((match = productPattern.exec(content)) !== null) {
+    const [, rawName, rawId, rawSalePrice, rawOriginalPrice, rawStock] = match;
+    if (!rawName || !rawId || !rawSalePrice || !rawOriginalPrice || !rawStock) {
+      continue;
+    }
+
     products.push({
-      name: match[1].trim(),
-      id: Number(match[2]),
-      salePrice: Number(match[3].replace(/\./g, "")),
-      originalPrice: Number(match[4].replace(/\./g, "")),
-      stock: Number(match[5]),
+      name: rawName.trim(),
+      id: Number(rawId),
+      salePrice: Number(rawSalePrice.replace(/\./g, "")),
+      originalPrice: Number(rawOriginalPrice.replace(/\./g, "")),
+      stock: Number(rawStock),
     });
   }
 
