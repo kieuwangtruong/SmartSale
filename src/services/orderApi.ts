@@ -100,6 +100,7 @@ export interface Customer {
   gender?: number | null
   cccd?: string | null
   age?: number | null
+  tier?: string | null
   totalSpent: number
   currentDebt: number
   orderCount: number
@@ -115,6 +116,7 @@ export interface CustomerFormPayload {
   gender?: number | null
   cccd?: string | null
   age?: number | null
+  tier?: string | null
 }
 
 export const GENDER_OPTIONS = [
@@ -431,6 +433,7 @@ export function updateCustomer(payload: Customer) {
     gender: payload.gender ?? 0,
     cccd: payload.cccd ?? null,
     age: payload.age ?? null,
+    tier: payload.tier ?? null,
   }
   const body = {
     id: payload.id,
