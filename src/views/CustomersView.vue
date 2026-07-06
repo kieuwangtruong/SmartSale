@@ -163,7 +163,7 @@ function handleExport(dates: { startDate: string; endDate: string }) {
     'Địa chỉ': c.address || '',
     'Giới tính': translateGender(c.gender),
     'CCCD': c.cccd || '',
-    'Tuổi': c.age ?? '',
+    'Tuổi': c.age && c.age > 0 ? c.age : '',
     'Hạng': c.tier || 'Standard',
     'Tổng chi tiêu': c.totalSpent || 0,
     'Công nợ': c.currentDebt || 0,
@@ -285,7 +285,7 @@ function edit(item: CustomerWithTier) {
     address: item.address || '',
     gender: item.gender ?? 0,
     cccd: item.cccd || '',
-    age: item.age ?? null,
+    age: item.age && item.age > 0 ? item.age : null,
     tier: item.tier || 'Standard',
   })
   showForm.value = true
@@ -420,7 +420,7 @@ onMounted(load)
             <td><span class="tier-label" :class="item.tier?.toLowerCase()">{{ translateTier(item.tier) }}</span></td>
             <td>{{ translateGender(item.gender) }}</td>
             <td>{{ item.cccd || '—' }}</td>
-            <td>{{ item.age ?? '—' }}</td>
+            <td>{{ item.age && item.age > 0 ? item.age : '—' }}</td>
             <td>{{ item.orderCount }}</td>
             <td>{{ formatCurrency(item.totalSpent) }}</td>
             <td>{{ formatCurrency(item.currentDebt) }}</td>
