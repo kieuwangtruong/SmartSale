@@ -209,6 +209,89 @@ const paginationInfo = computed(() => {
   return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
+const selectedOrderIds = ref<number[]>([])
+
+const isAllVisibleOrdersSelected = computed(() => {
+  if (!visible.value.length) return false
+  return visible.value.every((o) => selectedOrderIds.value.includes(o.id))
+})
+
+function toggleSelectAllOrders() {
+  if (isAllVisibleOrdersSelected.value) {
+    const visibleIds = visible.value.map((o) => o.id)
+    selectedOrderIds.value = selectedOrderIds.value.filter((id) => !visibleIds.includes(id))
+  } else {
+    const newIds = new Set([...selectedOrderIds.value, ...visible.value.map((o) => o.id)])
+    selectedOrderIds.value = Array.from(newIds)
+  }
+}
+
+function toggleSelectOrder(id: number) {
+  const idx = selectedOrderIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedOrderIds.value.splice(idx, 1)
+  } else {
+    selectedOrderIds.value.push(id)
+  }
+}
+
+function clearOrderSelection() {
+  selectedOrderIds.value = []
+}
+
+async function handleBulkDeleteOrders() {
+  if (!selectedOrderIds.value.length) return
+  if (!confirm(t(`Bạn có chắc chắn muốn xóa ${selectedOrderIds.value.length} đơn hàng đã chọn?`, `Are you sure you want to delete ${selectedOrderIds.value.length} selected orders?`))) return
+
+  let deletedCount = 0
+  for (const id of selectedOrderIds.value) {
+    try {
+      const order = orders.value.find((o) => o.id === id)
+      if (order) {
+        await deleteOrderAnyStatus(order.id, order.status)
+        deletedCount++
+      }
+    } catch (err) {
+      console.warn(`Failed to delete order ${id}:`, err)
+    }
+  }
+
+  toast.add({
+    severity: 'success',
+    summary: t('Thành công', 'Success'),
+    detail: t(`Đã xóa ${deletedCount} đơn hàng thành công!`, `Successfully deleted ${deletedCount} orders!`),
+    life: 3000,
+  })
+
+  selectedOrderIds.value = []
+  await load()
+}
+
+function handleExportSelectedOrders() {
+  const selectedItems = orders.value.filter((o) => selectedOrderIds.value.includes(o.id))
+  if (!selectedItems.length) return
+
+  const formattedData = selectedItems.map((o) => ({
+    'Mã Đơn': o.id,
+    'Khách hàng': o.customerName || 'Khách vãng lai',
+    'Nhân viên bán': o.salesStaffName || o.createdByUserName || '',
+    'Trạng thái': getOrderStatusLabel(o.status),
+    'Phương thức thanh toán': getPaymentMethodLabel(o.paymentMethod || ''),
+    'Tổng tiền': o.total,
+    'Đã thanh toán': o.amountPaid,
+    'Công nợ': o.debtAmount,
+    'Ngày tạo': o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : '',
+  }))
+
+  exportToExcel(formattedData, `Don_Hang_Da_Chon_${new Date().toISOString().split('T')[0]}`)
+  toast.add({
+    severity: 'success',
+    summary: t('Xuất dữ liệu', 'Export'),
+    detail: t(`Đã xuất ${selectedItems.length} đơn hàng đã chọn ra file Excel!`, `Exported ${selectedItems.length} selected orders!`),
+    life: 3000,
+  })
+}
+
 watch([search, filter], () => {
   currentPage.value = 1
 })
@@ -603,11 +686,39 @@ onMounted(load)
       </div>
     </aside>
 
+    <!-- Bulk Action Toolbar (Image 3 Jotform style) -->
+    <div v-if="selectedOrderIds.length > 0" class="bulk-actions-bar">
+      <div class="bulk-count-badge">
+        <i class="pi pi-check-square" />
+        <span>{{ t('Đã chọn', 'Selected') }}: <strong>{{ selectedOrderIds.length }}</strong> {{ t('đơn hàng', 'orders') }}</span>
+      </div>
+      <div class="bulk-btn-group">
+        <button type="button" class="bulk-btn btn-secondary" @click="handleExportSelectedOrders">
+          <i class="pi pi-file-excel" /> {{ t('Xuất các mục đã chọn', 'Export Selected') }}
+        </button>
+        <button v-if="isAdmin" type="button" class="bulk-btn btn-danger" @click="handleBulkDeleteOrders">
+          <i class="pi pi-trash" /> {{ t('Xóa đã chọn', 'Delete Selected') }}
+        </button>
+        <button type="button" class="bulk-btn btn-secondary" @click="clearOrderSelection">
+          <i class="pi pi-times" /> {{ t('Bỏ chọn', 'Deselect') }}
+        </button>
+      </div>
+    </div>
+
     <article class="panel table-wrap">
       <p v-if="loading">{{ t('Đang tải...', 'Loading...') }}</p>
       <table v-else>
         <thead>
           <tr>
+            <th style="width: 44px; text-align: center" @click.stop>
+              <input
+                type="checkbox"
+                class="table-custom-checkbox"
+                :checked="isAllVisibleOrdersSelected"
+                @change="toggleSelectAllOrders"
+                :title="t('Chọn tất cả', 'Select all')"
+              />
+            </th>
             <th>{{ t('Đơn', 'Order') }}</th>
             <th>{{ t('Khách hàng', 'Customer') }}</th>
             <th>{{ t('Tổng tiền', 'Total Amount') }}</th>
@@ -618,7 +729,21 @@ onMounted(load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in visible" :key="order.id" class="clickable-order-row" @click="openOrderDetail(order)">
+          <tr
+            v-for="order in visible"
+            :key="order.id"
+            class="clickable-order-row"
+            :class="{ 'row-selected': selectedOrderIds.includes(order.id) }"
+            @click="openOrderDetail(order)"
+          >
+            <td style="width: 44px; text-align: center" @click.stop>
+              <input
+                type="checkbox"
+                class="table-custom-checkbox"
+                :checked="selectedOrderIds.includes(order.id)"
+                @change="toggleSelectOrder(order.id)"
+              />
+            </td>
             <td>#{{ order.id }}</td>
             <td>{{ order.customerName || t('Khách lẻ', 'Walk-in') }}</td>
             <td>{{ formatCurrency(order.total) }}</td>
@@ -662,6 +787,12 @@ onMounted(load)
 </template>
 
 <style scoped>
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .filter-select-wrap {
   min-width: 180px;
 }
@@ -672,7 +803,7 @@ onMounted(load)
   align-items: end;
 }
 .add-customer-btn {
-  min-height: 38px;
+  min-height: 40px;
   white-space: nowrap;
 }
 .customer-modal-backdrop {
@@ -697,8 +828,8 @@ onMounted(load)
   margin-top: 8px;
   margin-bottom: 15px;
   font-weight: 600;
-  min-height: 38px;
-  border-radius: 8px;
+  min-height: 40px;
+  border-radius: 10px;
 }
 .app-dark .add-row-btn {
   background: #1e293b !important;
@@ -712,7 +843,7 @@ onMounted(load)
   align-items: center;
 }
 .item-row input {
-  min-height: 38px;
+  min-height: 40px;
 }
 .line-price {
   font-size: 12px;
@@ -726,7 +857,7 @@ onMounted(load)
   align-items: center;
   padding: 12px;
   margin-bottom: 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
 }
@@ -742,27 +873,12 @@ onMounted(load)
   min-width: 170px;
 }
 .status-select-wrap :deep(.p-select) {
-  min-height: 34px;
-  font-size: 13px;
-}
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: #f3f4f6;
-  font-size: 13px;
-}
-.app-dark .status-badge {
-  background: #374151;
+  min-height: 36px;
+  font-size: 12.5px;
+  border-radius: 8px;
 }
 .clickable-order-row {
   cursor: pointer;
-}
-.clickable-order-row:hover {
-  background: #f8fafc;
-}
-.app-dark .clickable-order-row:hover {
-  background: #1f2937;
 }
 .detail-btn {
   margin-right: 8px;
@@ -774,9 +890,15 @@ onMounted(load)
   border-radius: 999px;
   background: #ecfdf5;
   color: #047857;
+  border: 1px solid #a7f3d0;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+}
+.app-dark .payment-method-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 .app-dark .payment-method-badge {
   background: rgba(16, 185, 129, 0.16);

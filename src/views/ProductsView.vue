@@ -51,6 +51,7 @@ const productTemplateData = [
     'Mô tả': 'Mô tả chi tiết',
     'Giá nhập': 50000,
     'Giá bán gốc': 100000,
+    'Giá bán khuyến mãi': 80000,
     'Tồn kho': 10,
     'Ngưỡng báo động': 5
   }
@@ -73,13 +74,17 @@ async function handleImportProducts(data: any[]) {
       const categoryId = firstCategory?.id ?? 0
       const supplierId = firstSupplier?.id ?? 0
 
+      const original = Number(row['Giá bán gốc']) || 0
+      const sale = Number(row['Giá bán khuyến mãi']) || null
+      const hasSale = sale && sale < original
+
       await createProduct({
         name: String(name),
         description: row['Mô tả'] ? String(row['Mô tả']) : '',
         importPrice: Number(row['Giá nhập']) || 0,
-        sellingPrice: Number(row['Giá bán gốc']) || 0,
-        originalPrice: Number(row['Giá bán gốc']) || null,
-        salePrice: null,
+        sellingPrice: hasSale ? sale : original,
+        originalPrice: original || null,
+        salePrice: hasSale ? sale : null,
         quantity: Number(row['Tồn kho']) || 0,
         reserveStock: Number(row['Ngưỡng báo động']) || 0,
         categoryId,
@@ -224,12 +229,107 @@ function openAddCategory() {
   showCategoryModal.value = true
 }
 
+// Filter and Bulk Selection logic
+const selectedCategoryFilter = ref<number | 'all'>('all')
+const selectedStockFilter = ref<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all')
+const selectedProductIds = ref<number[]>([])
+
+const isAllVisibleSelected = computed(() => {
+  if (!visible.value.length) return false
+  return visible.value.every((p) => selectedProductIds.value.includes(p.id))
+})
+
+function toggleSelectAll() {
+  if (isAllVisibleSelected.value) {
+    // Unselect visible items
+    const visibleIds = visible.value.map((p) => p.id)
+    selectedProductIds.value = selectedProductIds.value.filter((id) => !visibleIds.includes(id))
+  } else {
+    // Select all visible items
+    const newIds = new Set([...selectedProductIds.value, ...visible.value.map((p) => p.id)])
+    selectedProductIds.value = Array.from(newIds)
+  }
+}
+
+function toggleSelectProduct(id: number) {
+  const idx = selectedProductIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedProductIds.value.splice(idx, 1)
+  } else {
+    selectedProductIds.value.push(id)
+  }
+}
+
+function clearSelection() {
+  selectedProductIds.value = []
+}
+
+async function handleBulkDelete() {
+  if (!selectedProductIds.value.length) return
+  if (!confirm(t(`Bạn có chắc muốn xóa ${selectedProductIds.value.length} sản phẩm đã chọn?`, `Are you sure you want to delete ${selectedProductIds.value.length} selected products?`))) return
+  
+  let deletedCount = 0
+  for (const id of selectedProductIds.value) {
+    try {
+      await deleteProduct(id)
+      deletedCount++
+    } catch (err) {
+      console.warn(`Failed to delete product ${id}:`, err)
+    }
+  }
+
+  toast.add({
+    severity: 'success',
+    summary: t('Thành công', 'Success'),
+    detail: t(`Đã xóa thành công ${deletedCount} sản phẩm!`, `Successfully deleted ${deletedCount} products!`),
+    life: 3000,
+  })
+
+  selectedProductIds.value = []
+  await load()
+}
+
+function handleExportSelected() {
+  const selectedItems = products.value.filter((p) => selectedProductIds.value.includes(p.id))
+  if (!selectedItems.length) return
+
+  const formattedData = selectedItems.map((p) => ({
+    'ID Sản phẩm': p.id,
+    'Tên sản phẩm': p.name,
+    'Mô tả': p.description || '',
+    'Danh mục': p.categoryName || '',
+    'Nhà cung cấp': p.supplierName || '',
+    'Giá nhập': p.importPrice,
+    'Giá bán gốc': p.originalPrice,
+    'Giá bán khuyến mãi': p.salePrice || '',
+    'Tồn kho': p.quantity,
+    'Ngưỡng báo động': p.reserveStock,
+  }))
+  exportToExcel(formattedData, `San_Pham_Da_Chon_${new Date().toISOString().split('T')[0]}`)
+  toast.add({
+    severity: 'success',
+    summary: t('Xuất dữ liệu', 'Export'),
+    detail: t(`Đã xuất ${selectedItems.length} sản phẩm đã chọn ra file Excel!`, `Exported ${selectedItems.length} selected products!`),
+    life: 3000,
+  })
+}
+
 // Filter logic
 const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
-  return !q ? products.value : products.value.filter((p) =>
-    [p.name, p.categoryName, String(p.id)].some((value) => value.toLowerCase().includes(q)),
-  )
+  return products.value.filter((p) => {
+    const matchSearch = !q || [p.name, p.categoryName, String(p.id)].some((value) => value?.toLowerCase().includes(q))
+    const matchCat = selectedCategoryFilter.value === 'all' || p.categoryId === selectedCategoryFilter.value
+    let matchStock = true
+    if (selectedStockFilter.value === 'in_stock') {
+      matchStock = p.quantity > p.reserveStock
+    } else if (selectedStockFilter.value === 'low_stock') {
+      matchStock = p.quantity <= p.reserveStock && p.quantity > 0
+    } else if (selectedStockFilter.value === 'out_of_stock') {
+      matchStock = p.quantity <= 0
+    }
+    return matchSearch && matchCat && matchStock
+  })
 })
 
 // Pagination calculations
@@ -400,6 +500,18 @@ onMounted(load)
       <div class="page-head-actions">
         <input v-model="search" :placeholder="t('Tìm sản phẩm...', 'Search products...')" class="search-input" />
         
+        <select v-model="selectedCategoryFilter" class="filter-select">
+          <option value="all">{{ t('Tất cả danh mục', 'All categories') }}</option>
+          <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+
+        <select v-model="selectedStockFilter" class="filter-select">
+          <option value="all">{{ t('Tất cả tồn kho', 'All stock') }}</option>
+          <option value="in_stock">{{ t('Còn hàng (> ngưỡng)', 'In Stock') }}</option>
+          <option value="low_stock">{{ t('Sắp hết (<= ngưỡng)', 'Low Stock') }}</option>
+          <option value="out_of_stock">{{ t('Hết hàng (0)', 'Out of Stock') }}</option>
+        </select>
+
         <button type="button" class="excel-btn" @click="showImportModal = true">
           <i class="pi pi-upload" /> {{ t('Nhập Excel', 'Import Excel') }}
         </button>
@@ -473,15 +585,19 @@ onMounted(load)
           </div>
           <div
             v-for="(_, index) in detailImageUrls"
-            :key="index"
+            :key="`product-detail-image-${index}`"
             class="detail-image-row"
           >
             <div class="detail-image-preview">
-              <img v-if="detailImageUrls[index]" :src="detailImageUrls[index]" :alt="`Ảnh ${index + 1}`" />
-              <i v-else class="pi pi-image" />
+              <img
+                v-if="detailImageUrls[index]"
+                :src="detailImageUrls[index]"
+                :alt="`Detail preview ${index + 1}`"
+              />
+              <span v-else>{{ index + 1 }}</span>
             </div>
             <label>
-              {{ t(`Ảnh ${index + 1}`, `Image ${index + 1}`) }}
+              {{ t('Ảnh', 'Image') }} {{ index + 1 }}
               <input v-model="detailImageUrls[index]" placeholder="https://..." />
             </label>
           </div>
@@ -507,11 +623,39 @@ onMounted(load)
       </form>
     </aside>
 
-    <!-- Full width table -->
+    <!-- Bulk Action Toolbar -->
+    <div v-if="selectedProductIds.length > 0" class="bulk-actions-bar">
+      <div class="bulk-count-badge">
+        <i class="pi pi-check-square" />
+        <span>{{ t('Đã chọn', 'Selected') }}: <strong>{{ selectedProductIds.length }}</strong> {{ t('sản phẩm', 'products') }}</span>
+      </div>
+      <div class="bulk-btn-group">
+        <button type="button" class="bulk-btn btn-secondary" @click="handleExportSelected">
+          <i class="pi pi-file-excel" /> {{ t('Xuất các mục đã chọn', 'Export Selected') }}
+        </button>
+        <button v-if="canManageProducts" type="button" class="bulk-btn btn-danger" @click="handleBulkDelete">
+          <i class="pi pi-trash" /> {{ t('Xóa đã chọn', 'Delete Selected') }}
+        </button>
+        <button type="button" class="bulk-btn btn-secondary" @click="clearSelection">
+          <i class="pi pi-times" /> {{ t('Bỏ chọn', 'Deselect') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Full width table with Checkboxes -->
     <article class="panel table-wrap">
       <table>
         <thead>
           <tr>
+            <th style="width: 44px; text-align: center">
+              <input
+                type="checkbox"
+                class="table-custom-checkbox"
+                :checked="isAllVisibleSelected"
+                @change="toggleSelectAll"
+                :title="t('Chọn tất cả', 'Select all')"
+              />
+            </th>
             <th>{{ t('Sản phẩm', 'Product') }}</th>
             <th>{{ t('Mô tả', 'Description') }}</th>
             <th>{{ t('Danh mục', 'Category') }}</th>
@@ -522,7 +666,19 @@ onMounted(load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in visible" :key="p.id">
+          <tr
+            v-for="p in visible"
+            :key="p.id"
+            :class="{ 'row-selected': selectedProductIds.includes(p.id) }"
+          >
+            <td style="width: 44px; text-align: center">
+              <input
+                type="checkbox"
+                class="table-custom-checkbox"
+                :checked="selectedProductIds.includes(p.id)"
+                @change="toggleSelectProduct(p.id)"
+              />
+            </td>
             <td>{{ p.name }}<small>ID: #{{ p.id }}</small></td>
             <td class="product-description">{{ p.description || t('Chưa có mô tả', 'No description') }}</td>
             <td>{{ p.categoryName }}</td>

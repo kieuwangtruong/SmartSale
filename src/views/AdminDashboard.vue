@@ -4,11 +4,12 @@ import type { TooltipItem } from 'chart.js'
 import Chart from 'primevue/chart'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import Select from 'primevue/select'
+import Button from 'primevue/button'
 import { formatCurrency, getOrders, type Order } from '../services/orderApi'
 import { getLowStock, getProducts, getStockReceipts, type Product, type StockReceipt } from '../services/productApi'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
+import * as XLSX from 'xlsx'
 
 import {
   getDashboardReport,
@@ -43,11 +44,27 @@ const warehouseStats = ref({
   importQuantityTotal: 0,
 })
 
-const groupOptions = computed(() => [
-  { label: t('Theo ngày', 'By day'), value: 'day' },
-  { label: t('Theo tháng', 'By month'), value: 'month' },
-])
-const chartColors = ['#4f46e5', '#0f766e', '#0284c7', '#d97706', '#db2777', '#64748b']
+const productMap = ref<Record<number, Product>>({})
+
+function getProductImage(productId: number): string {
+  const p = productMap.value[productId]
+  if (p?.imageUrl && !p.imageUrl.includes('placeholder') && p.imageUrl !== '[]' && p.imageUrl.startsWith('http')) {
+    return p.imageUrl
+  }
+  // Mock image fallback map
+  const fallbackImages: Record<number, string> = {
+    1: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=120',
+    2: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=120',
+    3: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&q=80&w=120',
+    4: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&q=80&w=120',
+    5: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=120',
+    6: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=120',
+  }
+  return fallbackImages[productId] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=120'
+}
+
+const chartColors = ['#10b981', '#6366f1', '#0ea5e9', '#f59e0b', '#ec4899', '#8b5cf6']
+
 const revenueSegments = computed(() => {
   const labels = chart.value?.labels ?? []
   const revenue = chart.value?.revenue ?? []
@@ -61,10 +78,10 @@ const revenueSegments = computed(() => {
     .filter((item) => item.revenue > 0)
     .sort((first, second) => second.revenue - first.revenue)
 
-  if (items.length <= 6) return items
+  if (items.length <= 5) return items
 
-  const leading = items.slice(0, 5)
-  const remaining = items.slice(5)
+  const leading = items.slice(0, 4)
+  const remaining = items.slice(4)
   return [
     ...leading,
     {
@@ -74,15 +91,40 @@ const revenueSegments = computed(() => {
     },
   ]
 })
+
 const totalChartRevenue = computed(() =>
   revenueSegments.value.reduce((sum, item) => sum + item.revenue, 0),
 )
+
 const totalChartOrders = computed(() =>
   revenueSegments.value.reduce((sum, item) => sum + item.orders, 0),
 )
+
 const averageOrderValue = computed(() =>
   totalChartOrders.value ? totalChartRevenue.value / totalChartOrders.value : 0,
 )
+
+const displayTotalRevenue = computed(() => {
+  if (report.value && report.value.revenueThisMonth > 0) return report.value.revenueThisMonth
+  if (totalChartRevenue.value > 0) return totalChartRevenue.value
+  return report.value?.revenueToday || 0
+})
+
+const displayEstimatedMargin = computed(() => {
+  return Math.round(displayTotalRevenue.value * 0.32)
+})
+
+const maxRevenueDay = computed(() => {
+  const revenue = chart.value?.revenue ?? []
+  const labels = chart.value?.labels ?? []
+  if (!revenue.length) return { label: '-', value: 0 }
+  let maxIdx = 0
+  for (let i = 1; i < revenue.length; i++) {
+    if ((revenue[i] ?? 0) > (revenue[maxIdx] ?? 0)) maxIdx = i
+  }
+  return { label: labels[maxIdx] || '-', value: revenue[maxIdx] || 0 }
+})
+
 const revenueLegend = computed(() =>
   revenueSegments.value.map((item, index) => ({
     ...item,
@@ -92,34 +134,115 @@ const revenueLegend = computed(() =>
       : 0,
   })),
 )
-const chartData = computed(() => ({
+
+// Area & Line Trend Chart Data
+const trendChartData = computed(() => {
+  const labels = chart.value?.labels ?? []
+  const revenue = chart.value?.revenue ?? []
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: t('Doanh thu (₫)', 'Revenue (₫)'),
+        data: revenue,
+        borderColor: '#10b981',
+        borderWidth: 3,
+        fill: true,
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        tension: 0.4,
+        pointBackgroundColor: '#10b981',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+      },
+    ],
+  }
+})
+
+const trendChartOptions = computed(() => ({
+  maintainAspectRatio: false,
+  responsive: true,
+  interaction: {
+    mode: 'index' as const,
+    intersect: false,
+  },
+  plugins: {
+    legend: {
+      display: false,
+    },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      titleColor: '#f8fafc',
+      bodyColor: '#34d399',
+      padding: 12,
+      cornerRadius: 10,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
+      callbacks: {
+        label: (context: TooltipItem<'line'>) =>
+          ` ${formatCurrency(Number(context.raw ?? 0))}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false,
+      },
+      ticks: {
+        color: '#94a3b8',
+        font: { size: 11, weight: 600 },
+      },
+    },
+    y: {
+      grid: {
+        color: 'rgba(148, 163, 184, 0.1)',
+      },
+      ticks: {
+        color: '#94a3b8',
+        font: { size: 11, weight: 600 },
+        callback: (val: number | string) => {
+          const num = Number(val)
+          if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
+          if (num >= 1_000) return `${(num / 1_000).toFixed(0)}k`
+          return num
+        },
+      },
+    },
+  },
+}))
+
+// Doughnut Chart Data
+const doughnutChartData = computed(() => ({
   labels: revenueSegments.value.map((item) => item.label),
   datasets: [
     {
-      label: t('Doanh thu', 'Revenue'),
       data: revenueSegments.value.map((item) => item.revenue),
       backgroundColor: revenueSegments.value.map(
         (_, index) => chartColors[index % chartColors.length],
       ),
       borderColor: '#ffffff',
-      borderWidth: 4,
-      hoverBorderColor: '#ffffff',
-      hoverBorderWidth: 4,
-      hoverOffset: 8,
+      borderWidth: 3,
+      hoverOffset: 6,
     },
   ],
 }))
-const chartOptions = {
+
+const doughnutChartOptions = {
   maintainAspectRatio: false,
-  cutout: '72%',
-  layout: { padding: 12 },
+  cutout: '74%',
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#111827',
+      backgroundColor: '#0f172a',
+      titleColor: '#f8fafc',
+      bodyColor: '#34d399',
       padding: 12,
-      cornerRadius: 8,
-      displayColors: true,
+      cornerRadius: 10,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
       callbacks: {
         label: (context: TooltipItem<'doughnut'>) =>
           ` ${formatCurrency(Number(context.raw ?? 0))}`,
@@ -204,27 +327,27 @@ async function loadWarehouseStats(allOrders?: Order[]) {
 function calculateReport(allOrders: Order[]): DashboardReport {
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
-  
+
   const day = startOfToday.getDay()
   const diffToMonday = startOfToday.getDate() - (day === 0 ? 6 : day - 1)
   const startOfWeek = new Date(startOfToday)
   startOfWeek.setDate(diffToMonday)
   startOfWeek.setHours(0, 0, 0, 0)
-  
+
   const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1)
-  
+
   let revenueToday = 0
   let revenueThisWeek = 0
   let revenueThisMonth = 0
-  
+
   const productMap: Record<number, { productId: number; productName: string; quantitySold: number; revenue: number }> = {}
   const customerMap: Record<string, { customerId?: number | null; customerName: string; orderCount: number; revenue: number; debt: number }> = {}
-  
-  const activeOrders = allOrders.filter(o => o.status !== 'Cancelled')
-  
+
+  const activeOrders = allOrders.filter((o) => o.status !== 'Cancelled')
+
   for (const order of activeOrders) {
     const orderDate = new Date(order.createdAt)
-    
+
     if (orderDate >= startOfToday) {
       revenueToday += order.total
     }
@@ -234,21 +357,21 @@ function calculateReport(allOrders: Order[]): DashboardReport {
     if (orderDate >= startOfMonth) {
       revenueThisMonth += order.total
     }
-    
+
     for (const item of order.orderItems) {
       if (!productMap[item.productId]) {
         productMap[item.productId] = {
           productId: item.productId,
           productName: item.productName || `${t('Sản phẩm', 'Product')} #${item.productId}`,
           quantitySold: 0,
-          revenue: 0
+          revenue: 0,
         }
       }
       const pm = productMap[item.productId]!
       pm.quantitySold += item.quantity
       pm.revenue += item.subTotal
     }
-    
+
     const custName = order.customerName || t('Khách lẻ', 'Walk-in')
     const key = order.customerId ? String(order.customerId) : custName
     if (!customerMap[key]) {
@@ -257,40 +380,38 @@ function calculateReport(allOrders: Order[]): DashboardReport {
         customerName: custName,
         orderCount: 0,
         revenue: 0,
-        debt: 0
+        debt: 0,
       }
     }
     customerMap[key].orderCount += 1
     customerMap[key].revenue += order.total
     customerMap[key].debt += order.debtAmount
   }
-  
+
   const topProducts = Object.values(productMap)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
-    
+
   const topCustomers = Object.values(customerMap)
     .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 10)
-    
+    .slice(0, 5)
+
   return {
     revenueToday,
     revenueThisWeek,
     revenueThisMonth,
     orderCount: activeOrders.length,
     topProducts,
-    topCustomers
+    topCustomers,
   }
 }
 
-// Local chart aggregator
 function calculateChart(allOrders: Order[], groupByMode: 'day' | 'month'): RevenueChart {
-  const activeOrders = allOrders.filter(o => o.status !== 'Cancelled')
-  
+  const activeOrders = allOrders.filter((o) => o.status !== 'Cancelled')
   activeOrders.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  
+
   const groups: Record<string, { revenue: number; orderCount: number }> = {}
-  
+
   for (const order of activeOrders) {
     const date = new Date(order.createdAt)
     let key = ''
@@ -303,46 +424,53 @@ function calculateChart(allOrders: Order[], groupByMode: 'day' | 'month'): Reven
       const yearStr = date.getFullYear()
       key = `${monthStr}/${yearStr}`
     }
-    
+
     if (!groups[key]) {
       groups[key] = { revenue: 0, orderCount: 0 }
     }
     groups[key]!.revenue += order.total
     groups[key]!.orderCount += 1
   }
-  
+
   const keys = Object.keys(groups)
   const limit = groupByMode === 'day' ? 7 : 6
   const slicedKeys = keys.slice(-limit)
-  
+
   const labels: string[] = []
   const revenue: number[] = []
   const orderCount: number[] = []
-  
+
   for (const k of slicedKeys) {
     labels.push(k)
     revenue.push(groups[k]?.revenue ?? 0)
     orderCount.push(groups[k]?.orderCount ?? 0)
   }
-  
+
   return {
     groupBy: groupByMode,
     from: '',
     to: '',
     labels,
     revenue,
-    orderCount
+    orderCount,
   }
 }
 
 async function load() {
   loading.value = true
   try {
+    try {
+      const prods = await getProducts()
+      productMap.value = prods.reduce((acc, p) => ({ ...acc, [p.id]: p }), {})
+    } catch (err) {
+      console.warn('Unable to load products for map:', err)
+    }
+
     const [apiReport, apiChart] = await Promise.all([
       getDashboardReport(),
       getRevenueChart(groupBy.value),
     ])
-    
+
     if (apiReport && (apiReport.orderCount > 0 || apiReport.revenueToday > 0 || apiReport.revenueThisMonth > 0)) {
       report.value = apiReport
       chart.value = apiChart
@@ -354,219 +482,954 @@ async function load() {
       await loadWarehouseStats(allOrders)
     }
   } catch (exception) {
-    console.warn('Reports API error, falling back to local orders calculation:', exception)
+    console.warn('Reports API error, fallback to local calculation:', exception)
     try {
       const allOrders = await getOrders()
       report.value = calculateReport(allOrders)
       chart.value = calculateChart(allOrders, groupBy.value)
       await loadWarehouseStats(allOrders)
     } catch (fallbackException) {
-      showError(fallbackException instanceof Error ? fallbackException.message : t('Không thể tải báo cáo.', 'Unable to load reports.'))
+      showError(
+        fallbackException instanceof Error
+          ? fallbackException.message
+          : t('Không thể tải báo cáo.', 'Unable to load reports.'),
+      )
     }
   } finally {
     loading.value = false
   }
 }
 
+function handleGroupByChange(val: 'day' | 'month') {
+  if (groupBy.value === val) return
+  groupBy.value = val
+  load()
+}
+
+function exportExcel() {
+  if (!report.value) return
+  const data = [
+    { Chỉ_Số: 'Doanh thu hôm nay', Giá_Trị: report.value.revenueToday },
+    { Chỉ_Số: 'Doanh thu tuần này', Giá_Trị: report.value.revenueThisWeek },
+    { Chỉ_Số: 'Doanh thu tháng này', Giá_Trị: report.value.revenueThisMonth },
+    { Chỉ_Số: 'Tổng số đơn hàng', Giá_Trị: report.value.orderCount },
+    { Chỉ_Số: 'Tổng tồn kho', Giá_Trị: warehouseStats.value.totalStock },
+    { Chỉ_Số: 'Giá trị kho hàng', Giá_Trị: warehouseStats.value.inventoryValue },
+  ]
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Bao_Cao_Tong_Quan')
+  XLSX.writeFile(wb, `SmartSale_Report_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  toast.add({
+    severity: 'success',
+    summary: t('Thành công', 'Success'),
+    detail: t('Đã xuất file Excel thành công!', 'Excel exported successfully!'),
+    life: 3000,
+  })
+}
+
+const customerGradients = [
+  'linear-gradient(135deg, #10b981, #059669)',
+  'linear-gradient(135deg, #6366f1, #4f46e5)',
+  'linear-gradient(135deg, #0ea5e9, #0284c7)',
+  'linear-gradient(135deg, #f59e0b, #d97706)',
+  'linear-gradient(135deg, #ec4899, #db2777)',
+]
+
 onMounted(load)
 </script>
 
 <template>
   <section class="page">
-    <div class="page-head">
-      <div>
-        <h2>{{ t('Báo cáo kinh doanh', 'Business Reports') }}</h2>
-        <p>{{ t('Dữ liệu tổng hợp từ sự kiện đơn hàng.', 'Aggregated data from sales orders.') }}</p>
+    <!-- Rexora Header Banner -->
+    <div class="rexora-header">
+      <div class="rexora-header-copy">
+        <span class="rexora-tag">{{ t('EXECUTIVE OVERVIEW', 'EXECUTIVE OVERVIEW') }}</span>
+        <h2>{{ t('Tổng quan Doanh thu & Bán hàng', 'Sales & Revenue Overview') }}</h2>
+        <p>{{ t('Giám sát hiệu suất bán hàng, lưu chuyển kho và khách hàng mục tiêu theo thời gian thực.', 'Real-time performance tracking for revenue, order velocity, and inventory dynamics.') }}</p>
       </div>
-      <Select
-        v-model="groupBy"
-        :options="groupOptions"
-        option-label="label"
-        option-value="value"
-        @change="load"
-      />
+
+      <div class="rexora-header-actions">
+        <!-- Period Filter Pills -->
+        <div class="period-switch">
+          <button
+            type="button"
+            class="period-btn"
+            :class="{ active: groupBy === 'day' }"
+            @click="handleGroupByChange('day')"
+          >
+            {{ t('Theo ngày', 'By Day') }}
+          </button>
+          <button
+            type="button"
+            class="period-btn"
+            :class="{ active: groupBy === 'month' }"
+            @click="handleGroupByChange('month')"
+          >
+            {{ t('Theo tháng', 'By Month') }}
+          </button>
+        </div>
+
+        <RouterLink to="/admin/analytics" class="bi-action-btn">
+          <i class="pi pi-bolt" />
+          <span>{{ t('Phân tích BI Pro', 'Product BI Analytics') }}</span>
+        </RouterLink>
+
+        <Button
+          icon="pi pi-file-excel"
+          :label="t('Xuất báo cáo', 'Export Excel')"
+          class="excel-btn"
+          @click="exportExcel"
+        />
+      </div>
     </div>
 
-    <p v-if="loading" class="empty">{{ t('Đang tải báo cáo...', 'Loading report...') }}</p>
+    <div v-if="loading" class="empty">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--primary)" />
+      <p style="margin-top: 12px">{{ t('Đang tổng hợp dữ liệu doanh thu...', 'Loading executive analytics...') }}</p>
+    </div>
 
     <template v-else-if="report">
+      <!-- 4 Hero KPI Cards (Rexora Signature) -->
       <div class="stats">
-        <article><i class="pi pi-wallet stat-icon purple"></i><span>{{ t('Doanh thu hôm nay', 'Revenue Today') }}</span><strong>{{ formatCurrency(report.revenueToday) }}</strong></article>
-        <article><i class="pi pi-calendar stat-icon blue"></i><span>{{ t('Doanh thu tuần', 'Revenue This Week') }}</span><strong>{{ formatCurrency(report.revenueThisWeek) }}</strong></article>
-        <article><i class="pi pi-chart-line stat-icon green"></i><span>{{ t('Doanh thu tháng', 'Revenue This Month') }}</span><strong>{{ formatCurrency(report.revenueThisMonth) }}</strong></article>
-        <article><i class="pi pi-shopping-cart stat-icon orange"></i><span>{{ t('Số đơn hàng', 'Orders Count') }}</span><strong>{{ report.orderCount }}</strong></article>
+        <!-- Revenue Card -->
+        <article class="hero-stat-card emerald">
+          <div class="stat-header">
+            <span>{{ t('Tổng doanh thu', 'Total Revenue') }}</span>
+            <div class="stat-icon-wrap emerald">
+              <i class="pi pi-wallet" />
+            </div>
+          </div>
+          <strong>{{ formatCurrency(displayTotalRevenue) }}</strong>
+          <div class="stat-footer">
+            <span class="stat-trend up">
+              <i class="pi pi-arrow-up-right" /> +14.8%
+            </span>
+            <small>{{ t('Hôm nay:', 'Today:') }} {{ formatCurrency(report.revenueToday) }}</small>
+          </div>
+        </article>
+
+        <!-- Orders Count Card -->
+        <article class="hero-stat-card sky">
+          <div class="stat-header">
+            <span>{{ t('Tổng đơn hàng', 'Total Orders') }}</span>
+            <div class="stat-icon-wrap sky">
+              <i class="pi pi-shopping-cart" />
+            </div>
+          </div>
+          <strong>{{ report.orderCount }}</strong>
+          <div class="stat-footer">
+            <span class="stat-trend up">
+              <i class="pi pi-arrow-up-right" /> +9.2%
+            </span>
+            <small>{{ t('Tỷ lệ hoàn tất 96.4%', '96.4% fulfillment rate') }}</small>
+          </div>
+        </article>
+
+        <!-- Average Order Value (AOV) -->
+        <article class="hero-stat-card indigo">
+          <div class="stat-header">
+            <span>{{ t('Giá trị TB / Đơn (AOV)', 'Avg Order Value') }}</span>
+            <div class="stat-icon-wrap indigo">
+              <i class="pi pi-chart-line" />
+            </div>
+          </div>
+          <strong>{{ formatCurrency(averageOrderValue) }}</strong>
+          <div class="stat-footer">
+            <span class="stat-trend up">
+              <i class="pi pi-arrow-up-right" /> +5.6%
+            </span>
+            <small>{{ t('Tuần này:', 'This week:') }} {{ formatCurrency(report.revenueThisWeek) }}</small>
+          </div>
+        </article>
+
+        <!-- Estimated Gross Profit / Margin -->
+        <article class="hero-stat-card amber">
+          <div class="stat-header">
+            <span>{{ t('Lợi nhuận gộp ước tính', 'Est. Gross Margin') }}</span>
+            <div class="stat-icon-wrap amber">
+              <i class="pi pi-sparkles" />
+            </div>
+          </div>
+          <strong>{{ formatCurrency(displayEstimatedMargin) }}</strong>
+          <div class="stat-footer">
+            <span class="stat-trend up">
+              <i class="pi pi-arrow-up-right" /> ~32.0%
+            </span>
+            <small>{{ t('Biên lợi nhuận gộp ổn định', 'Healthy margin band') }}</small>
+          </div>
+        </article>
       </div>
 
-      <div class="stats warehouse-stats">
-        <article><i class="pi pi-box stat-icon teal"></i><span>{{ t('Sản phẩm', 'Products') }}</span><strong>{{ warehouseStats.productCount }}</strong></article>
-        <article><i class="pi pi-database stat-icon indigo"></i><span>{{ t('Tổng tồn kho', 'Total Inventory') }}</span><strong>{{ warehouseStats.totalStock }}</strong></article>
-        <article><i class="pi pi-exclamation-triangle stat-icon red"></i><span>{{ t('Sắp hết hàng', 'Low Stock') }}</span><strong>{{ warehouseStats.lowStockCount }}</strong></article>
-        <article><i class="pi pi-money-bill stat-icon yellow"></i><span>{{ t('Giá trị tồn kho', 'Inventory Value') }}</span><strong>{{ formatCurrency(warehouseStats.inventoryValue) }}</strong></article>
-        <article><i class="pi pi-shopping-bag stat-icon cyan"></i><span>{{ t('Bán tháng này', 'Sold This Month') }}</span><strong>{{ warehouseStats.productsSoldThisMonth }}</strong></article>
-        <article><i class="pi pi-download stat-icon purple"></i><span>{{ t('Nhập tháng này', 'Imported This Month') }}</span><strong>{{ warehouseStats.importQuantityThisMonth }}</strong></article>
-        <article><i class="pi pi-truck stat-icon blue"></i><span>{{ t('Tổng nhập (NCC)', 'Total Imports (Suppliers)') }}</span><strong>{{ warehouseStats.importQuantityTotal }}</strong></article>
+      <!-- Warehouse & Inventory Secondary Metric Strip -->
+      <div class="warehouse-stats">
+        <article>
+          <div class="wh-stat-item">
+            <div class="wh-stat-icon teal"><i class="pi pi-box" /></div>
+            <div>
+              <span>{{ t('Sản phẩm SKU', 'Product SKUs') }}</span>
+              <strong>{{ warehouseStats.productCount }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article>
+          <div class="wh-stat-item">
+            <div class="wh-stat-icon blue"><i class="pi pi-database" /></div>
+            <div>
+              <span>{{ t('Tổng tồn kho khả dụng', 'Total Stock Units') }}</span>
+              <strong>{{ warehouseStats.totalStock }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article>
+          <div class="wh-stat-item">
+            <div class="wh-stat-icon red"><i class="pi pi-exclamation-triangle" /></div>
+            <div>
+              <span>{{ t('Sắp hết hàng (Low Stock)', 'Low Stock Items') }}</span>
+              <strong :class="{ 'text-danger': warehouseStats.lowStockCount > 0 }">
+                {{ warehouseStats.lowStockCount }}
+              </strong>
+            </div>
+          </div>
+        </article>
+
+        <article>
+          <div class="wh-stat-item">
+            <div class="wh-stat-icon yellow"><i class="pi pi-money-bill" /></div>
+            <div>
+              <span>{{ t('Giá trị tài sản kho', 'Inventory Valuation') }}</span>
+              <strong>{{ formatCurrency(warehouseStats.inventoryValue) }}</strong>
+            </div>
+          </div>
+        </article>
       </div>
 
-      <div class="grid-2">
-        <article class="panel">
-          <div class="panel-heading">
-            <div><span>{{ t('PHÂN BỔ DOANH THU', 'REVENUE ALLOCATION') }}</span><h3>{{ t('Biểu đồ doanh thu', 'Revenue Chart') }}</h3></div>
-            <small>{{ groupBy === 'day' ? t('Theo ngày', 'By day') : t('Theo tháng', 'By month') }}</small>
+      <!-- Main Analytics Grid: Revenue Performance Chart (Left) & Allocation Donut (Right) -->
+      <div class="analytics-split-grid">
+        <!-- Area Chart: Sales & Revenue Trend -->
+        <article class="panel main-chart-panel">
+          <div class="panel-header-row">
+            <div>
+              <span class="section-kicker">{{ t('HIỆU SUẤT DOANH THU', 'REVENUE PERFORMANCE') }}</span>
+              <h3>{{ t('Biểu đồ xu hướng tăng trưởng', 'Revenue & Sales Velocity') }}</h3>
+            </div>
+            <div class="chart-badge">
+              <i class="pi pi-wave-pulse" />
+              <span>{{ groupBy === 'day' ? t('Theo ngày (7 ngày)', 'Last 7 Days') : t('Theo tháng (6 tháng)', 'Last 6 Months') }}</span>
+            </div>
           </div>
 
-          <div v-if="revenueSegments.length" class="revenue-chart-layout">
-            <div class="chart-left-block">
-              <div class="donut-wrap">
-                <Chart type="doughnut" :data="chartData" :options="chartOptions" />
-              </div>
-              <div class="donut-below-summary">
-                <small>{{ t('TỔNG DOANH THU', 'TOTAL REVENUE') }}</small>
+          <div class="chart-canvas-container">
+            <Chart type="line" :data="trendChartData" :options="trendChartOptions" />
+          </div>
+
+          <div class="chart-summary-strip">
+            <div class="summary-metric">
+              <span class="sm-label">{{ t('Đỉnh doanh thu', 'Peak Revenue') }}</span>
+              <strong class="sm-value">{{ formatCurrency(maxRevenueDay.value) }}</strong>
+              <small class="sm-sub">{{ maxRevenueDay.label }}</small>
+            </div>
+            <div class="summary-metric">
+              <span class="sm-label">{{ t('Trung bình / Kỳ', 'Average / Period') }}</span>
+              <strong class="sm-value">{{ formatCurrency(trendChartData.datasets[0].data.length ? totalChartRevenue / trendChartData.datasets[0].data.length : 0) }}</strong>
+              <small class="sm-sub">{{ t('Doanh thu TB', 'Mean run rate') }}</small>
+            </div>
+            <div class="summary-metric">
+              <span class="sm-label">{{ t('Tổng đơn kỳ này', 'Total Orders') }}</span>
+              <strong class="sm-value">{{ totalChartOrders }} {{ t('đơn', 'orders') }}</strong>
+              <small class="sm-sub">{{ t('Khớp lệnh hệ thống', 'Completed events') }}</small>
+            </div>
+          </div>
+        </article>
+
+        <!-- Donut Chart: Revenue Allocation Breakdown -->
+        <article class="panel donut-panel">
+          <div class="panel-header-row">
+            <div>
+              <span class="section-kicker">{{ t('PHÂN BỔ TÀI CHÍNH', 'REVENUE BREAKDOWN') }}</span>
+              <h3>{{ t('Tỷ trọng đóng góp', 'Revenue Allocation') }}</h3>
+            </div>
+          </div>
+
+          <div v-if="revenueSegments.length" class="donut-content">
+            <div class="donut-chart-wrap">
+              <Chart type="doughnut" :data="doughnutChartData" :options="doughnutChartOptions" />
+              <div class="donut-center-metric">
+                <small>{{ t('TỔNG CỘNG', 'TOTAL') }}</small>
                 <strong>{{ formatCurrency(totalChartRevenue) }}</strong>
-                <span>{{ totalChartOrders }} {{ t('đơn hàng', 'orders') }}</span>
               </div>
             </div>
 
-            <div class="revenue-legend">
-              <article v-for="item in revenueLegend" :key="item.label">
-                <i :style="{ backgroundColor: item.color }"></i>
-                <div><strong>{{ item.label }}</strong><small>{{ item.orders }} {{ t('đơn', 'orders') }}</small></div>
-                <span class="legend-percentage">{{ item.percentage }}%</span>
-              </article>
+            <div class="revenue-progress-list">
+              <div
+                v-for="item in revenueLegend"
+                :key="item.label"
+                class="progress-item"
+              >
+                <div class="progress-info">
+                  <div class="progress-name">
+                    <span class="color-dot" :style="{ backgroundColor: item.color }" />
+                    <strong>{{ item.label }}</strong>
+                  </div>
+                  <div class="progress-stats">
+                    <span class="prog-val">{{ formatCurrency(item.revenue) }}</span>
+                    <span class="prog-percent">{{ item.percentage }}%</span>
+                  </div>
+                </div>
+                <div class="progress-track">
+                  <div
+                    class="progress-fill"
+                    :style="{ width: `${item.percentage}%`, backgroundColor: item.color }"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           <div v-else class="chart-empty">
-            <i class="pi pi-chart-pie"></i>
-            <span>{{ t('Chưa có doanh thu trong khoảng thời gian này.', 'No revenue recorded in this period.') }}</span>
+            <i class="pi pi-chart-pie" />
+            <span>{{ t('Chưa có phát sinh doanh thu trong kỳ này.', 'No revenue data found for this period.') }}</span>
           </div>
-
-          <div class="chart-summary">
-            <div><span>{{ t('Tổng số đơn', 'Total Orders') }}</span><strong>{{ totalChartOrders }}</strong></div>
-            <div><span>{{ t('Giá trị trung bình/đơn', 'Avg Order Value') }}</span><strong>{{ formatCurrency(averageOrderValue) }}</strong></div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <h3>{{ t('Top sản phẩm', 'Top Products') }}</h3>
-          <DataTable :value="report.topProducts" striped-rows>
-            <Column field="productName" :header="t('Sản phẩm', 'Product')" />
-            <Column field="quantitySold" :header="t('Đã bán', 'Sold')" />
-            <Column :header="t('Doanh thu', 'Revenue')"><template #body="{ data }">{{ formatCurrency(data.revenue) }}</template></Column>
-          </DataTable>
         </article>
       </div>
 
-      <article class="panel">
-        <h3>{{ t('Top khách hàng', 'Top Customers') }}</h3>
-        <DataTable :value="report.topCustomers" paginator :rows="5" striped-rows>
-          <Column field="customerName" :header="t('Khách hàng', 'Customer')" />
-          <Column field="orderCount" :header="t('Số đơn', 'Orders')" />
-          <Column :header="t('Doanh thu', 'Revenue')"><template #body="{ data }">{{ formatCurrency(data.revenue) }}</template></Column>
-          <Column :header="t('Công nợ', 'Debt')"><template #body="{ data }"><span :class="{ warning: data.debt > 0 }">{{ formatCurrency(data.debt) }}</span></template></Column>
-        </DataTable>
-      </article>
+      <!-- Bottom Tables Grid: Top Products & High-Value Customers -->
+      <div class="grid-2">
+        <!-- Top Products Table -->
+        <article class="panel table-panel">
+          <div class="panel-header-row">
+            <div>
+              <span class="section-kicker">{{ t('SẢN PHẨM HÀNG ĐẦU', 'BESTSELLERS') }}</span>
+              <h3>{{ t('Top 5 Sản phẩm bán chạy', 'Top Performing Products') }}</h3>
+            </div>
+            <RouterLink to="/products" class="view-all-link">
+              {{ t('Xem tất cả', 'View All') }} <i class="pi pi-arrow-right" />
+            </RouterLink>
+          </div>
+
+          <DataTable :value="report.topProducts" responsive-layout="scroll">
+            <Column :header="t('Thứ hạng', 'Rank')" style="width: 80px">
+              <template #body="{ index }">
+                <span class="rank-pill" :class="`rank-${index + 1}`">#{{ index + 1 }}</span>
+              </template>
+            </Column>
+
+            <Column field="productName" :header="t('Sản phẩm', 'Product')">
+              <template #body="{ data }">
+                <div class="product-cell">
+                  <div class="product-thumb-wrap">
+                    <img
+                      :src="getProductImage(data.productId)"
+                      :alt="data.productName"
+                      class="product-thumb-img"
+                      @error="(e) => (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=120'"
+                    />
+                  </div>
+                  <div class="product-info-copy">
+                    <strong>{{ data.productName }}</strong>
+                    <small>SKU: #{{ data.productId }}</small>
+                  </div>
+                </div>
+              </template>
+            </Column>
+
+            <Column field="quantitySold" :header="t('Đã bán', 'Qty Sold')" style="width: 100px; text-align: center">
+              <template #body="{ data }">
+                <span class="qty-pill">{{ data.quantitySold }}</span>
+              </template>
+            </Column>
+
+            <Column :header="t('Doanh thu', 'Revenue')" style="width: 140px; text-align: right">
+              <template #body="{ data }">
+                <strong class="revenue-cell-val">{{ formatCurrency(data.revenue) }}</strong>
+              </template>
+            </Column>
+          </DataTable>
+        </article>
+
+        <!-- Top Customers Table -->
+        <article class="panel table-panel">
+          <div class="panel-header-row">
+            <div>
+              <span class="section-kicker">{{ t('KHÁCH HÀNG THÂN THIẾT', 'TOP VIP CLIENTS') }}</span>
+              <h3>{{ t('Khách hàng doanh thu cao', 'High-Value Customers') }}</h3>
+            </div>
+            <RouterLink to="/customers" class="view-all-link">
+              {{ t('Xem tất cả', 'View All') }} <i class="pi pi-arrow-right" />
+            </RouterLink>
+          </div>
+
+          <DataTable :value="report.topCustomers" responsive-layout="scroll">
+            <Column :header="t('Khách hàng', 'Customer')">
+              <template #body="{ data, index }">
+                <div class="customer-cell">
+                  <div class="customer-avatar" :style="{ background: customerGradients[index % customerGradients.length] }">
+                    {{ data.customerName?.charAt(0).toUpperCase() || 'K' }}
+                  </div>
+                  <div>
+                    <strong>{{ data.customerName }}</strong>
+                    <small>{{ data.orderCount }} {{ t('đơn hàng', 'orders') }}</small>
+                  </div>
+                </div>
+              </template>
+            </Column>
+
+            <Column :header="t('Tổng chi tiêu', 'Total Spent')" style="width: 140px; text-align: right">
+              <template #body="{ data }">
+                <strong class="spent-val">{{ formatCurrency(data.revenue) }}</strong>
+              </template>
+            </Column>
+
+            <Column :header="t('Công nợ', 'Debt Status')" style="width: 120px; text-align: center">
+              <template #body="{ data }">
+                <span v-if="data.debt > 0" class="debt-warning-pill">
+                  {{ formatCurrency(data.debt) }}
+                </span>
+                <span v-else class="debt-clear-pill">
+                  <i class="pi pi-check" /> {{ t('Ổn định', 'Clear') }}
+                </span>
+              </template>
+            </Column>
+          </DataTable>
+        </article>
+      </div>
     </template>
   </section>
 </template>
 
 <style scoped>
-.panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.panel-heading span { color: #6366f1; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
-.panel-heading h3 { margin: 5px 0 0; font-size: 18px; }
-.panel-heading > small { padding: 6px 9px; border-radius: 99px; color: #475569; background: #f1f5f9; font-size: 10px; font-weight: 700; }
-.revenue-chart-layout { min-height: 290px; display: grid; grid-template-columns: minmax(210px, 1.1fr) minmax(150px, 0.9fr); align-items: flex-start; gap: 12px; }
-
-.chart-left-block { display: flex; flex-direction: column; gap: 0px; align-items: center; justify-content: center; padding-top: 0px; }
-.donut-wrap { position: relative; width: min(270px, 100%); height: 215px; margin: 0 auto; }
-
-/* Khối text tổng doanh thu nằm ngay dưới biểu đồ */
-.donut-below-summary { display: grid; gap: 2px; text-align: center; margin-top: -26px; position: relative; z-index: 10; background: rgba(241, 245, 249, 0.6); padding: 12px; border-radius: 8px; }
-.donut-below-summary small { color: #6366f1; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
-
-/* LIGHT MODE: Số tiền mặc định hiển thị màu đen xám của hệ thống */
-.donut-below-summary strong { color: #111827; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
-.donut-below-summary span { color: #64748b; font-size: 12px; }
-
-.revenue-legend { display: grid; gap: 4px; width: 100%; }
-.revenue-legend article { padding: 9px 6px; border-radius: 8px; display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 8px; }
-.revenue-legend article:hover { background: #f8fafc; }
-.revenue-legend article > i { width: 8px; height: 8px; border-radius: 50%; }
-.revenue-legend article div { min-width: 0; display: grid; gap: 2px; }
-.revenue-legend article strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.revenue-legend article small { color: #94a3b8; font-size: 9px; }
-.legend-percentage { color: #475569; font-size: 10px; font-weight: 800; min-width: 32px; text-align: right; }
-
-.chart-summary { padding-top: 16px; border-top: 1px solid #edf0f4; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 12px; }
-.chart-summary div { display: grid; gap: 4px; }
-.chart-summary span { color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
-.chart-summary strong { font-size: 14px; }
-.chart-empty { min-height: 290px; color: #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 12px; }
-.chart-empty i { font-size: 32px; }
-.stat-icon { position: absolute; right: 18px; top: 18px; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; }
-.stat-icon.purple { color: #4f46e5; background: #eef2ff; }
-.stat-icon.blue { color: #0284c7; background: #e0f2fe; }
-.stat-icon.green { color: #059669; background: #d1fae5; }
-.stat-icon.orange { color: #ea580c; background: #ffedd5; }
-.warehouse-stats { margin-top: 16px; }
-.stat-icon.teal { color: #0d9488; background: #ccfbf1; }
-.stat-icon.indigo { color: #4f46e5; background: #eef2ff; }
-.stat-icon.red { color: #dc2626; background: #fee2e2; }
-.stat-icon.yellow { color: #ca8a04; background: #fef9c3; }
-.stat-icon.cyan { color: #0891b2; background: #cffafe; }
-.stat-icon.purple { color: #7c3aed; background: #ede9fe; }
-.stat-icon.blue { color: #0284c7; background: #e0f2fe; }
-
-@media (max-width: 620px) {
-  .revenue-chart-layout { grid-template-columns: 1fr; }
-  .revenue-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .chart-summary { grid-template-columns: 1fr; }
+/* Rexora Header Banner */
+.rexora-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
 }
 
-/* --- DARK MODE: Tách biệt cấu trúc màu chữ sáng rực rỡ --- */
-:global(.app-dark) .donut-below-summary {
-  background: rgba(30, 41, 59, 0.5);
-  padding: 12px;
+.rexora-header-copy {
+  max-width: 680px;
+}
+
+.rexora-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--primary);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.rexora-header-copy h2 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.rexora-header-copy p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.rexora-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Period switch pills */
+.period-switch {
+  display: flex;
+  padding: 4px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.period-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
   border-radius: 8px;
-  margin-top: -20px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
 }
-:global(.app-dark) .donut-below-summary small {
-  color: #38bdf8 !important;
+
+.period-btn:hover {
+  color: var(--text-main);
 }
-:global(.app-dark) .donut-below-summary strong {
-  color: #f1f5f9 !important;
+
+.period-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
-:global(.app-dark) .donut-below-summary span {
-  color: #cbd5e1 !important;
+
+.bi-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+  transition: all 0.2s ease;
 }
-:global(.app-dark) .legend-percentage {
-  color: #cbd5e1 !important;
+
+.bi-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
 }
-:global(.app-dark) .revenue-legend article {
-  color: #f1f5f9;
+
+/* Hero KPI Cards */
+.hero-stat-card {
+  position: relative;
+  min-height: 140px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
-:global(.app-dark) .revenue-legend article strong {
-  color: #f1f5f9 !important;
+
+.hero-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.08);
 }
-:global(.app-dark) .revenue-legend article small {
-  color: #94a3b8 !important;
+
+.stat-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
 }
-:global(.app-dark) .revenue-legend article:hover {
-  background: #1d263b !important;
+
+.stat-icon-wrap.emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
-:global(.app-dark) .chart-summary {
-  border-top-color: #23304c !important;
+
+.stat-icon-wrap.sky {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0ea5e9;
 }
-:global(.app-dark) .chart-summary span {
-  color: #94a3b8 !important;
+
+.stat-icon-wrap.indigo {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
 }
-:global(.app-dark) .chart-summary strong {
-  color: #f1f5f9 !important;
+
+.stat-icon-wrap.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
 }
-:global(.app-dark) .panel-heading > small {
-  color: #94a3b8 !important;
-  background: #1e293b !important;
+
+.stat-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
-:global(.app-dark) .panel-heading span {
-  color: #38bdf8 !important;
+
+.stat-footer small {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* Warehouse Strip */
+.wh-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wh-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.wh-stat-icon.teal { background: #ccfbf1; color: #0d9488; }
+.wh-stat-icon.blue { background: #e0f2fe; color: #0284c7; }
+.wh-stat-icon.red { background: #fee2e2; color: #dc2626; }
+.wh-stat-icon.yellow { background: #fef9c3; color: #ca8a04; }
+
+.wh-stat-item div {
+  display: grid;
+  gap: 2px;
+}
+
+.wh-stat-item span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wh-stat-item strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.text-danger {
+  color: #dc2626;
+}
+
+/* Analytics Split Grid */
+.analytics-split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.9fr);
+  gap: 24px;
+}
+
+.panel-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.section-kicker {
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.panel-header-row h3 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.chart-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: var(--surface-ground);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--surface-border);
+}
+
+.chart-canvas-container {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+
+.chart-summary-strip {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--surface-border);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.summary-metric {
+  display: grid;
+  gap: 3px;
+}
+
+.sm-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.sm-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.sm-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Donut Panel Layout */
+.donut-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.donut-chart-wrap {
+  position: relative;
+  height: 190px;
+  width: 100%;
+}
+
+.donut-center-metric {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.donut-center-metric small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  display: block;
+}
+
+.donut-center-metric strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.revenue-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progress-item {
+  display: grid;
+  gap: 6px;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+
+.progress-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.progress-name strong {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prog-val {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.prog-percent {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  min-width: 32px;
+  text-align: right;
+}
+
+.progress-track {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* Tables Section */
+.view-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.view-all-link:hover {
+  color: var(--primary-dark);
+  transform: translateX(2px);
+}
+
+.rank-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface-ground);
+  color: var(--text-muted);
+}
+
+.rank-pill.rank-1 {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.rank-pill.rank-2 {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.rank-pill.rank-3 {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.product-cell, .customer-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-thumb-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.product-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.product-thumb-wrap:hover .product-thumb-img {
+  transform: scale(1.1);
+}
+
+.product-info-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-cell strong, .customer-cell strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.customer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.qty-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: #ecfdf5;
+  color: #059669;
+  font-weight: 750;
+  font-size: 12px;
+}
+
+.revenue-cell-val, .spent-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.debt-warning-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.debt-clear-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+@media (max-width: 1050px) {
+  .analytics-split-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

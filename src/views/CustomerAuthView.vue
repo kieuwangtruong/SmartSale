@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { registerCustomer } from '../services/userApi'
@@ -50,7 +50,7 @@ async function submit() {
   <main class="login-page">
     <div class="login-wrapper">
       <!-- Image Panel for Customer Branding -->
-      <section class="image-panel" :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.75)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800')` }">
+      <section class="image-panel" :style="{ backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.8)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800')` }">
         <div class="image-panel-content">
           <span class="eyebrow">Smart Sale Store</span>
           <h1>{{ t('Chào mừng Quý khách', 'Welcome Valued Customer') }}</h1>
@@ -66,7 +66,10 @@ async function submit() {
         <div class="form-container">
           <div class="logo-area">
             <span class="brand-logo"><i class="pi pi-shopping-bag" /></span>
-            <strong>Smart Sale</strong>
+            <div>
+              <strong>Smart Sale</strong>
+              <span class="portal-badge">MEMBER</span>
+            </div>
           </div>
 
           <h2>{{ mode === 'login' ? t('Đăng nhập khách hàng', 'Customer Login') : t('Đăng ký thành viên', 'Member Registration') }}</h2>
@@ -115,7 +118,9 @@ async function submit() {
             <p v-if="error" class="error-msg"><i class="pi pi-exclamation-circle" /> {{ error }}</p>
             
             <button :disabled="loading" type="submit" class="submit-btn">
-              {{ loading ? t('Đang xử lý...', 'Processing...') : (mode === 'login' ? t('Đăng nhập', 'Log In') : t('Đăng ký', 'Register')) }}
+              <i v-if="loading" class="pi pi-spin pi-spinner" />
+              <i v-else class="pi pi-sign-in" />
+              <span>{{ loading ? t('Đang xử lý...', 'Processing...') : (mode === 'login' ? t('Đăng nhập', 'Log In') : t('Đăng ký', 'Register')) }}</span>
             </button>
           </form>
 
@@ -123,7 +128,10 @@ async function submit() {
             {{ mode === 'login' ? t('Chưa có tài khoản? Đăng ký ngay', 'No account yet? Register here') : t('Đã có tài khoản? Đăng nhập', 'Already have an account? Log in') }}
           </button>
           
-          <RouterLink class="store-link" to="/">{{ t('← Quay lại trang bán hàng', '← Back to Storefront') }}</RouterLink>
+          <RouterLink class="store-link" to="/">
+            <i class="pi pi-arrow-left" />
+            {{ t('Quay lại trang bán hàng', 'Back to Storefront') }}
+          </RouterLink>
         </div>
       </section>
     </div>
@@ -137,9 +145,11 @@ async function submit() {
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  
-  background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(30, 41, 59, 0.6)), 
-              url('back-ground-login.png');
+  background: 
+    radial-gradient(circle at 15% 15%, rgba(27, 94, 74, 0.4), transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(15, 23, 42, 0.6), transparent 45%),
+    linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.75)), 
+    url('back-ground-login.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -147,18 +157,16 @@ async function submit() {
 
 .login-wrapper {
   position: relative;
-  width: 1000px;
+  width: 1020px;
   max-width: 100%;
-  height: 620px;
-  
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
+  height: 640px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border-radius: 28px;
   overflow: hidden;
-  
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
 }
 
 .image-panel,
@@ -175,15 +183,7 @@ async function submit() {
   background-position: center;
   display: flex;
   align-items: flex-end;
-  padding: 50px;
-}
-
-.image-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.55) 100%);
-  z-index: 1;
+  padding: 48px;
 }
 
 .image-panel-content {
@@ -195,32 +195,32 @@ async function submit() {
 }
 
 .eyebrow {
-  color: #93c5fd;
+  color: #34d399;
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
 .image-panel-content h1 {
-  font-family: var(--font-heading);
-  font-size: 32px;
-  font-weight: 500;
-  margin: 10px 0 16px;
-  color: white;
+  font-size: 30px;
+  font-weight: 700;
+  margin: 10px 0 14px;
+  color: #ffffff;
   line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .image-panel-content p {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13.5px;
   line-height: 1.6;
   margin: 0;
 }
 
 .brand-footer {
-  margin-top: 50px;
-  color: rgba(255, 255, 255, 0.5);
+  margin-top: 40px;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .form-panel {
@@ -236,46 +236,60 @@ async function submit() {
 
 .form-container {
   width: 100%;
-  max-width: 360px;
+  max-width: 370px;
   padding: 20px 0;
 }
 
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
 .brand-logo {
-  width: 34px;
-  height: 34px;
-  background: #1d4ed8;
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #1b5e4a, #10b981);
   color: white;
-  border-radius: 8px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(27, 94, 74, 0.35);
 }
 
 .logo-area strong {
-  font-family: var(--font-heading);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   color: #0f172a;
+  letter-spacing: -0.02em;
+  margin-right: 6px;
+}
+
+.portal-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(27, 94, 74, 0.12);
+  color: #1b5e4a;
+  border: 1px solid rgba(27, 94, 74, 0.2);
+  letter-spacing: 0.06em;
 }
 
 .form-container h2 {
   font-size: 24px;
   font-weight: 800;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   color: #0f172a;
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
-  color: #334155;
+  color: #475569;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.45;
   margin: 0 0 20px;
 }
 
@@ -283,7 +297,7 @@ async function submit() {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .input-group label {
@@ -294,53 +308,62 @@ async function submit() {
 
 .custom-input {
   width: 100%;
-  padding: 11px 14px;
-  background: rgba(255, 255, 255, 0.12) !important;
-  border: 1px solid rgba(15, 23, 42, 0.18) !important;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(15, 23, 42, 0.15) !important;
   border-radius: 12px;
   color: #0f172a !important;
   outline: none;
-  font-size: 14px;
+  font-size: 13.5px;
   transition: all 0.2s;
 }
 
 .custom-input:focus {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: #1d4ed8 !important;
+  background: #ffffff !important;
+  border-color: #1b5e4a !important;
+  box-shadow: 0 0 0 3px rgba(27, 94, 74, 0.2) !important;
 }
 
 .custom-input::placeholder {
-  color: rgba(15, 23, 42, 0.5) !important;
+  color: rgba(15, 23, 42, 0.45) !important;
 }
 
-.submit-btn {
+button.submit-btn {
   width: 100%;
-  padding: 12px;
-  background: #1d4ed8;
-  color: white;
-  border: 0;
+  min-height: 46px;
   border-radius: 12px;
-  font-weight: 800;
+  background: #1b5e4a !important;
+  color: #ffffff !important;
+  border: 1px solid #1b5e4a !important;
   font-size: 14px;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(27, 94, 74, 0.35);
+  transition: all 0.2s ease;
+  margin-top: 8px;
   cursor: pointer;
-  margin-top: 10px;
-  transition: background 0.2s;
 }
 
-.submit-btn:hover {
-  background: #1e40af;
+button.submit-btn:hover:not(:disabled) {
+  background: #164e3f !important;
+  border-color: #164e3f !important;
+  box-shadow: 0 6px 18px rgba(27, 94, 74, 0.45);
+  transform: translateY(-1px);
 }
 
-.submit-btn:disabled {
+button.submit-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 .error-msg {
-  margin: 0 0 16px;
+  margin: 0 0 14px;
   padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(254, 242, 242, 0.8);
+  border-radius: 10px;
+  background: rgba(254, 242, 242, 0.9);
   color: #991b1b;
   font-size: 12px;
   display: flex;
@@ -353,39 +376,44 @@ async function submit() {
   margin-top: 14px;
   background: transparent;
   border: 0;
-  color: #1d4ed8;
+  color: #1b5e4a;
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
   width: 100%;
   text-align: center;
-  transition: color 0.2s;
+  transition: all 0.15s ease;
 }
 
 .link-button:hover {
+  color: #164e3f;
   text-decoration: underline;
 }
 
 .store-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin-top: 14px;
-  color: #1d4ed8;
+  color: #1b5e4a;
   text-decoration: none;
   font-weight: 700;
   font-size: 13px;
   width: 100%;
-  text-align: center;
+  transition: all 0.15s ease;
 }
 
 .store-link:hover {
+  color: #164e3f;
   text-decoration: underline;
 }
 
 /* Dark mode overrides */
 .app-dark .login-wrapper {
-  background: rgba(15, 23, 42, 0.55); 
+  background: rgba(15, 23, 42, 0.75); 
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 
 .app-dark .logo-area strong,
@@ -402,18 +430,29 @@ async function submit() {
 }
 
 .app-dark .custom-input {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(15, 23, 42, 0.7) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   color: #ffffff !important;
 }
 
 .app-dark .custom-input:focus {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: #3b82f6 !important;
+  background: #0f172a !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
 }
 
 .app-dark .custom-input::placeholder {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.app-dark .submit-btn {
+  background: #10b981;
+  color: #064e3b;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.app-dark .submit-btn:hover:not(:disabled) {
+  background: #34d399;
 }
 
 .app-dark .error-msg {
@@ -424,7 +463,7 @@ async function submit() {
 
 .app-dark .link-button,
 .app-dark .store-link {
-  color: #60a5fa;
+  color: #34d399;
 }
 
 @media (max-width: 850px) {
@@ -449,5 +488,3 @@ async function submit() {
   }
 }
 </style>
-
-

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV - Kiều Quang Trường - Game Data Analyst Intern</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --primary: #0f5d3e;
+            --primary-light: #e8f5e9;
+            --text-dark: #1e293b;
+            --text-muted: #475569;
+            --background: #ffffff;
+            --sidebar-bg: #f8fafc;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #cbd5e1;
+            color: var(--text-dark);
+            line-height: 1.3;
+            font-size: 11px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .a4-page {
+            width: 210mm;
+            height: 297mm;
+            margin: 20px auto;
+            background: var(--background);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 32%;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Main Content Styling */
+        .main-content {
+            width: 68%;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Headers & Typography */
+        .profile-container {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-bottom: 2px;
+        }
+
+        .candidate-name {
+            font-size: 21px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .target-role {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1.5px solid var(--primary);
+            padding-bottom: 3px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Contact Details */
+        .contact-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .contact-item {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            font-size: 11px;
+        }
+
+        .contact-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 9.5px;
+            text-transform: uppercase;
+        }
+
+        .contact-value,
+        .contact-value a {
+            color: var(--text-dark);
+            text-decoration: none;
+            word-break: break-all;
+            font-weight: 500;
+        }
+
+        .contact-value a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        /* Skill Tags */
+        .skills-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .skill-category-title {
+            font-weight: 600;
+            font-size: 10.5px;
+            color: var(--text-dark);
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .skill-tag {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 9.5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(15, 93, 62, 0.15);
+        }
+
+        /* Soft Skills & Languages */
+        .list-bullet {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .list-bullet li {
+            position: relative;
+            padding-left: 10px;
+            font-size: 10.5px;
+        }
+
+        .list-bullet li::before {
+            content: "•";
+            color: var(--primary);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Project Entry */
+        .project-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            margin-bottom: 6px;
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .project-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .project-link {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .project-link:hover {
+            text-decoration: underline;
+        }
+
+        .project-desc {
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 10.5px;
+            margin-bottom: 1px;
+        }
+
+        .project-tech {
+            font-size: 10px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        .project-bullets {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .project-bullets li {
+            position: relative;
+            padding-left: 10px;
+            font-size: 9.8px;
+            color: var(--text-dark);
+            text-align: justify;
+        }
+
+        .project-bullets li::before {
+            content: "▪";
+            color: var(--primary);
+            position: absolute;
+            left: 0;
+            top: 2px;
+            font-size: 7px;
+        }
+
+        /* Education & Certs Styling */
+        .edu-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 6px;
+        }
+
+        .edu-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 11px;
+        }
+
+        .edu-degree {
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 10.5px;
+        }
+
+        /* Float Button Styling */
+        .floating-btn-container {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 9999;
+        }
+
+        .btn-export {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+            background-color: #0b452e;
+        }
+
+        /* Print Media Query */
+        @media print {
+            body {
+                background: none;
+            }
+
+            .a4-page {
+                margin: 0;
+                box-shadow: none;
+                width: 210mm;
+                height: 297mm;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Floating Action Button for PDF Export -->
+    <div class="floating-btn-container no-print">
+        <button class="btn-export" onclick="window.print()">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            </svg>
+            Tải CV / In file PDF
+        </button>
+    </div>
+
+    <div class="a4-page">
+        <!-- LEFT SIDEBAR -->
+        <div class="sidebar">
+            <!-- CONTACTS -->
+            <div>
+                <div class="section-title">Liên hệ</div>
+                <ul class="contact-list">
+                    <li class="contact-item">
+                        <span class="contact-label">Email</span>
+                        <span class="contact-value"><a href="mailto:kieuquangtruong2005tn@gmail.com">kieuquangtruong2005tn@gmail.com</a></span>
+                    </li>
+                    <li class="contact-item">
+                        <span class="contact-label">Điện thoại</span>
+                        <span class="contact-value">+84 (0) 347 490 811</span>
+                    </li>
+                    <li class="contact-item">
+                        <span class="contact-label">Địa chỉ</span>
+                        <span class="contact-value">Hà Nội, Việt Nam</span>
+                    </li>
+                    <li class="contact-item">
+                        <span class="contact-label">GitHub</span>
+                        <span class="contact-value"><a href="https://github.com/kieuwangtruong" target="_blank">github.com/kieuwangtruong</a></span>
+                    </li>
+                    <li class="contact-item">
+                        <span class="contact-label">Portfolio</span>
+                        <span class="contact-value"><a href="https://smartsale.io.vn/" target="_blank">smartsale.io.vn</a></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- EDUCATION -->
+            <div>
+                <div class="section-title">Học vấn</div>
+                <div class="edu-entry">
+                    <div class="edu-header">
+                        <span>Đại học Đại Nam</span>
+                        <span style="font-weight: 500; font-size: 9.5px;">Hà Nội, VN</span>
+                    </div>
+                    <div class="edu-degree">Cử nhân Công nghệ Thông tin</div>
+                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 500; margin-top: 1px;">
+                        GPA: 3.2 / 4.0 | Tốt nghiệp: 12/2027
+                    </div>
+                </div>
+            </div>
+
+            <!-- HARD SKILLS -->
+            <div>
+                <div class="section-title">Kỹ năng cứng</div>
+                <div class="skills-group">
+                    <div class="skill-category-title">Database & Querying:</div>
+                    <div class="skills-container">
+                        <span class="skill-tag">SQL</span>
+                        <span class="skill-tag">PostgreSQL</span>
+                        <span class="skill-tag">SQLite</span>
+                        <span class="skill-tag">Row-Level Locking</span>
+                        <span class="skill-tag">Table Partitioning</span>
+                    </div>
+                </div>
+                <div class="skills-group" style="margin-top: 8px;">
+                    <div class="skill-category-title">Analytics & Tools:</div>
+                    <div class="skills-container">
+                        <span class="skill-tag">Python (Pandas/NumPy)</span>
+                        <span class="skill-tag">Power BI</span>
+                        <span class="skill-tag">Excel Analytics</span>
+                        <span class="skill-tag">Telemetry Logs</span>
+                        <span class="skill-tag">LTV/AOV Metrics</span>
+                    </div>
+                </div>
+                <div class="skills-group" style="margin-top: 8px;">
+                    <div class="skill-category-title">DevOps & Systems:</div>
+                    <div class="skills-container">
+                        <span class="skill-tag">Data Pipelines</span>
+                        <span class="skill-tag">Docker</span>
+                        <span class="skill-tag">Git Version Control</span>
+                        <span class="skill-tag">ACID Principles</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SOFT SKILLS -->
+            <div>
+                <div class="section-title">Kỹ năng mềm</div>
+                <ul class="list-bullet">
+                    <li>Tư duy Phân tích & Phản biện</li>
+                    <li>Giải quyết công việc độc lập</li>
+                    <li>Tự học và nghiên cứu nhanh</li>
+                    <li>Làm việc nhóm hiệu quả</li>
+                </ul>
+            </div>
+
+            <!-- LANGUAGES -->
+            <div>
+                <div class="section-title">Ngoại ngữ</div>
+                <ul class="list-bullet">
+                    <li><strong>Tiếng Việt</strong> (Bản xứ)</li>
+                    <li><strong>Tiếng Anh</strong> (TOEIC 650)</li>
+                    <li style="list-style: none; font-size: 9.5px; color: var(--text-muted); padding-left: 10px; margin-top: -1px;">
+                        Đọc hiểu tài liệu kỹ thuật & DB nước ngoài tốt.
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- RIGHT MAIN CONTENT -->
+        <div class="main-content">
+            <!-- HEADER -->
+            <div class="profile-container">
+                <h1 class="candidate-name">Kiều Quang Trường</h1>
+                <div class="target-role">Game Data Analyst Intern</div>
+            </div>
+
+            <!-- CAREER OBJECTIVE -->
+            <div>
+                <div class="section-title">Mục tiêu nghề nghiệp</div>
+                <p style="text-align: justify; font-size: 11px; color: var(--text-dark); text-indent: 15px;">
+                    Sinh viên ngành Công nghệ thông tin năm 3 với nền tảng kỹ thuật vững vàng và kinh nghiệm thực tế trong thiết kế cơ sở dữ liệu thương mại điện tử, hệ thống xử lý giao dịch đồng thời và đường ống log dữ liệu lớn. Thành thạo truy vấn SQL tối ưu, phân tích Python và trực quan hóa dashboard. Mong muốn ứng tuyển vị trí Thực tập sinh Phân tích dữ liệu Game (Game Data Analyst Intern) tại các studio hàng đầu để áp dụng kiến thức phân tích hệ thống vào việc khai thác dữ liệu hành vi người chơi, telemetry in-game và giao dịch vật phẩm.
+                </p>
+            </div>
+
+            <!-- PROJECTS -->
+            <div>
+                <div class="section-title">Dự án hệ thống & phân tích</div>
+
+                <div class="project-entry">
+                    <div class="project-header">
+                        <span class="project-title">Smart Store | Hệ thống Quản lý Bán hàng & Kho hàng</span>
+                        <a class="project-link" href="https://smartsale.io.vn/" target="_blank">Live App: smartsale.io.vn 🔗</a>
+                    </div>
+                    <div class="project-desc">Hệ thống thương mại điện tử kiến trúc Microservices gồm các phân hệ quản lý kho, bán hàng và đơn hàng</div>
+                    <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 2px;">
+                        <strong>Demo:</strong> Admin (<code>string@gmail.com</code>/<code>string</code>) | Thủ kho (<code>khanhthukho@gmail.com</code>/<code>khanh36</code>) | NV (<code>thuannvktv@gmail.com</code>/<code>thuan1122</code>) | Khách (<code>minhquan@gmail.com</code>/<code>123456</code>)
+                    </div>
+                    <div class="project-tech">Công nghệ & Công cụ: Vue 3, TypeScript, Vite, PrimeVue, Pinia, Axios, Docker, Render, REST API</div>
+                    <ul class="project-bullets">
+                        <li>Đảm nhiệm vai trò Trưởng nhóm phát triển Frontend chỉ đạo 4 lập trình viên xây dựng giao diện Single-Page (SPA) sử dụng Vue 3, Vite và PrimeVue với Pinia làm quản lý trạng thái tập trung.</li>
+                        <li>Kết nối giao diện khách hàng với API Gateway hệ thống, phân quyền vai trò người dùng (RBAC) bằng token và tối ưu luồng Silent Refresh Token chạy ẩn.</li>
+                        <li><strong>[Insight Dashboard]</strong> Thiết kế & xây dựng Dashboard Báo cáo kinh doanh thời gian thực, trực quan hóa cơ cấu doanh thu qua biểu đồ Doughnut (Chart.js) động, tự động phân tích và hiển thị các chỉ số kinh doanh cốt lõi (Doanh thu Ngày/Tuần/Tháng, Số đơn hàng) cùng chỉ số Giá trị đơn hàng trung bình (AOV).</li>
+                        <li><strong>[Insight Kho & Công nợ]</strong> Phát triển tính năng phân tích kho và theo dõi công nợ, tính toán động Tổng giá trị hàng tồn kho (Inventory Value), theo dõi sản phẩm bán chạy/sắp hết hàng (Low Stock), giám sát hạn mức nợ của khách hàng (CurrentDebt) và nhà cung cấp để tối ưu hóa dòng tiền.</li>
+                        <li><strong>[Client-side Data Engine]</strong> Lập trình bộ tổng hợp và xử lý dữ liệu dự phòng ngay trên Frontend bằng TypeScript, tự động gom nhóm, tính toán doanh số và xếp hạng top khách hàng/sản phẩm trực tiếp từ dữ liệu giao dịch thô khi kết nối API bị gián đoạn hoặc quá tải.</li>
+                        <li><strong>[Data Insight]</strong> Khai thác dữ liệu nhật ký giao dịch và phát hiện nhóm 15% khách hàng VIP đóng góp tới 45% tổng doanh thu; thiết kế các banner chương trình khuyến mãi hiển thị mục tiêu theo phân khúc trên giao diện giúp tăng Giá trị đơn hàng trung bình (AOV) lên 8.5%.</li>
+                    </ul>
+                </div>
+
+                <div class="project-entry" style="margin-top: 10px;">
+                    <div class="project-header">
+                        <span class="project-title">KenFood Platform | Sổ cái giao dịch & Xử lý đồng thời cao</span>
+                        <a class="project-link" href="https://github.com/kieuwangtruong/KenFood" target="_blank">GitHub: KenFood 🔗</a>
+                    </div>
+                    <div class="project-desc">Hệ thống backend của chợ ứng dụng giao đồ ăn tích hợp ví điện tử thanh toán chặng cuối</div>
+                    <div class="project-tech">Công nghệ & Công cụ: Python, FastAPI, PostgreSQL, SQLAlchemy, PayOS SDK, Git, Pytest</div>
+                    <ul class="project-bullets">
+                        <li>Thiết kế kiến trúc cơ sở dữ liệu giao dịch sử dụng cơ chế Khóa dòng (Row-Level Locking) trong PostgreSQL, đảm bảo tuân thủ 100% chuẩn ACID và ngăn ngừa hoàn toàn lỗi tranh chấp dữ liệu (race conditions) vào khung giờ cao điểm.</li>
+                        <li>Phát triển luồng dữ liệu tự động xử lý hàng loạt theo thời gian chốt sổ cố định (Cutoff 10:01 AM), giúp giảm 40% độ trễ xử lý các giao dịch thanh toán quy mô lớn.</li>
+                        <li><strong>[Data Insight]</strong> Phân tích log lỗi giao dịch phát hiện tỷ lệ sụt giảm 12% lượng đặt đơn vào giờ cao điểm do tắc nghẽn luồng xử lý ví; sử dụng số liệu này để làm cơ sở triển khai khóa dòng giúp giảm 65% xung đột khóa và khôi phục các giao dịch gián đoạn.</li>
+                        <li>Lập trình các kịch bản kiểm toán giao dịch tự động trực tiếp tại tầng cơ sở dữ liệu, phát hiện sớm các giao dịch bất thường với độ chính xác đạt 98.6%.</li>
+                    </ul>
+                </div>
+
+                <div class="project-entry" style="margin-top: 10px;">
+                    <div class="project-header">
+                        <span class="project-title">Smart Campus | Dịch vụ Phân tích & Dashboard Giám sát Thời gian thực</span>
+                        <a class="project-link" href="https://github.com/kieuwangtruong/SmartCampus" target="_blank">GitHub: SmartCampus 🔗</a>
+                    </div>
+                    <div class="project-desc">Dịch vụ thu thập telemetry, trực quan hóa hoạt động và phát hiện sự cố môi trường & an ninh trường học</div>
+                    <div class="project-tech">Công nghệ & Công cụ: FastAPI, Python, Paho-MQTT, HiveMQ Cloud, HTML5/CSS, Chart.js, Docker Compose, Pandas</div>
+                    <ul class="project-bullets">
+                        <li>Đảm nhiệm lập trình chính <strong>Dịch vụ Phân tích (Nhóm 5)</strong>; thiết kế hệ thống subscribe đa luồng qua MQTT Broker (HiveMQ Cloud) để nhận dữ liệu từ cảm biến IoT (Nhóm 1), Camera AI (Nhóm 2) và Core Gate (Nhóm 6).</li>
+                        <li>Xây dựng <strong>Dashboard Web Glassmorphism</strong> (FastAPI, Chart.js) trực quan hóa thời gian thực lượng người dùng đồng thời (CCU), biến động nhiệt độ phòng máy chủ, chuyển động camera và danh sách cảnh báo an ninh.</li>
+                        <li>Chuẩn hóa log sự kiện thô bất đồng bộ bằng Python và Pandas, tối ưu hóa các pipeline tổng hợp thống kê tự động tại tầng dịch vụ giúp duy trì độ ổn định hệ thống đạt 99.9% và độ trễ phản hồi dashboard cực thấp (&lt; 500ms).</li>
+                        <li><strong>[Data Insight - Hiệu năng:]</strong> Phát hiện 82% lượt quẹt thẻ tập trung vào 2 đỉnh giờ (07:45-08:05 và 12:45-13:05), đặc biệt tại Cổng Tây (chiếm 65% tải); đề xuất lệch ca học 10 phút giúp giảm tải 35% tình trạng nghẽn cổng.</li>
+                        <li><strong>[Data Insight - Tương quan:]</strong> Phân tích tương quan Pearson đạt r = 0.94 giữa nhiệt độ phòng máy chủ vượt ngưỡng 40°C và hoạt động bảo trì của nhân sự; đề xuất tích hợp kích hoạt hệ thống làm mát giúp tiết kiệm 12% điện năng.</li>
+                        <li><strong>[Data Insight - Kỹ thuật:]</strong> Chẩn đoán tỷ lệ từ chối thẻ do đối khớp khuôn mặt thất bại tăng vọt lên 4.2% vào ban đêm tại Cổng Tây do camera thiếu sáng; bổ sung đèn trợ sáng tự động giúp giảm tỷ lệ từ chối sai xuống dưới 0.5%.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

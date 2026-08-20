@@ -56,6 +56,12 @@ export function translateApiMessage(message: string): string {
   const trimmed = message.trim()
   if (!trimmed) return trimmed
 
+  if (trimmed.includes('<!DOCTYPE html') || trimmed.includes('<html>') || trimmed.includes('<head>')) {
+    return isEn
+      ? 'Backend API connection error. Please sign out and log in again to sync.'
+      : 'Không thể kết nối máy chủ backend. Vui lòng đăng xuất và đăng nhập lại để đồng bộ.'
+  }
+
   const exact = isEn ? EXACT_MESSAGES_EN[trimmed] : EXACT_MESSAGES_VI[trimmed]
   if (exact) return exact
 

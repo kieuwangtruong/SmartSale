@@ -187,14 +187,103 @@ const tierOptions = computed(() => [
   { label: t('Thành viên Kim cương', 'Platinum Member'), value: 'Platinum' },
 ])
 
+const selectedTierFilter = ref<string>('all')
+const selectedCustomerIds = ref<number[]>([])
+
+const isAllVisibleCustomersSelected = computed(() => {
+  if (!visible.value.length) return false
+  return visible.value.every((c) => selectedCustomerIds.value.includes(c.id))
+})
+
+function toggleSelectAllCustomers() {
+  if (isAllVisibleCustomersSelected.value) {
+    const visibleIds = visible.value.map((c) => c.id)
+    selectedCustomerIds.value = selectedCustomerIds.value.filter((id) => !visibleIds.includes(id))
+  } else {
+    const newIds = new Set([...selectedCustomerIds.value, ...visible.value.map((c) => c.id)])
+    selectedCustomerIds.value = Array.from(newIds)
+  }
+}
+
+function toggleSelectCustomer(id: number) {
+  const idx = selectedCustomerIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedCustomerIds.value.splice(idx, 1)
+  } else {
+    selectedCustomerIds.value.push(id)
+  }
+}
+
+function clearCustomerSelection() {
+  selectedCustomerIds.value = []
+}
+
+async function handleBulkDeleteCustomers() {
+  if (!selectedCustomerIds.value.length) return
+  if (!confirm(t(`Bạn có chắc muốn xóa ${selectedCustomerIds.value.length} khách hàng đã chọn?`, `Are you sure you want to delete ${selectedCustomerIds.value.length} selected customers?`))) return
+
+  let deletedCount = 0
+  for (const id of selectedCustomerIds.value) {
+    try {
+      const item = customers.value.find((c) => c.id === id)
+      if (item) {
+        if (item.id < 0) {
+          await deleteUser(-item.id)
+        } else {
+          await deleteCustomer(item.id, item.phone)
+        }
+        deletedCount++
+      }
+    } catch (err) {
+      console.warn(`Failed to delete customer ${id}:`, err)
+    }
+  }
+
+  toast.add({
+    severity: 'success',
+    summary: t('Thành công', 'Success'),
+    detail: t(`Đã xóa thành công ${deletedCount} khách hàng!`, `Successfully deleted ${deletedCount} customers!`),
+    life: 3000,
+  })
+
+  selectedCustomerIds.value = []
+  await load()
+}
+
+function handleExportSelectedCustomers() {
+  const selectedItems = customers.value.filter((c) => selectedCustomerIds.value.includes(c.id))
+  if (!selectedItems.length) return
+
+  const formattedData = selectedItems.map((c) => ({
+    'Họ tên': c.fullName,
+    'Số điện thoại': c.phone,
+    'Email': c.email || '',
+    'Địa chỉ': c.address || '',
+    'Giới tính': translateGender(c.gender),
+    'CCCD': c.cccd || '',
+    'Tuổi': c.age || '',
+    'Hạng': translateTier(c.tier),
+    'Đơn hàng': c.orderCount,
+    'Tổng chi tiêu': c.totalSpent,
+    'Công nợ': c.currentDebt,
+  }))
+
+  exportToExcel(formattedData, `Khach_Hang_Da_Chon_${new Date().toISOString().split('T')[0]}`)
+  toast.add({
+    severity: 'success',
+    summary: t('Xuất dữ liệu', 'Export'),
+    detail: t(`Đã xuất ${selectedItems.length} khách hàng đã chọn ra file Excel!`, `Exported ${selectedItems.length} selected customers!`),
+    life: 3000,
+  })
+}
+
 const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
-  return !q
-    ? customers.value
-    : customers.value.filter((c) =>
-        [c.fullName, c.phone, c.email, c.address, c.cccd]
-          .some((val) => val && String(val).toLowerCase().includes(q)),
-      )
+  return customers.value.filter((c) => {
+    const matchSearch = !q || [c.fullName, c.phone, c.email, c.address, c.cccd].some((val) => val && String(val).toLowerCase().includes(q))
+    const matchTier = selectedTierFilter.value === 'all' || c.tier === selectedTierFilter.value
+    return matchSearch && matchTier
+  })
 })
 
 const totalPages = computed(() => Math.ceil(filtered.value.length / itemsPerPage) || 1)
@@ -212,7 +301,7 @@ const paginationInfo = computed(() => {
   return t(`Hiển thị ${start}-${end} trong tổng số ${total} mục`, `Showing ${start}-${end} of ${total} items`)
 })
 
-watch(search, () => {
+watch([search, selectedTierFilter], () => {
   currentPage.value = 1
 })
 
@@ -359,6 +448,15 @@ onMounted(load)
       </div>
       <div class="page-head-actions">
         <input v-model="search" :placeholder="t('Tìm khách hàng...', 'Search customers...')" class="search-input" />
+        
+        <select v-model="selectedTierFilter" class="filter-select">
+          <option value="all">{{ t('Tất cả hạng', 'All tiers') }}</option>
+          <option value="Standard">{{ t('Thường', 'Standard') }}</option>
+          <option value="Silver">{{ t('Bạc', 'Silver') }}</option>
+          <option value="Gold">{{ t('Vàng', 'Gold') }}</option>
+          <option value="Platinum">{{ t('Kim cương', 'Platinum') }}</option>
+        </select>
+
         <button type="button" class="excel-btn" @click="showImportModal = true">
           <i class="pi pi-upload" /> {{ t('Nhập Excel', 'Import Excel') }}
         </button>
@@ -397,10 +495,38 @@ onMounted(load)
       </form>
     </aside>
 
+    <!-- Bulk Action Toolbar (Image 3 Jotform style) -->
+    <div v-if="selectedCustomerIds.length > 0" class="bulk-actions-bar">
+      <div class="bulk-count-badge">
+        <i class="pi pi-check-square" />
+        <span>{{ t('Đã chọn', 'Selected') }}: <strong>{{ selectedCustomerIds.length }}</strong> {{ t('khách hàng', 'customers') }}</span>
+      </div>
+      <div class="bulk-btn-group">
+        <button type="button" class="bulk-btn btn-secondary" @click="handleExportSelectedCustomers">
+          <i class="pi pi-file-excel" /> {{ t('Xuất các mục đã chọn', 'Export Selected') }}
+        </button>
+        <button v-if="auth.role === 'Admin'" type="button" class="bulk-btn btn-danger" @click="handleBulkDeleteCustomers">
+          <i class="pi pi-trash" /> {{ t('Xóa đã chọn', 'Delete Selected') }}
+        </button>
+        <button type="button" class="bulk-btn btn-secondary" @click="clearCustomerSelection">
+          <i class="pi pi-times" /> {{ t('Bỏ chọn', 'Deselect') }}
+        </button>
+      </div>
+    </div>
+
     <article class="panel table-wrap">
       <table>
         <thead>
           <tr>
+            <th style="width: 44px; text-align: center">
+              <input
+                type="checkbox"
+                class="table-custom-checkbox"
+                :checked="isAllVisibleCustomersSelected"
+                @change="toggleSelectAllCustomers"
+                :title="t('Chọn tất cả', 'Select all')"
+              />
+            </th>
             <th>{{ t('Khách hàng', 'Customer') }}</th>
             <th>{{ t('Liên hệ', 'Contact') }}</th>
             <th>{{ t('Hạng', 'Tier') }}</th>
@@ -414,7 +540,19 @@ onMounted(load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in visible" :key="item.id">
+          <tr
+            v-for="item in visible"
+            :key="item.id"
+            :class="{ 'row-selected': selectedCustomerIds.includes(item.id) }"
+          >
+            <td style="width: 44px; text-align: center">
+              <input
+                type="checkbox"
+                class="table-custom-checkbox"
+                :checked="selectedCustomerIds.includes(item.id)"
+                @change="toggleSelectCustomer(item.id)"
+              />
+            </td>
             <td>{{ item.fullName }}<small>{{ item.address }}</small></td>
             <td>{{ item.phone }}<small>{{ item.email }}</small></td>
             <td><span class="tier-label" :class="item.tier?.toLowerCase()">{{ translateTier(item.tier) }}</span></td>

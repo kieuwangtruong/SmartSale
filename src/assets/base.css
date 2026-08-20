@@ -368,6 +368,18 @@ table,
   font-weight: 900;
 }
 
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-head-actions input,
+.page-head-actions select {
+  width: auto;
+}
+
 .hero-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -705,11 +717,9 @@ select:disabled {
 
 .order-card:hover,
 .order-card.active,
-tbody tr:hover,
 tbody tr.active {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-md);
-  background: #ffffff;
 }
 
 .order-card.active {
