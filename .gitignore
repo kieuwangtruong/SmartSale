@@ -26,5 +26,6 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
-*.sw?
+*.code-workspace
+*.vue.js
+*.vue.js.map
