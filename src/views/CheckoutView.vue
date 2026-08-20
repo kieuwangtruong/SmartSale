@@ -89,6 +89,8 @@ function buildPayload(): CustomerCheckoutPayload {
   }
 }
 
+import { eventTracker } from '../modules/analytics/services/eventTracker'
+
 async function submitOrder() {
   if (loading.value || !cart.value.length) return
   loading.value = true
@@ -100,12 +102,20 @@ async function submitOrder() {
     if (payload.phone) localStorage.setItem(CUSTOMER_PHONE_KEY, payload.phone)
 
     if (paymentMethod.value === 'payos') {
+      try {
+        eventTracker.track('payment_started', { amount: cartTotal.value, paymentMethod: 'payos' })
+      } catch {}
       const payment = await createPaymentLink(payload)
       window.location.assign(payment.checkoutUrl)
       return
     }
 
     placedOrder.value = await createCustomerCashOrder(payload)
+    if (placedOrder.value?.id) {
+      try {
+        eventTracker.trackOrderCreated(placedOrder.value.id, placedOrder.value.total, 'cash')
+      } catch {}
+    }
     clearPurchasedCart()
     success.value = t('Đặt hàng thành công. Đơn hàng của bạn đang chờ nhân viên xác nhận.', 'Order placed successfully. Your order is waiting for staff confirmation.')
   } catch (exception) {
@@ -130,6 +140,10 @@ onMounted(() => {
   form.email = auth.user?.email ?? ''
   form.address = auth.user?.address ?? ''
   form.phone = localStorage.getItem(CUSTOMER_PHONE_KEY) ?? ''
+
+  try {
+    eventTracker.trackCheckoutStarted(cartTotal.value, cartCount.value)
+  } catch {}
 })
 </script>
 

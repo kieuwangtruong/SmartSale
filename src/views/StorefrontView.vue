@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, onUnmounted } from "vue";
+import { computed, onMounted, reactive, ref, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { createPaymentLink, formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, requestOrderCancellation, type Order, type OrderStatus } from "../services/orderApi";
 import { getProducts, type Product, type ProductVariant, type ProductVariantColor } from "../services/productApi";
@@ -24,6 +24,7 @@ const CATEGORY_LABELS: Record<string, { vi: string; en: string }> = {
 };
 
 function translateCategory(cat: string): string {
+  if (!cat) return "";
   if (cat === "Gia dụng" || cat.toLowerCase().includes("gia dụng")) {
     return t("Gia dụng", "Home");
   }
@@ -40,16 +41,46 @@ function translateCategory(cat: string): string {
 }
 
 function productMatchesSearch(product: Product, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  const categoryName = product.categoryName || "";
-  return (
-    product.name.toLowerCase().includes(q) ||
-    translateProductName(product).toLowerCase().includes(q) ||
-    String(product.id).includes(q) ||
-    categoryName.toLowerCase().includes(q) ||
-    translateCategory(categoryName).toLowerCase().includes(q)
-  );
+  if (!query || !query.trim()) return true;
+  const q = query.toLowerCase().trim();
+  const nameVi = (product.name || "").toLowerCase();
+  const nameEn = translateProductName(product).toLowerCase();
+  const desc = (product.description || "").toLowerCase();
+  const idStr = String(product.id);
+  return nameVi.includes(q) || nameEn.includes(q) || desc.includes(q) || idStr.includes(q);
+}
+
+// Lightbox full image viewer modal state
+const lightboxImage = reactive({
+  show: false,
+  imageUrl: "",
+  title: "",
+  images: [] as string[],
+  activeIdx: 0,
+});
+
+function openLightbox(product: Product) {
+  const images = getEnrichedProductImages(product);
+  const mainImg = product.imageUrl || images[0] || "";
+  lightboxImage.imageUrl = mainImg;
+  lightboxImage.title = translateProductName(product);
+  lightboxImage.images = images.length > 0 ? images : (mainImg ? [mainImg] : []);
+  lightboxImage.activeIdx = 0;
+  lightboxImage.show = true;
+}
+
+function closeLightbox() {
+  lightboxImage.show = false;
+}
+
+function prevLightboxImage() {
+  if (!lightboxImage.images.length) return;
+  lightboxImage.activeIdx = (lightboxImage.activeIdx - 1 + lightboxImage.images.length) % lightboxImage.images.length;
+}
+
+function nextLightboxImage() {
+  if (!lightboxImage.images.length) return;
+  lightboxImage.activeIdx = (lightboxImage.activeIdx + 1) % lightboxImage.images.length;
 }
 
 // Product detail specification accordion state flags
@@ -757,7 +788,11 @@ async function sendChatbotText(text = chatbotInput.value) {
 
 function isAuthExpiredError(exception: unknown) {
   if (!(exception instanceof Error)) return false;
-  return /401|unauthorized|hết hạn|đăng nhập/i.test(exception.message);
+  const msg = exception.message;
+  if (msg.includes('Không thể kết nối máy chủ') || msg.includes('Backend API connection error')) {
+    return false;
+  }
+  return /401|unauthorized|hết hạn|đăng nhập/i.test(msg);
 }
 
 function handleExpiredCustomerSession() {
@@ -803,9 +838,20 @@ function handleChatAction(action: ChatAction) {
   openProductDetail(product);
 }
 
+import { eventTracker } from "../modules/analytics/services/eventTracker";
+
 // Open product detail modal for quick view
 function openProductDetail(product: Product) {
   selectedProduct.value = product;
+  try {
+    eventTracker.trackProductView({
+      id: product.id,
+      name: product.name,
+      sellingPrice: product.sellingPrice,
+      categoryId: product.categoryId,
+    });
+  } catch {}
+
   const firstVariant = product.variants.find((variant) => variant.isActive && variant.quantity > 0)
     ?? product.variants.find((variant) => variant.isActive);
   selectedVariantId.value = firstVariant?.id ?? null;
@@ -864,6 +910,14 @@ function addToCartFromDetail() {
   } else {
     cart.value.push({ product: selectedProduct.value, variant: selectedVariant.value, color: selectedColor.value, quantity });
   }
+
+  try {
+    eventTracker.trackAddToCart({
+      id: selectedProduct.value.id,
+      name: selectedProduct.value.name,
+      sellingPrice: selectedProduct.value.sellingPrice,
+    }, quantity);
+  } catch {}
   
   // Animate cart button
   animateCart.value = true;
@@ -1207,14 +1261,10 @@ function stopSlideTimer() {
 function triggerSearch() {
   search.value = searchInput.value;
   showSearchDropdown.value = false;
-}
-
-watch(search, (newVal) => {
-  if (newVal.trim()) {
+  if (!category.value) {
     showAllProducts.value = true;
-    category.value = "";
   }
-});
+}
 
 watch([search, category, sort, showAllProducts], () => {
   currentPage.value = 1;
@@ -1657,6 +1707,31 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- Category Scoped Search Toolbar (Present on all nav tabs except Home) -->
+          <div class="category-search-bar-wrap">
+            <div class="category-search-box">
+              <i class="pi pi-search" />
+              <input
+                v-model="search"
+                type="text"
+                :placeholder="category ? t(`Tìm kiếm trong ${translateCategory(category)}...`, `Search within ${translateCategory(category)}...`) : t('Tìm kiếm trong tất cả sản phẩm...', 'Search all products...')"
+              />
+              <button
+                v-if="search"
+                class="category-search-clear-btn"
+                type="button"
+                @click="search = ''"
+                :aria-label="t('Xóa tìm kiếm', 'Clear search')"
+              >
+                <i class="pi pi-times" />
+              </button>
+            </div>
+            <div class="category-scope-chip" v-if="category">
+              <i class="pi pi-folder-open" />
+              <span>{{ t('Danh mục:', 'Category:') }} <strong>{{ translateCategory(category) }}</strong></span>
+            </div>
+          </div>
+
           <div class="catalog-toolbar">
             <div class="active-filters">
               <span class="filter-tag" v-if="search">{{ t('Tìm kiếm:', 'Search:') }} "{{ search }}" <i class="pi pi-times" style="cursor: pointer; margin-left: 4px;" @click="searchInput = ''; search = '';" /></span>
@@ -1716,6 +1791,9 @@ onUnmounted(() => {
                     <i class="pi pi-box" />
                     <small>ID #{{ product.id }}</small>
                   </div>
+                  <button class="preview-img-trigger" type="button" @click.stop="openLightbox(product)" :title="t('Xem ảnh lớn', 'View full image')">
+                    <i class="pi pi-eye" />
+                  </button>
                 </div>
                 <div class="product-content">
                   <div class="product-labels">
@@ -2601,6 +2679,44 @@ onUnmounted(() => {
         </div>
       </div>
     </aside>
+
+    <!-- Fullscreen Product Image Lightbox Modal -->
+    <div v-if="lightboxImage.show" class="lightbox-overlay" @click="closeLightbox">
+      <div class="lightbox-modal" @click.stop>
+        <button class="lightbox-close-btn" type="button" @click="closeLightbox" :aria-label="t('Đóng', 'Close')">
+          <i class="pi pi-times" />
+        </button>
+
+        <button v-if="lightboxImage.images.length > 1" class="lightbox-arrow prev" type="button" @click="prevLightboxImage">
+          <i class="pi pi-chevron-left" />
+        </button>
+
+        <div class="lightbox-stage">
+          <img :src="lightboxImage.images[lightboxImage.activeIdx] || lightboxImage.imageUrl" :alt="lightboxImage.title" class="lightbox-img" />
+          <div class="lightbox-caption-bar">
+            <strong>{{ lightboxImage.title }}</strong>
+            <span v-if="lightboxImage.images.length > 1">{{ lightboxImage.activeIdx + 1 }} / {{ lightboxImage.images.length }}</span>
+          </div>
+        </div>
+
+        <button v-if="lightboxImage.images.length > 1" class="lightbox-arrow next" type="button" @click="nextLightboxImage">
+          <i class="pi pi-chevron-right" />
+        </button>
+
+        <!-- Thumbs -->
+        <div v-if="lightboxImage.images.length > 1" class="lightbox-thumbs-strip">
+          <div
+            v-for="(img, idx) in lightboxImage.images"
+            :key="idx"
+            class="lightbox-thumb-item"
+            :class="{ active: lightboxImage.activeIdx === idx }"
+            @click="lightboxImage.activeIdx = idx"
+          >
+            <img :src="img" alt="" />
+          </div>
+        </div>
+      </div>
+    </div>
 </template>
 
 <style scoped>
@@ -9492,4 +9608,317 @@ background: rgba(56, 189, 248, 0.1) !important;
 .app-dark .chat-product-row dl div {
   background: #111827 !important;
 }
+
+/* ==========================================================================
+   Category-Scoped Search Toolbar (Appears on all Category Navs)
+   ========================================================================== */
+.category-search-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.category-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 44px;
+  border-radius: 99px;
+  background: #ffffff;
+  border: 1.5px solid var(--line);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex: 1;
+  max-width: 480px;
+  transition: all 0.2s ease;
+}
+
+.app-dark .category-search-box {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: none;
+}
+
+.category-search-box:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.category-search-box i.pi-search {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.category-search-box input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  font-family: inherit;
+}
+
+.app-dark .category-search-box input {
+  color: #f8fafc;
+}
+
+.category-search-clear-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.category-search-clear-btn:hover {
+  color: #ef4444;
+}
+
+.category-scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--teal);
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.app-dark .category-scope-chip {
+  background: rgba(45, 212, 191, 0.12);
+  color: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+/* ==========================================================================
+   Product Image Quick Preview Trigger (Eye Icon)
+   ========================================================================== */
+.product-card .product-image {
+  position: relative;
+  cursor: pointer;
+}
+
+.preview-img-trigger {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.app-dark .preview-img-trigger {
+  background: rgba(30, 41, 59, 0.92);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.product-card:hover .preview-img-trigger {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.preview-img-trigger:hover {
+  background: var(--teal);
+  color: #ffffff !important;
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   Fullscreen Lightbox Image Modal
+   ========================================================================== */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(10, 15, 26, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.lightbox-modal {
+  position: relative;
+  max-width: 860px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.lightbox-close-btn {
+  position: absolute;
+  top: -46px;
+  right: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lightbox-close-btn:hover {
+  background: #ef4444;
+  transform: rotate(90deg);
+}
+
+.lightbox-arrow {
+  position: absolute;
+  top: 45%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.lightbox-arrow.prev {
+  left: -20px;
+}
+
+.lightbox-arrow.next {
+  right: -20px;
+}
+
+.lightbox-arrow:hover {
+  background: var(--teal);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.lightbox-stage {
+  width: 100%;
+  max-height: 70vh;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lightbox-img {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 8px;
+  animation: zoomIn 0.25s ease-out;
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lightbox-caption-bar {
+  width: 100%;
+  padding: 12px 20px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lightbox-caption-bar strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.lightbox-caption-bar span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.lightbox-thumbs-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 6px 4px;
+}
+
+.lightbox-thumb-item {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.lightbox-thumb-item.active,
+.lightbox-thumb-item:hover {
+  opacity: 1;
+  border-color: #2dd4bf;
+  transform: translateY(-2px);
+}
+
+.lightbox-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 </style>
+

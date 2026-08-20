@@ -11,30 +11,70 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
+const searchQuery = ref('')
 const { t, currentLanguage, setLanguage } = useLanguage()
 
-const allNavigation = computed(() => [
-  { to: '/dashboard', label: t('Tổng quan', 'Dashboard'), icon: 'pi pi-chart-bar', roles: ['Admin'] },
-  { to: '/orders', label: t('Đơn hàng', 'Orders'), icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
-  { to: '/customers', label: t('Khách hàng', 'Customers'), icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
-  { to: '/suppliers', label: t('Nhà cung cấp', 'Suppliers'), icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/products', label: t('Sản phẩm', 'Products'), icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
-  { to: '/inventory', label: t('Kho hàng', 'Inventory'), icon: 'pi pi-warehouse', roles: ['Admin', 'WarehouseKeeper'] },
-  { to: '/users', label: t('Nhân sự', 'HR Users'), icon: 'pi pi-user-edit', roles: ['Admin'] },
-  { to: '/employees', label: t('Chấm công', 'Attendance'), icon: 'pi pi-calendar-clock', roles: ['Admin'] },
-  { to: '/customer', label: t('Hồ sơ của tôi', 'My Profile'), icon: 'pi pi-id-card', roles: ['Customer'] },
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  roles: string[]
+  badge?: string
+}
+
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+
+const navSections = computed<NavSection[]>(() => [
+  {
+    title: '',
+    items: [
+      { to: '/dashboard', label: t('Tổng quan', 'Dashboard'), icon: 'pi pi-th-large', roles: ['Admin'] },
+      { to: '/orders', label: t('Đơn hàng', 'Orders'), icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
+      { to: '/products', label: t('Sản phẩm', 'Products'), icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
+      { to: '/customers', label: t('Khách hàng', 'Customers'), icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
+      { to: '/admin/analytics', label: t('Báo cáo & BI', 'Reports'), icon: 'pi pi-file', roles: ['Admin'], badge: 'BI' },
+    ],
+  },
+  {
+    title: '',
+    items: [
+      { to: '/inventory', label: t('Kho & Tích hợp', 'Integrations'), icon: 'pi pi-link', roles: ['Admin', 'WarehouseKeeper'] },
+      { to: '/suppliers', label: t('Nhà cung cấp', 'Suppliers'), icon: 'pi pi-truck', roles: ['Admin', 'WarehouseKeeper'] },
+      { to: '/users', label: t('Nhân sự', 'HR Users'), icon: 'pi pi-user-edit', roles: ['Admin'] },
+      { to: '/employees', label: t('Cài đặt', 'Settings'), icon: 'pi pi-cog', roles: ['Admin'] },
+      { to: '/customer', label: t('Hồ sơ của tôi', 'My Profile'), icon: 'pi pi-id-card', roles: ['Customer'] },
+    ],
+  },
 ])
-const navigation = computed(() =>
-  allNavigation.value.filter((item) => auth.role && item.roles.includes(auth.role)),
+
+const filteredSections = computed(() => {
+  const userRole = auth.role
+  if (!userRole) return []
+
+  return navSections.value
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => item.roles.includes(userRole)),
+    }))
+    .filter((section) => section.items.length > 0)
+})
+
+const allNavItems = computed(() =>
+  navSections.value.flatMap((s) => s.items).filter((item) => auth.role && item.roles.includes(auth.role)),
 )
+
 const currentPage = computed(
-  () => navigation.value.find((item) => item.to === route.path)?.label ?? t('Quản lý', 'Management'),
+  () => allNavItems.value.find((item) => item.to === route.path)?.label ?? t('Quản lý hệ thống', 'System Management'),
 )
+
 const roleLabel = computed(() => {
   const role = auth.role
   if (role === 'Admin') return t('Quản trị viên', 'Admin')
   if (role === 'SalesStaff') return t('Nhân viên bán lẻ', 'Retail Staff')
-  if (role === 'WarehouseKeeper') return t('Thủ kho quản lý', 'Warehouse Keeper')
+  if (role === 'WarehouseKeeper') return t('Thủ kho', 'Warehouse Keeper')
   if (role === 'Customer') return t('Khách hàng', 'Customer')
   return role || ''
 })
@@ -65,8 +105,17 @@ function toggleLanguage() {
   setLanguage(currentLanguage.value === 'vi' ? 'en' : 'vi')
 }
 
+function handleSearchKeydown(event: KeyboardEvent) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    const searchInput = document.getElementById('global-search-input')
+    searchInput?.focus()
+  }
+}
+
 onMounted(() => {
   window.addEventListener('auth-changed', syncAuth)
+  window.addEventListener('keydown', handleSearchKeydown)
   isDark.value = localStorage.getItem('theme-dark') === 'true'
   if (isDark.value) {
     document.documentElement.classList.add('app-dark')
@@ -74,7 +123,11 @@ onMounted(() => {
     document.documentElement.classList.remove('app-dark')
   }
 })
-onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
+
+onUnmounted(() => {
+  window.removeEventListener('auth-changed', syncAuth)
+  window.removeEventListener('keydown', handleSearchKeydown)
+})
 </script>
 
 <template>
@@ -87,31 +140,49 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
       @click="sidebarOpen = false"
     />
 
-    <aside class="admin-sidebar" :class="{ open: sidebarOpen }">
-      <RouterLink class="admin-brand" to="/">
-        <span class="admin-brand-mark"><i class="pi pi-shopping-bag" /></span>
-        <span><strong>Admin Smart Store</strong><small>{{ t('Hệ thống bán hàng', 'Sales & Inventory') }}</small></span>
+    <aside class="admin-sidebar ezmart-sidebar-style" :class="{ open: sidebarOpen }">
+      <!-- Brand Header with Emerald 4-square grid -->
+      <RouterLink class="admin-brand brand-green" to="/dashboard">
+        <div class="brand-logo-grid">
+          <span class="brand-sq sq-1" />
+          <span class="brand-sq sq-2" />
+          <span class="brand-sq sq-3" />
+          <span class="brand-sq sq-4" />
+        </div>
+        <div class="brand-title-wrap">
+          <strong>SmartSale <span class="brand-badge">PRO</span></strong>
+        </div>
       </RouterLink>
 
-      <p class="nav-caption">{{ t('MENU QUẢN LÝ', 'MANAGEMENT MENU') }}</p>
       <nav class="admin-navigation">
-        <RouterLink
-          v-for="item in navigation"
-          :key="item.to"
-          :to="item.to"
-          @click="sidebarOpen = false"
-        >
-          <i :class="item.icon" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
+        <template v-for="(section, sIdx) in filteredSections" :key="sIdx">
+          <div v-if="sIdx > 0" class="nav-section-divider" />
+          <p v-if="section.title" class="nav-caption">{{ section.title }}</p>
+          <RouterLink
+            v-for="item in section.items"
+            :key="item.to"
+            :to="item.to"
+            @click="sidebarOpen = false"
+          >
+            <i :class="item.icon" />
+            <span>{{ item.label }}</span>
+            <span v-if="item.badge" class="nav-tag">{{ item.badge }}</span>
+          </RouterLink>
+        </template>
       </nav>
 
-      <div class="admin-profile">
-        <span class="profile-avatar">{{ auth.user?.fullName?.charAt(0).toUpperCase() }}</span>
-        <div><strong>{{ auth.user?.fullName }}</strong><small>{{ roleLabel }}</small></div>
+      <div class="admin-profile ezmart-profile-card">
+        <div class="profile-avatar-wrap">
+          <span class="profile-avatar">{{ auth.user?.fullName?.charAt(0).toUpperCase() || 'A' }}</span>
+          <span class="avatar-status-dot" />
+        </div>
+        <div class="profile-text">
+          <strong>{{ auth.user?.fullName || 'Quản trị viên' }}</strong>
+          <small>{{ roleLabel }}</small>
+        </div>
         <Button
           icon="pi pi-sign-out"
-          severity="danger"
+          severity="secondary"
           text
           rounded
           :aria-label="t('Đăng xuất', 'Logout')"
@@ -132,32 +203,71 @@ onUnmounted(() => window.removeEventListener('auth-changed', syncAuth))
             :aria-label="t('Mở menu', 'Open Menu')"
             @click="sidebarOpen = true"
           />
-          <div><small>{{ t('HỆ THỐNG QUẢN LÝ', 'MANAGEMENT SYSTEM') }}</small><h1>{{ currentPage }}</h1></div>
+          <div>
+            <small>{{ t('HỆ THỐNG QUẢN LÝ DOANH THU', 'SALES & REVENUE MANAGEMENT') }}</small>
+            <h1>{{ currentPage }}</h1>
+          </div>
         </div>
-        <div class="topbar-actions">
-          <Button
-            :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
-            severity="secondary"
-            text
-            rounded
-            :aria-label="t('Đổi giao diện', 'Toggle Dark Mode')"
-            @click="toggleDarkMode"
+
+        <div class="topbar-search ezmart-search-bar">
+          <input
+            id="global-search-input"
+            v-model="searchQuery"
+            type="text"
+            :placeholder="t('Tìm kiếm hàng hóa, đơn hàng... (⌘K)', 'Search stock, order, etc (⌘K)')"
           />
-          <Button
-            icon="pi pi-globe"
-            :label="currentLanguage === 'vi' ? 'EN' : 'VI'"
-            severity="secondary"
-            text
-            rounded
-            :aria-label="t('Đổi ngôn ngữ', 'Switch Language')"
+          <i class="pi pi-search" />
+        </div>
+
+        <div class="topbar-actions ezmart-vibe-dock">
+          <span class="live-status-chip">
+            <span class="pulse-dot" />
+            {{ t('Hệ thống Live', 'Live Sync') }}
+          </span>
+
+          <div class="dock-divider" />
+
+          <button
+            type="button"
+            class="topbar-icon-btn lang-btn"
+            :title="t('Đổi ngôn ngữ', 'Switch Language')"
             @click="toggleLanguage"
-          />
-          <RouterLink class="store-shortcut" to="/"><i class="pi pi-external-link" /> {{ t('Cửa hàng', 'Storefront') }}</RouterLink>
-          <span class="role-chip"><i class="pi pi-shield" /> {{ roleLabel }}</span>
+          >
+            <i class="pi pi-globe" />
+            <span>{{ currentLanguage === 'vi' ? 'EN' : 'VI' }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="topbar-icon-btn"
+            :title="t('Đổi giao diện', 'Toggle Dark Mode')"
+            @click="toggleDarkMode"
+          >
+            <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
+          </button>
+
+          <div class="dock-divider" />
+
+          <RouterLink class="dock-storefront-btn" to="/">
+            <i class="pi pi-shopping-bag" />
+            <span>{{ t('Cửa hàng', 'Storefront') }}</span>
+          </RouterLink>
+
+          <div class="topbar-profile-pill">
+            <div class="profile-avatar-sm">
+              {{ auth.user?.fullName?.charAt(0).toUpperCase() || 'A' }}
+            </div>
+            <div class="profile-info-sm">
+              <strong>{{ auth.user?.fullName || 'Quản trị viên' }}</strong>
+              <small>{{ roleLabel }}</small>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main class="admin-main"><RouterView /></main>
+      <main class="admin-main">
+        <RouterView />
+      </main>
     </div>
   </div>
   <Toast />

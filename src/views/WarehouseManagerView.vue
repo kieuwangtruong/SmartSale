@@ -10,7 +10,7 @@ import {
   getProducts,
   getStockReceipts,
   submitStockReceipt,
-  updateInventory,
+  updateProduct,
   type Product,
   type StockReceipt,
 } from '../services/productApi'
@@ -238,7 +238,21 @@ async function saveInventory(product: Product) {
   const draft = inventoryDraft[product.id]
   if (!draft) return
   try {
-    await updateInventory(product.id, product.quantity, draft.reserveStock)
+    await updateProduct(product.id, {
+      name: product.name,
+      description: product.description,
+      importPrice: product.importPrice,
+      sellingPrice: product.sellingPrice,
+      originalPrice: product.originalPrice,
+      salePrice: product.salePrice,
+      imageUrl: product.imageUrl,
+      imageUrls: product.imageUrls,
+      imageItems: product.imageItems,
+      categoryId: product.categoryId,
+      supplierId: product.supplierId,
+      quantity: draft.quantity,
+      reserveStock: draft.reserveStock
+    })
     await load()
   } catch (e) {
     showError(e instanceof Error ? e.message : t('Không thể cập nhật ngưỡng tồn.', 'Unable to update stock threshold.'))
@@ -266,7 +280,33 @@ async function submitReceipt() {
 }
 
 async function confirmReceipt(item: StockReceipt) {
-  try { await confirmStockReceipt(item.id); await load() }
+  try { 
+    await confirmStockReceipt(item.id)
+    
+    // In our mock backend, we need to manually increment the product stock
+    for (const receiptItem of item.items) {
+      const product = products.value.find(p => p.id === receiptItem.productId)
+      if (product) {
+        await updateProduct(product.id, {
+          name: product.name,
+          description: product.description,
+          importPrice: product.importPrice,
+          sellingPrice: product.sellingPrice,
+          originalPrice: product.originalPrice,
+          salePrice: product.salePrice,
+          imageUrl: product.imageUrl,
+          imageUrls: product.imageUrls,
+          imageItems: product.imageItems,
+          categoryId: product.categoryId,
+          supplierId: product.supplierId,
+          quantity: product.quantity + receiptItem.quantity,
+          reserveStock: product.reserveStock
+        })
+      }
+    }
+    
+    await load()
+  }
   catch (e) { showError(e instanceof Error ? e.message : t('Không thể xác nhận phiếu.', 'Unable to confirm receipt.')) }
 }
 async function submitReceiptForApproval(item: StockReceipt) {

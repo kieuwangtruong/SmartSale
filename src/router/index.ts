@@ -56,6 +56,16 @@ const routes: RouteRecordRaw[] = [
     meta: { roles: ['Admin'] },
   },
   {
+    path: '/admin/analytics',
+    name: 'product-analytics',
+    component: () => import('../modules/analytics/pages/ProductAnalyticsView.vue'),
+    meta: { roles: ['Admin'] },
+  },
+  {
+    path: '/analytics',
+    redirect: '/admin/analytics',
+  },
+  {
     path: '/customer',
     name: 'customer-profile',
     component: () => import('../views/CustomerProfileView.vue'),

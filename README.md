@@ -1,43 +1,72 @@
-# Sales and Inventory Frontend
+# 🛍️ SmartSale - Omnichannel Sales & Real-Time Inventory Management System
 
-Vue 3 frontend tích hợp ba microservice:
+**SmartSale** là nền tảng quản lý bán hàng đa kênh và kiểm soát tồn kho thông minh thế hệ mới. Hệ thống tích hợp cổng thanh toán trực tuyến PayOS QR, báo cáo phân tích kinh doanh nâng cao (BI Analytics), trợ lý ảo AI Chatbot và hệ thống phân quyền đa người dùng.
 
-- User & Report: `https://nhom3-sales-and-inventory-management.onrender.com`
-- Order & Sales: `https://nhom2-sales-and-inventory-management.onrender.com`
-- Product & Inventory: `https://nhom1-sales-and-inventory-management-1.onrender.com`
+---
 
-## Vai trò
+## 🚀 Tính năng nổi bật
 
-- `Admin`: báo cáo, tài khoản, đơn hàng, khách hàng, nhà cung cấp, sản phẩm và kho.
-- `SalesStaff`: đơn hàng, khách hàng và nhà cung cấp.
-- `WarehouseKeeper`: sản phẩm, tồn kho và phiếu nhập.
+- **Cửa hàng trực tuyến (Storefront):**
+  - Trải nghiệm mua sắm hiện đại, hỗ trợ bộ lọc và tìm kiếm chuyên biệt theo từng danh mục.
+  - Trình xem ảnh lớn sắc nét (Image Lightbox Viewer) với thư viện ảnh chi tiết.
+  - Giỏ hàng thời gian thực, đồng bộ tồn kho trực tiếp.
+  - Thanh toán tự động qua mã QR PayOS và Tiền mặt.
+  - Lộ trình theo dõi trạng thái đơn hàng trực quan.
+- **Quản trị bán hàng & CRM:**
+  - Quản lý danh sách đơn hàng, xuất Excel, xử lý trạng thái đơn và công nợ.
+  - Quản lý hồ sơ khách hàng, phân cấp bậc thành viên (*Standard, Silver, Gold, Platinum*).
+- **Quản lý kho & Nhà cung cấp:**
+  - Lập và phê duyệt phiếu nhập kho nhiều bước (*Draft $\rightarrow$ Pending $\rightarrow$ Confirmed*).
+  - Cảnh báo tồn kho an toàn (`reserve_stock`), theo dõi biến động hàng hóa.
+- **Báo cáo & Phân tích kinh doanh (BI Analytics):**
+  - Trực quan hóa doanh thu, lợi nhuận, phân khúc khách hàng, tỷ lệ chuyển đổi, phân tích vòng đời khách hàng (LTV) và biểu đồ giữ chân (Cohort Retention).
+- **Trợ lý AI Chatbot:**
+  - Hỗ trợ tư vấn sản phẩm, tra cứu đơn hàng và gợi ý mua sắm thông minh 24/7.
 
-Khách hàng là dữ liệu bán hàng trong Order service, không phải tài khoản đăng nhập.
+---
 
-## Chạy local
+## 🛠️ Công nghệ sử dụng
 
+- **Frontend:** Vue 3 (Composition API), Vite, TypeScript, PrimeVue, Chart.js, Pinia.
+- **Backend:** Node.js, Express.js, JWT, Bcrypt, OpenAI API, PayOS SDK.
+- **Database:** PostgreSQL trên nền tảng đám mây **Neon Serverless**.
+
+---
+
+## 🔑 Tài khoản Demo hệ thống
+
+| Vai trò (Role) | Họ và tên | Email đăng nhập | Mật khẩu (Password) |
+| :--- | :--- | :--- | :--- |
+| **Quản trị viên (Admin)** | Nguyễn Thế Dân | `admin@smartsale.com` | `Admin@123456` |
+| **Nhân viên bán hàng (Sales)** | Trần Phương Linh | `sales@smartsale.com` | `Admin@123456` |
+| **Thủ kho (Warehouse)** | Lê Hoàng Hải | `warehouse@smartsale.com` | `Admin@123456` |
+| **Khách hàng VIP (Customer)** | Phạm Quốc Việt | `customer@smartsale.com` | `Admin@123456` |
+
+---
+
+## 💻 Cài đặt & Chạy ứng dụng
+
+### 1. Khởi chạy Frontend:
 ```bash
 npm install
 npm run dev
 ```
+Truy cập tại: `http://localhost:5173/` hoặc `http://localhost:5174/`
 
-Mặc định frontend gọi các URL Render. Có thể ghi đè bằng:
-
+### 2. Khởi chạy Backend & Database:
 ```bash
-VITE_USER_API_URL=http://localhost:5056
-VITE_ORDER_API_URL=http://localhost:5000
-VITE_PRODUCT_API_URL=http://localhost:8080
+cd server
+npm install
+node src/server.js
 ```
 
-Xem mẫu tại `.env.example`.
-
-## Kiểm tra
-
+### 3. Khởi tạo & nạp dữ liệu Database lên Neon:
 ```bash
-npm run lint
-npm run build
+cd server
+node src/apply_complete_seed.mjs
 ```
 
-Frontend dùng history routing để trang bán hàng ở `/` và trang đăng nhập nhân viên ở `/admin`.
+---
 
-Trên Render Static Site, cần thêm rewrite rule từ `/*` đến `/index.html` để truy cập trực tiếp hoặc refresh các route Vue không bị lỗi 404.
+## 📄 Bản quyền
+Phát triển bởi **Kiều Quang Trưởng Vĩ** & SmartSale Team. Bảo lưu mọi quyền © 2026.

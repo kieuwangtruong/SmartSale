@@ -12,6 +12,10 @@ dist
 dist-ssr
 .vite
 .eslintcache
+# Environment
+.env
+.env.*
+!.env.example
 *.local
 
 # Editor directories and files
