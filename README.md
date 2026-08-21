@@ -35,12 +35,17 @@
 
 ## 🔑 Tài khoản Demo hệ thống
 
-| Vai trò (Role) | Họ và tên | Email đăng nhập | Mật khẩu (Password) |
-| :--- | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | Nguyễn Thế Dân | `admin@smartsale.com` | `Admin@123456` |
-| **Nhân viên bán hàng (Sales)** | Trần Phương Linh | `sales@smartsale.com` | `Admin@123456` |
-| **Thủ kho (Warehouse)** | Lê Hoàng Hải | `warehouse@smartsale.com` | `Admin@123456` |
-| **Khách hàng VIP (Customer)** | Phạm Quốc Việt | `customer@smartsale.com` | `Admin@123456` |
+| Vai trò / Hạng thành viên | Họ và tên | Email đăng nhập | Mật khẩu (Password) | Tổng chi tiêu / Ghi chú |
+| :--- | :--- | :--- | :--- | :--- |
+| **Quản trị viên (Admin)** | Nguyễn Thế Dân | `admin@smartsale.com` | `Admin@123456` | Toàn quyền quản trị & Dashboard |
+| **Nhân viên bán hàng (Sales)** | Trần Phương Linh | `sales@smartsale.com` | `Admin@123456` | Quản lý đơn & khách hàng |
+| **Thủ kho (Warehouse)** | Lê Hoàng Hải | `warehouse@smartsale.com` | `Admin@123456` | Nhập kho & Tồn kho |
+| 💎 **Khách VIP Kim Cương** | Phạm Quốc Việt | `diamond@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 20.000.000 ₫ (27.5M ₫) |
+| 🥇 **Khách VIP Vàng** | Nguyễn Thị Tuyết Mai | `gold@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 8.000.000 ₫ (12.9M ₫) |
+| 🥈 **Khách VIP Bạc** | Lê Thu Hương | `silver@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 2.000.000 ₫ (4.2M ₫) |
+| 👤 **Khách Thành viên Thường** | Trần Minh Đức | `standard@smartsale.com` | `Admin@123456` | Chi tiêu < 2.000.000 ₫ (640k ₫) |
+| 💎 **Khách VIP (Legacy)** | Phạm Quốc Việt | `customer@smartsale.com` | `Admin@123456` | Tài khoản khách hàng mặc định |
+
 
 ---
 

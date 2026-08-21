@@ -19,6 +19,7 @@ export interface AuthUser {
   sex: number
   address: string
   paidOrderCount?: number
+  totalSpent?: number
   customerTier?: string
   customerTierLabel?: string
   workStatus?: string

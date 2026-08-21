@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLabel, type Order, type OrderStatus } from '../services/orderApi'
 import { getMyProfile, type UserDto } from '../services/userApi'
 import { useLanguage } from '../services/i18n'
+import { getTierProgress, getTierConfig, getTierLabel, type TierProgress } from '../services/customerTier'
 
 interface TimelineStep {
   key: string
@@ -24,6 +25,19 @@ const loading = ref(true)
 const error = ref('')
 
 const { t, currentLanguage, setLanguage } = useLanguage()
+
+const totalCustomerSpent = computed(() => {
+  const userSpent = (profile.value?.totalSpent !== undefined && profile.value?.totalSpent > 0)
+    ? profile.value.totalSpent
+    : (auth.user?.totalSpent !== undefined && auth.user?.totalSpent > 0)
+      ? auth.user.totalSpent
+      : paidOrders.value.reduce((sum, order) => sum + (Number(order.total) || 0), 0)
+  return userSpent
+})
+
+const tierProgress = computed(() => getTierProgress(totalCustomerSpent.value))
+const currentTierConfig = computed(() => tierProgress.value.currentTierConfig)
+const currentTierLabel = computed(() => getTierLabel(totalCustomerSpent.value, currentLanguage.value === 'en' ? 'en' : 'vi'))
 
 // Collapsible option states
 const isAccountOpen = ref(true)
@@ -222,11 +236,18 @@ onMounted(load)
           <p>{{ t('Quản lý thông tin tài khoản, địa chỉ mặc định và tra cứu chi tiết lịch sử mua sắm của bạn.', 'Manage your account information, default address, and search through your shopping history.') }}</p>
         </div>
         <div class="banner-metrics">
-          <div class="metric-glass-card">
-            <i class="pi pi-id-card" />
+          <div class="metric-glass-card tier-card" :class="currentTierConfig.badgeClass">
+            <i :class="currentTierConfig.icon" />
             <div>
               <small>{{ t('HẠNG THÀNH VIÊN', 'MEMBERSHIP TIER') }}</small>
-              <strong>{{ profile?.customerTierLabel || t('Thành viên thường', 'Standard Member') }}</strong>
+              <strong>{{ currentTierLabel }}</strong>
+            </div>
+          </div>
+          <div class="metric-glass-card">
+            <i class="pi pi-wallet" />
+            <div>
+              <small>{{ t('TỔNG CHI TIÊU', 'TOTAL SPENT') }}</small>
+              <strong>{{ formatCurrency(totalCustomerSpent) }}</strong>
             </div>
           </div>
           <div class="metric-glass-card">
@@ -235,6 +256,37 @@ onMounted(load)
               <small>{{ t('TỔNG ĐƠN HÀNG', 'TOTAL ORDERS') }}</small>
               <strong>{{ orders.length }}</strong>
             </div>
+          </div>
+        </div>
+
+        <!-- VIP Tier Progress Tracker Strip -->
+        <div class="tier-progress-card">
+          <div class="progress-info-row">
+            <div class="current-tier-tag">
+              <i :class="currentTierConfig.icon" />
+              <span>{{ t(currentTierConfig.labelVi, currentTierConfig.labelEn) }}</span>
+            </div>
+            <div class="progress-status-copy">
+              <span v-if="tierProgress.nextTier">
+                {{ t('Đã chi tiêu', 'Spent') }} <strong>{{ formatCurrency(totalCustomerSpent) }}</strong>.
+                {{ t('Cần thêm', 'Need') }} <strong>{{ formatCurrency(tierProgress.amountNeeded) }}</strong>
+                {{ t('để thăng hạng', 'to reach') }} <strong>{{ t(tierProgress.nextTierConfig?.labelVi || '', tierProgress.nextTierConfig?.labelEn || '') }}</strong>
+              </span>
+              <span v-else>
+                💎 {{ t('Chúc mừng bạn đã đạt Hạng Thành Viên Kim Cương cao nhất!', 'Congratulations on achieving the highest Diamond Member tier!') }}
+              </span>
+            </div>
+            <div v-if="tierProgress.nextTier" class="next-tier-tag">
+              <span>{{ t(tierProgress.nextTierConfig?.labelVi || '', tierProgress.nextTierConfig?.labelEn || '') }}</span>
+              <i :class="tierProgress.nextTierConfig?.icon" />
+            </div>
+          </div>
+
+          <div class="progress-track-bar">
+            <div
+              class="progress-fill-bar"
+              :style="{ width: `${tierProgress.progressPercent}%`, backgroundColor: currentTierConfig.color }"
+            />
           </div>
         </div>
       </section>
@@ -654,30 +706,51 @@ onMounted(load)
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  padding: 20px 24px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-width: 180px;
-  transition: transform 0.2s;
+  gap: 14px;
+  min-width: 160px;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .metric-glass-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.metric-glass-card.tier-card.platinum i {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.2);
+}
+
+.metric-glass-card.tier-card.gold i {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.metric-glass-card.tier-card.silver i {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.metric-glass-card.tier-card.standard i {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.2);
 }
 
 .metric-glass-card i {
-  font-size: 28px;
+  font-size: 24px;
   color: #2dd4bf;
   background: rgba(45, 212, 191, 0.15);
-  padding: 12px;
+  padding: 10px;
   border-radius: 12px;
 }
 
 .metric-glass-card div {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .metric-glass-card small {
@@ -689,10 +762,71 @@ onMounted(load)
 }
 
 .metric-glass-card strong {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: white;
 }
+
+/* Tier Progress Tracker Card */
+.tier-progress-card {
+  grid-column: 1 / -1;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.progress-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.current-tier-tag, .next-tier-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 750;
+  color: #f1f5f9;
+}
+
+.progress-status-copy {
+  font-size: 13px;
+  color: #e2e8f0;
+  flex: 1;
+  text-align: center;
+}
+
+.progress-status-copy strong {
+  color: #2dd4bf;
+  font-weight: 750;
+}
+
+.progress-track-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.progress-fill-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
 
 /* Loading & error cards */
 .loading-state-card,
