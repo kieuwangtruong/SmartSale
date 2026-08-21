@@ -7,10 +7,15 @@ export interface TierThreshold {
   labelEn: string
   badgeClass: string
   color: string
+  gradient: string
+  glowColor: string
   bgLight: string
   borderColor: string
   icon: string
+  logoEmoji: string
   discountPercent: number
+  taglineVi: string
+  taglineEn: string
   descriptionVi: string
   descriptionEn: string
 }
@@ -23,10 +28,15 @@ export const TIER_CONFIG: Record<CustomerTier, TierThreshold> = {
     labelEn: 'Diamond',
     badgeClass: 'platinum',
     color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%)',
+    glowColor: 'rgba(168, 85, 247, 0.45)',
     bgLight: 'rgba(139, 92, 246, 0.12)',
-    borderColor: 'rgba(139, 92, 246, 0.35)',
+    borderColor: 'rgba(139, 92, 246, 0.4)',
     icon: 'pi pi-star-fill',
+    logoEmoji: '💎',
     discountPercent: 10,
+    taglineVi: 'Đặc quyền Kim Cương VIP — Giảm 10% đơn hàng',
+    taglineEn: 'Diamond VIP Tier — 10% Discount on orders',
     descriptionVi: 'Chi tiêu từ 20.000.000 ₫ — Hạng thành viên tối cao, đặc quyền VIP cao nhất',
     descriptionEn: 'Spent from 20,000,000 ₫ — Highest VIP tier with exclusive benefits',
   },
@@ -37,10 +47,15 @@ export const TIER_CONFIG: Record<CustomerTier, TierThreshold> = {
     labelEn: 'Gold',
     badgeClass: 'gold',
     color: '#f59e0b',
+    gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)',
+    glowColor: 'rgba(245, 158, 11, 0.45)',
     bgLight: 'rgba(245, 158, 11, 0.12)',
-    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
     icon: 'pi pi-shield',
+    logoEmoji: '👑',
     discountPercent: 5,
+    taglineVi: 'Đặc quyền Vàng VIP — Giảm 5% đơn hàng',
+    taglineEn: 'Gold VIP Tier — 5% Discount on orders',
     descriptionVi: 'Chi tiêu từ 8.000.000 ₫ — Khách hàng VIP thân thiết, ưu đãi đặc biệt',
     descriptionEn: 'Spent from 8,000,000 ₫ — Valued VIP customer with special perks',
   },
@@ -51,10 +66,15 @@ export const TIER_CONFIG: Record<CustomerTier, TierThreshold> = {
     labelEn: 'Silver',
     badgeClass: 'silver',
     color: '#0ea5e9',
+    gradient: 'linear-gradient(135deg, #93c5fd 0%, #38bdf8 50%, #64748b 100%)',
+    glowColor: 'rgba(14, 165, 233, 0.35)',
     bgLight: 'rgba(14, 165, 233, 0.12)',
-    borderColor: 'rgba(14, 165, 233, 0.35)',
+    borderColor: 'rgba(14, 165, 233, 0.4)',
     icon: 'pi pi-ticket',
+    logoEmoji: '🥈',
     discountPercent: 2,
+    taglineVi: 'Đặc quyền Bạc VIP — Giảm 2% đơn hàng',
+    taglineEn: 'Silver VIP Tier — 2% Discount on orders',
     descriptionVi: 'Chi tiêu từ 2.000.000 ₫ — Khách hàng thân thiết tích cực',
     descriptionEn: 'Spent from 2,000,000 ₫ — Active loyal customer',
   },
@@ -65,10 +85,15 @@ export const TIER_CONFIG: Record<CustomerTier, TierThreshold> = {
     labelEn: 'Standard',
     badgeClass: 'standard',
     color: '#64748b',
+    gradient: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)',
+    glowColor: 'rgba(100, 116, 139, 0.2)',
     bgLight: 'rgba(100, 116, 139, 0.12)',
     borderColor: 'rgba(100, 116, 139, 0.3)',
     icon: 'pi pi-user',
+    logoEmoji: '👤',
     discountPercent: 0,
+    taglineVi: 'Thành viên tiêu chuẩn',
+    taglineEn: 'Standard member',
     descriptionVi: 'Dưới 2.000.000 ₫ — Thành viên tiêu chuẩn',
     descriptionEn: 'Under 2,000,000 ₫ — Standard member',
   },

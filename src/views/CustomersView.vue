@@ -23,6 +23,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useLanguage, currentLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
 import { getTierByTotalSpent, getTierConfig, getTierLabel } from '../services/customerTier'
+import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 const auth = useAuthStore()
 const { t } = useLanguage()
@@ -182,10 +183,10 @@ const genderOptions = computed(() =>
 )
 
 const tierOptions = computed(() => [
-  { label: t('Thành viên thường', 'Standard Member'), value: 'Standard' },
-  { label: t('Thành viên Bạc', 'Silver Member'), value: 'Silver' },
-  { label: t('Thành viên Vàng', 'Gold Member'), value: 'Gold' },
-  { label: t('Thành viên Kim cương', 'Platinum Member'), value: 'Platinum' },
+  { label: `👤 ${t('Thành viên thường', 'Standard Member')}`, value: 'Standard' },
+  { label: `🥈 ${t('Thành viên Bạc (Giảm 2%)', 'Silver Member (2% Off)')}`, value: 'Silver' },
+  { label: `👑 ${t('Thành viên Vàng (Giảm 5%)', 'Gold Member (5% Off)')}`, value: 'Gold' },
+  { label: `💎 ${t('Thành viên Kim cương (Giảm 10%)', 'Platinum/Diamond Member (10% Off)')}`, value: 'Platinum' },
 ])
 
 const selectedTierFilter = ref<string>('all')
@@ -449,10 +450,10 @@ onMounted(load)
         
         <select v-model="selectedTierFilter" class="filter-select">
           <option value="all">{{ t('Tất cả hạng', 'All tiers') }}</option>
-          <option value="Standard">{{ t('Thường', 'Standard') }}</option>
-          <option value="Silver">{{ t('Bạc', 'Silver') }}</option>
-          <option value="Gold">{{ t('Vàng', 'Gold') }}</option>
-          <option value="Platinum">{{ t('Kim cương', 'Platinum') }}</option>
+          <option value="Standard">👤 {{ t('Thường', 'Standard') }}</option>
+          <option value="Silver">🥈 {{ t('Bạc', 'Silver') }}</option>
+          <option value="Gold">👑 {{ t('Vàng', 'Gold') }}</option>
+          <option value="Platinum">💎 {{ t('Kim cương', 'Platinum') }}</option>
         </select>
 
         <button type="button" class="excel-btn" @click="showImportModal = true">
@@ -551,9 +552,17 @@ onMounted(load)
                 @change="toggleSelectCustomer(item.id)"
               />
             </td>
-            <td>{{ item.fullName }}<small>{{ item.address }}</small></td>
+            <td>
+              <div class="customer-name-wrapper">
+                <CustomerTierBadge :tier="item.tier" size="xs" variant="logo-only" />
+                <strong>{{ item.fullName }}</strong>
+              </div>
+              <small>{{ item.address }}</small>
+            </td>
             <td>{{ item.phone }}<small>{{ item.email }}</small></td>
-            <td><span class="tier-label" :class="item.tier?.toLowerCase()">{{ translateTier(item.tier) }}</span></td>
+            <td>
+              <CustomerTierBadge :tier="item.tier" size="sm" variant="badge" :show-discount="true" />
+            </td>
             <td>{{ translateGender(item.gender) }}</td>
             <td>{{ item.cccd || '—' }}</td>
             <td>{{ item.age && item.age > 0 ? item.age : '—' }}</td>
@@ -586,6 +595,11 @@ onMounted(load)
 </template>
 
 <style scoped>
+.customer-name-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .tier-label {
   display: inline-flex;
   padding: 4px 10px;

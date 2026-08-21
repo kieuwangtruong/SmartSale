@@ -120,12 +120,73 @@ export interface StockReceipt {
 }
 
 function normalizeProduct(product: ProductApiResponse): Product {
+  const originalPrice = product.originalPrice || product.sellingPrice || 0
+  const sellingPrice = (product.salePrice && product.salePrice < originalPrice) ? product.salePrice : (product.sellingPrice || originalPrice)
+  const quantity = Math.max(0, Number(product.quantity) || 0)
+  const reserveStock = Math.max(0, Number(product.reserveStock) || 0)
+
+  let variants = Array.isArray(product.variants) && product.variants.length > 0 ? product.variants : []
+  if (!variants.length) {
+    variants = [
+      {
+        id: product.id * 100 + 1,
+        productId: product.id,
+        name: 'Tiêu chuẩn',
+        sku: `SKU-${product.id}`,
+        originalPrice,
+        salePrice: product.salePrice,
+        sellingPrice,
+        quantity,
+        reserveStock,
+        isActive: true,
+        colors: [
+          {
+            id: product.id * 1000 + 1,
+            name: 'Mặc định',
+            hexCode: '#3b82f6',
+            quantity,
+            isActive: true,
+            images: product.imageUrl ? [{ id: 1, imageUrl: product.imageUrl, sortOrder: 1 }] : [],
+          },
+        ],
+      },
+    ]
+  } else {
+    variants = variants.map((v) => {
+      const variantQty = Number(v.quantity) || quantity
+      let colors = Array.isArray(v.colors) && v.colors.length > 0 ? v.colors : []
+      if (!colors.length) {
+        colors = [
+          {
+            id: v.id * 10 + 1,
+            name: 'Mặc định',
+            hexCode: '#3b82f6',
+            quantity: variantQty,
+            isActive: true,
+            images: [],
+          },
+        ]
+      }
+      return {
+        ...v,
+        quantity: variantQty,
+        sellingPrice: v.sellingPrice || (v.salePrice && v.salePrice < v.originalPrice ? v.salePrice : v.originalPrice) || sellingPrice,
+        colors,
+      }
+    })
+  }
+
+  const imageUrls = product.imageUrls && product.imageUrls.length > 0
+    ? product.imageUrls
+    : (product.ImageUrls && product.ImageUrls.length > 0 ? product.ImageUrls : (product.imageUrl ? [product.imageUrl] : []))
+
   return {
     ...product,
     description: product.description ?? product.Description ?? null,
-    imageUrls: product.imageUrls ?? product.ImageUrls ?? [],
+    imageUrl: product.imageUrl || imageUrls[0] || null,
+    imageUrls,
     imageItems: product.imageItems ?? product.ImageItems ?? [],
-    variants: product.variants ?? [],
+    variants,
   }
 }
 

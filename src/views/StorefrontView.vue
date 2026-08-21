@@ -11,6 +11,7 @@ import { useLanguage } from "../services/i18n";
 import { translateProductName } from "../services/productTranslations";
 import { PRODUCT_MOCKS } from "../services/productMocks";
 import { getTierByTotalSpent, getTierConfig, getTierLabel } from "../services/customerTier";
+import CustomerTierBadge from "../components/CustomerTierBadge.vue";
 
 const { t, currentLanguage, setLanguage } = useLanguage();
 function toggleLang() {
@@ -119,7 +120,7 @@ const enrichedProductDetails = computed(() => {
   const mock = PRODUCT_MOCKS[p.id];
   const enName = translateProductName(p);
   
-  const overview = mock?.overview[currentLanguage.value] || p.description || t(
+  const overview = p.description || mock?.overview[currentLanguage.value] || t(
     `Sản phẩm ${p.name} sở hữu thiết kế thông minh, hiện đại mang lại sự tiện ích và thoải mái cho không gian của bạn.`,
     `The ${enName} features a smart, modern design that brings convenience and comfort to your space.`
   );
@@ -534,9 +535,13 @@ const selectedVariant = computed(() => selectedProduct.value?.variants
 const selectableColors = computed(() => selectedVariant.value?.colors ?? []);
 const selectedColor = computed(() => selectableColors.value
   .find((color) => color.id === selectedColorId.value) ?? null);
-const selectedStock = computed(() => selectedVariant.value && selectedColor.value
-  ? Math.min(selectedVariant.value.quantity, selectedColor.value.quantity)
-  : 0);
+const selectedStock = computed(() => {
+  if (!selectedProduct.value) return 0;
+  if (selectedVariant.value && selectedColor.value) {
+    return Math.min(selectedProduct.value.quantity, Math.min(selectedVariant.value.quantity, selectedColor.value.quantity));
+  }
+  return selectedProduct.value.quantity || 0;
+});
 const selectedDetailImages = computed(() => {
   const images = selectedColor.value?.images.map((image) => image.imageUrl).filter(Boolean) ?? [];
   return images.length ? images : selectedProduct.value ? getEnrichedProductImages(selectedProduct.value) : [];
@@ -631,6 +636,12 @@ const totalCustomerSpent = computed(() =>
   purchasedCustomerOrders.value.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
 );
 const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
+const displayedCustomerTier = computed(() => {
+  const userSpent = (auth.user?.totalSpent !== undefined && auth.user?.totalSpent > 0)
+    ? auth.user.totalSpent
+    : totalCustomerSpent.value;
+  return getTierByTotalSpent(userSpent);
+});
 const displayedCustomerTierLabel = computed(() => {
   const userSpent = (auth.user?.totalSpent !== undefined && auth.user?.totalSpent > 0)
     ? auth.user.totalSpent
@@ -901,24 +912,57 @@ function handleHeroSearchClickOutside(event: MouseEvent) {
 
 // Add to cart from product detail modal
 function addToCartFromDetail() {
-  if (!selectedProduct.value || !selectedVariant.value || !selectedColor.value || selectedStock.value <= 0) return;
-  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id
-    && item.variant.id === selectedVariant.value!.id && item.color.id === selectedColor.value!.id);
-  const quantity = productDetailQuantity.value;
+  if (!selectedProduct.value) return;
+  const product = selectedProduct.value;
+  const variant = selectedVariant.value
+    ?? product.variants?.find((item) => item.isActive && item.quantity > 0)
+    ?? product.variants?.[0]
+    ?? {
+      id: product.id * 100 + 1,
+      productId: product.id,
+      name: 'Tiêu chuẩn',
+      sku: `SKU-${product.id}`,
+      originalPrice: product.originalPrice || product.sellingPrice,
+      salePrice: product.salePrice,
+      sellingPrice: product.sellingPrice,
+      quantity: product.quantity || 1,
+      reserveStock: product.reserveStock || 0,
+      isActive: true,
+      colors: [],
+    };
+  const color = selectedColor.value
+    ?? variant?.colors?.find((item) => item.isActive && item.quantity > 0)
+    ?? variant?.colors?.[0]
+    ?? {
+      id: product.id * 1000 + 1,
+      name: 'Mặc định',
+      hexCode: '#3b82f6',
+      quantity: product.quantity || 1,
+      isActive: true,
+      images: [],
+    };
+  const availableStock = selectedStock.value > 0 ? selectedStock.value : Math.max(1, product.quantity || 1);
+  if (availableStock <= 0) return;
+
+  const line = cart.value.find((item) => item.product.id === product.id
+    && item.variant.id === variant.id && item.color.id === color.id);
+  const quantity = Math.max(1, Math.min(productDetailQuantity.value || 1, availableStock));
   
   if (line) {
-    if (line.quantity + quantity <= selectedStock.value) {
+    if (line.quantity + quantity <= availableStock) {
       line.quantity += quantity;
+    } else {
+      line.quantity = availableStock;
     }
   } else {
-    cart.value.push({ product: selectedProduct.value, variant: selectedVariant.value, color: selectedColor.value, quantity });
+    cart.value.push({ product, variant, color, quantity });
   }
 
   try {
     eventTracker.trackAddToCart({
-      id: selectedProduct.value.id,
-      name: selectedProduct.value.name,
-      sellingPrice: selectedProduct.value.sellingPrice,
+      id: product.id,
+      name: product.name,
+      sellingPrice: product.sellingPrice,
     }, quantity);
   } catch {}
   
@@ -932,17 +976,50 @@ function addToCartFromDetail() {
 }
 
 function buyNowFromDetail() {
-  if (!selectedProduct.value || !selectedVariant.value || !selectedColor.value || selectedStock.value <= 0) return;
-  const line = cart.value.find((item) => item.product.id === selectedProduct.value!.id
-    && item.variant.id === selectedVariant.value!.id && item.color.id === selectedColor.value!.id);
-  const quantity = productDetailQuantity.value;
+  if (!selectedProduct.value) return;
+  const product = selectedProduct.value;
+  const variant = selectedVariant.value
+    ?? product.variants?.find((item) => item.isActive && item.quantity > 0)
+    ?? product.variants?.[0]
+    ?? {
+      id: product.id * 100 + 1,
+      productId: product.id,
+      name: 'Tiêu chuẩn',
+      sku: `SKU-${product.id}`,
+      originalPrice: product.originalPrice || product.sellingPrice,
+      salePrice: product.salePrice,
+      sellingPrice: product.sellingPrice,
+      quantity: product.quantity || 1,
+      reserveStock: product.reserveStock || 0,
+      isActive: true,
+      colors: [],
+    };
+  const color = selectedColor.value
+    ?? variant?.colors?.find((item) => item.isActive && item.quantity > 0)
+    ?? variant?.colors?.[0]
+    ?? {
+      id: product.id * 1000 + 1,
+      name: 'Mặc định',
+      hexCode: '#3b82f6',
+      quantity: product.quantity || 1,
+      isActive: true,
+      images: [],
+    };
+  const availableStock = selectedStock.value > 0 ? selectedStock.value : Math.max(1, product.quantity || 1);
+  if (availableStock <= 0) return;
+
+  const line = cart.value.find((item) => item.product.id === product.id
+    && item.variant.id === variant.id && item.color.id === color.id);
+  const quantity = Math.max(1, Math.min(productDetailQuantity.value || 1, availableStock));
   
   if (line) {
-    if (line.quantity + quantity <= selectedStock.value) {
+    if (line.quantity + quantity <= availableStock) {
       line.quantity += quantity;
+    } else {
+      line.quantity = availableStock;
     }
   } else {
-    cart.value.push({ product: selectedProduct.value, variant: selectedVariant.value, color: selectedColor.value, quantity });
+    cart.value.push({ product, variant, color, quantity });
   }
   
   // Animate cart button
@@ -957,15 +1034,38 @@ function buyNowFromDetail() {
 
 // Direct add to cart (triggered from add button, not modal)
 function quickAddToCart(product: Product) {
-  const variant = product.variants.find((item) => item.isActive && item.quantity > 0);
-  const color = variant?.colors.find((item) => item.isActive && item.quantity > 0);
-  if (!variant || !color) return;
+  const variant = product.variants?.find((item) => item.isActive && item.quantity > 0)
+    ?? product.variants?.[0]
+    ?? {
+      id: product.id * 100 + 1,
+      productId: product.id,
+      name: 'Tiêu chuẩn',
+      sku: `SKU-${product.id}`,
+      originalPrice: product.originalPrice || product.sellingPrice,
+      salePrice: product.salePrice,
+      sellingPrice: product.sellingPrice,
+      quantity: product.quantity || 1,
+      reserveStock: product.reserveStock || 0,
+      isActive: true,
+      colors: [],
+    };
+  const color = variant?.colors?.find((item) => item.isActive && item.quantity > 0)
+    ?? variant?.colors?.[0]
+    ?? {
+      id: product.id * 1000 + 1,
+      name: 'Mặc định',
+      hexCode: '#3b82f6',
+      quantity: product.quantity || 1,
+      isActive: true,
+      images: [],
+    };
   
   const line = cart.value.find((item) => item.product.id === product.id
     && item.variant.id === variant.id && item.color.id === color.id);
   
+  const availableStock = Math.max(1, Math.min(product.quantity || 999, Math.min(variant.quantity || 999, color.quantity || 999)));
   if (line) {
-    if (line.quantity + 1 <= Math.min(variant.quantity, color.quantity)) {
+    if (line.quantity + 1 <= availableStock) {
       line.quantity += 1;
     }
   } else {
@@ -980,7 +1080,8 @@ function quickAddToCart(product: Product) {
 }
 
 function changeQuantity(line: CartLine, quantity: number) {
-  line.quantity = Math.max(1, Math.min(quantity || 1, Math.min(line.variant.quantity, line.color.quantity)));
+  const maxStock = Math.max(1, Math.min(line.product.quantity || 999, Math.min(line.variant.quantity || 999, line.color.quantity || 999)));
+  line.quantity = Math.max(1, Math.min(quantity || 1, maxStock));
 }
 
 function removeLine(lineToRemove: CartLine) {
@@ -1400,6 +1501,9 @@ onUnmounted(() => {
         <div v-else class="customer-menu">
           <button class="customer-avatar" type="button" @click="toggleCustomerPanel">
             {{ customerInitials }}
+            <span class="avatar-tier-icon">
+              <CustomerTierBadge :tier="displayedCustomerTier" size="xs" variant="logo-only" />
+            </span>
           </button>
           <aside v-if="showCustomerPanel" class="customer-panel">
             <div class="customer-panel-head">
@@ -1412,10 +1516,18 @@ onUnmounted(() => {
             <p v-if="customerPanelError" class="customer-panel-error">{{ customerPanelError }}</p>
             <p v-else-if="customerPanelLoading" class="customer-panel-muted">{{ t('Đang tải thông tin...', 'Loading profile info...') }}</p>
             <template v-else>
-              <div class="customer-tier-card">
-                <small>{{ t('Hạng thành viên', 'Membership Tier') }}</small>
-                <strong>{{ displayedCustomerTierLabel }}</strong>
-                <span>{{ totalPurchasedOrderCount }} {{ t('đơn đã mua', 'purchased orders') }}</span>
+              <div class="customer-tier-card-wrapper">
+                <CustomerTierBadge
+                  :tier="displayedCustomerTier"
+                  size="md"
+                  variant="card"
+                  :show-discount="true"
+                  :show-tagline="true"
+                />
+                <div class="tier-orders-stat">
+                  <i class="pi pi-shopping-bag" />
+                  <span>{{ totalPurchasedOrderCount }} {{ t('đơn đã tích lũy', 'accumulated orders') }}</span>
+                </div>
               </div>
               <div class="customer-panel-buttons">
                 <button class="panel-btn" type="button" @click="openProfileModal">
@@ -1862,7 +1974,7 @@ onUnmounted(() => {
           </div>
           <div class="profile-detail-row">
             <strong>{{ t('Hạng thành viên:', 'Membership Tier:') }}</strong>
-            <span class="badge-tier">{{ displayedCustomerTierLabel }}</span>
+            <CustomerTierBadge :tier="displayedCustomerTier" size="sm" variant="badge" :show-discount="true" />
           </div>
         </div>
 
@@ -9922,6 +10034,41 @@ background: rgba(56, 189, 248, 0.1) !important;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.customer-avatar {
+  position: relative;
+}
+
+.avatar-tier-icon {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.customer-tier-card-wrapper {
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tier-orders-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+}
+
+.app-dark .tier-orders-stat {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
 }
 </style>
 

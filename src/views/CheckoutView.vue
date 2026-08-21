@@ -11,6 +11,8 @@ import {
 import type { Product, ProductVariant, ProductVariantColor } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
+import { getTierByTotalSpent } from '../services/customerTier'
+import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 interface CartLine {
   product: Product
@@ -40,6 +42,10 @@ const form = reactive({
   phone: '',
   email: '',
   address: '',
+})
+
+const customerTier = computed(() => {
+  return getTierByTotalSpent(auth.user?.totalSpent || 0)
 })
 
 const cartCount = computed(() =>
@@ -195,7 +201,10 @@ onMounted(() => {
       <form class="checkout-card checkout-form" @submit.prevent="submitOrder">
         <div class="section-title">
           <span>{{ t('Thông tin nhận hàng', 'Shipping Information') }}</span>
-          <strong>{{ t('Người nhận', 'Recipient') }}</strong>
+          <div class="checkout-title-row">
+            <strong>{{ t('Người nhận', 'Recipient') }}</strong>
+            <CustomerTierBadge v-if="auth.isAuthenticated" :tier="customerTier" size="sm" variant="badge" :show-discount="true" />
+          </div>
         </div>
 
         <label>
@@ -348,6 +357,14 @@ onMounted(() => {
   display: grid;
   gap: 4px;
   margin-bottom: 20px;
+}
+
+.checkout-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .section-title strong {

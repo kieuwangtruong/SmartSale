@@ -29,6 +29,8 @@ import { getUsers, type UserDto } from '../services/userApi'
 import { filterVisibleOrders } from '../services/orderHiddenStorage'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
+import { getTierByTotalSpent } from '../services/customerTier'
+import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 const auth = useAuthStore()
 const isAdmin = computed(() => auth.role === 'Admin')
@@ -106,12 +108,23 @@ const itemsPerPage = 10
 /** Giá trị hiển thị dropdown — reset về trạng thái gốc nếu không đổi được */
 const statusDraft = reactive<Record<number, OrderStatus>>({})
 
+function getCustomerTier(customerId?: number | null) {
+  if (!customerId) return 'Standard'
+  const c = customers.value.find((cust) => cust.id === customerId)
+  if (!c) return 'Standard'
+  return c.tier || getTierByTotalSpent(c.totalSpent || 0)
+}
+
 const customerOptions = computed(() => [
   { label: t('Khách lẻ', 'Walk-in Customer'), value: null as number | null },
-  ...customers.value.map((c) => ({
-    label: `${c.fullName} - ${c.phone}`,
-    value: c.id,
-  })),
+  ...customers.value.map((c) => {
+    const tier = c.tier || getTierByTotalSpent(c.totalSpent || 0)
+    const emoji = tier === 'Platinum' ? '💎' : tier === 'Gold' ? '👑' : tier === 'Silver' ? '🥈' : '👤'
+    return {
+      label: `${emoji} ${c.fullName} - ${c.phone}`,
+      value: c.id,
+    }
+  }),
 ])
 
 const productOptions = computed(() =>
@@ -582,7 +595,16 @@ onMounted(load)
         <div class="detail-grid">
           <div class="detail-card">
             <span>{{ t('Khách hàng', 'Customer') }}</span>
-            <strong>{{ selectedOrder.customerName || t('Khách lẻ', 'Walk-in') }}</strong>
+            <div class="order-detail-cust-row">
+              <strong>{{ selectedOrder.customerName || t('Khách lẻ', 'Walk-in') }}</strong>
+              <CustomerTierBadge
+                v-if="selectedOrder.customerId"
+                :tier="getCustomerTier(selectedOrder.customerId)"
+                size="xs"
+                variant="badge"
+                :show-discount="true"
+              />
+            </div>
           </div>
           <div class="detail-card">
             <span>{{ t('Trạng thái', 'Status') }}</span>
@@ -745,7 +767,17 @@ onMounted(load)
               />
             </td>
             <td>#{{ order.id }}</td>
-            <td>{{ order.customerName || t('Khách lẻ', 'Walk-in') }}</td>
+            <td>
+              <div class="order-customer-cell">
+                <CustomerTierBadge
+                  v-if="order.customerId"
+                  :tier="getCustomerTier(order.customerId)"
+                  size="xs"
+                  variant="logo-only"
+                />
+                <span>{{ order.customerName || t('Khách lẻ', 'Walk-in') }}</span>
+              </div>
+            </td>
             <td>{{ formatCurrency(order.total) }}</td>
             <td><span class="payment-method-badge">{{ getPaymentMethodLabel(order.paymentMethod) }}</span></td>
             <td>{{ formatCurrency(order.debtAmount) }}</td>
@@ -787,6 +819,12 @@ onMounted(load)
 </template>
 
 <style scoped>
+.order-customer-cell,
+.order-detail-cust-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .page-head-actions {
   display: flex;
   align-items: center;

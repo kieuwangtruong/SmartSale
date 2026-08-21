@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken'
 import OpenAI from 'openai'
 import { PayOS } from '@payos/node'
 import { query } from './db.js'
+import { openApiSpec, swaggerHtml } from './openapi.js'
 
 const app = express()
 const roles = new Set(['Admin', 'SalesStaff', 'WarehouseKeeper', 'Customer'])
@@ -29,6 +30,43 @@ app.use(cors({
   },
 }))
 app.use(express.json({ limit: '256kb' }))
+
+app.get('/', (_req, res) => {
+  res.json({
+    status: 'online',
+    service: 'SmartSale REST API Server',
+    version: '1.0.0',
+    database: 'Neon Serverless PostgreSQL (Connected)',
+    docsUrl: 'http://localhost:3001/docs',
+    endpoints: [
+      'GET /api/products',
+      'GET /api/categories',
+      'GET /api/suppliers',
+      'GET /api/orders',
+      'GET /api/User/me',
+      'GET /api/reports/dashboard'
+    ],
+    webAppUrl: process.env.PUBLIC_WEB_URL || 'http://localhost:5173',
+    message: 'SmartSale API is running successfully. Visit /docs to view Swagger documentation.'
+  })
+})
+
+app.get('/docs', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.send(swaggerHtml())
+})
+
+app.get('/swagger', (_req, res) => {
+  res.redirect('/docs')
+})
+
+app.get('/api/openapi.json', (_req, res) => {
+  res.json(openApiSpec)
+})
+
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() })
+})
 
 function apiError(statusCode, message) {
   const error = new Error(message)

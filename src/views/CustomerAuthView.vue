@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { registerCustomer } from '../services/userApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
+import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -55,6 +56,11 @@ async function submit() {
           <span class="eyebrow">Smart Sale Store</span>
           <h1>{{ t('Chào mừng Quý khách', 'Welcome Valued Customer') }}</h1>
           <p>{{ t('Đăng nhập hoặc đăng ký tài khoản thành viên để bắt đầu hành trình mua sắm thông minh và tích lũy ưu đãi hấp dẫn.', 'Sign in or register a member account to start shopping smart and accumulate attractive rewards.') }}</p>
+          <div class="auth-tier-strip">
+            <CustomerTierBadge tier="Platinum" size="xs" variant="badge" :show-discount="true" />
+            <CustomerTierBadge tier="Gold" size="xs" variant="badge" :show-discount="true" />
+            <CustomerTierBadge tier="Silver" size="xs" variant="badge" :show-discount="true" />
+          </div>
           <div class="brand-footer">
             <small>© 2026 Smart Sale Store. All rights reserved.</small>
           </div>
@@ -486,5 +492,13 @@ button.submit-btn:disabled {
   .form-panel {
     padding: 45px 24px;
   }
+}
+
+.auth-tier-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0 20px;
 }
 </style>
