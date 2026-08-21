@@ -20,8 +20,9 @@ import ExportExcelModal from '../components/ExportExcelModal.vue'
 import ImportExcelModal from '../components/ImportExcelModal.vue'
 import { exportToExcel } from '../utils/excelUtils'
 import { useAuthStore } from '../stores/authStore'
-import { useLanguage } from '../services/i18n'
+import { useLanguage, currentLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
+import { getTierByTotalSpent, getTierConfig, getTierLabel } from '../services/customerTier'
 
 const auth = useAuthStore()
 const { t } = useLanguage()
@@ -430,10 +431,7 @@ function translateGender(gender?: number | null) {
 }
 
 function translateTier(tier: string | null | undefined) {
-  if (tier === 'Silver') return t('Bạc', 'Silver')
-  if (tier === 'Gold') return t('Vàng', 'Gold')
-  if (tier === 'Platinum') return t('Kim cương', 'Platinum')
-  return t('Thường', 'Standard')
+  return getTierLabel(tier, currentLanguage.value === 'en' ? 'en' : 'vi')
 }
 
 onMounted(load)

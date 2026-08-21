@@ -91,11 +91,21 @@ function productDto(row) {
   }
 }
 
+function calculateTierBySpent(totalSpent) {
+  const spent = number(totalSpent)
+  if (spent >= 20000000) return 'Platinum'
+  if (spent >= 8000000) return 'Gold'
+  if (spent >= 2000000) return 'Silver'
+  return 'Standard'
+}
+
 function customerDto(row) {
+  const totalSpent = number(row.totalSpent)
+  const tier = calculateTierBySpent(totalSpent)
   return {
     id: Number(row.id), fullName: row.fullName, phone: row.phone, email: row.email,
     address: row.address, gender: row.gender, cccd: row.cccd, age: row.age,
-    tier: row.tier, totalSpent: number(row.totalSpent), currentDebt: number(row.currentDebt),
+    tier, totalSpent, currentDebt: number(row.currentDebt),
     orderCount: integer(row.orderCount), createdAt: toIso(row.createdAt), lastModifiedAt: toIso(row.lastModifiedAt),
   }
 }
@@ -150,7 +160,23 @@ async function findUser(id) {
             last_modified_at AS "lastModifiedAt"
      FROM users WHERE id = $1`, [id],
   )
-  return row ? userDto(row) : null
+  if (!row) return null
+  const user = userDto(row)
+  if (user.role === 'Customer') {
+    const [spentRow] = await query(
+      `SELECT COALESCE(SUM(total) FILTER (WHERE status NOT IN ('Cancelled','PaymentCancelled','PaymentExpired')), 0) AS "totalSpent",
+              COUNT(id) AS "paidOrderCount"
+       FROM orders WHERE user_id = $1`, [id],
+    )
+    const totalSpent = number(spentRow?.totalSpent)
+    const tier = calculateTierBySpent(totalSpent)
+    const tierLabels = { Platinum: 'Thành viên Kim cương', Gold: 'Thành viên Vàng', Silver: 'Thành viên Bạc', Standard: 'Thành viên thường' }
+    user.totalSpent = totalSpent
+    user.customerTier = tier
+    user.customerTierLabel = tierLabels[tier] || 'Thành viên thường'
+    user.paidOrderCount = integer(spentRow?.paidOrderCount)
+  }
+  return user
 }
 
 function payos() {
@@ -259,7 +285,7 @@ app.post('/api/User/login', asyncRoute(async (req, res) => {
      FROM users WHERE email = $1`, [email],
   )
   if (!row || !(await bcrypt.compare(password, row.passwordHash))) throw apiError(401, 'Email hoặc mật khẩu không đúng.')
-  const user = userDto(row)
+  const user = await findUser(Number(row.id))
   return res.json({ ...signTokens(user), user })
 }))
 

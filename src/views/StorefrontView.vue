@@ -10,6 +10,7 @@ import { useAuthStore } from "../stores/authStore";
 import { useLanguage } from "../services/i18n";
 import { translateProductName } from "../services/productTranslations";
 import { PRODUCT_MOCKS } from "../services/productMocks";
+import { getTierByTotalSpent, getTierConfig, getTierLabel } from "../services/customerTier";
 
 const { t, currentLanguage, setLanguage } = useLanguage();
 function toggleLang() {
@@ -624,15 +625,17 @@ const customerInitials = computed(() => {
 });
 const isCustomerLoggedIn = computed(() => auth.isAuthenticated && auth.user?.role === "Customer");
 const purchasedCustomerOrders = computed(() =>
-  customerOrders.value.filter((order) => order.status === "Completed"),
+  customerOrders.value.filter((order) => order.status === "Completed" || order.status === "Paid" || order.status === "Shipped"),
+);
+const totalCustomerSpent = computed(() =>
+  purchasedCustomerOrders.value.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
 );
 const totalPurchasedOrderCount = computed(() => purchasedCustomerOrders.value.length);
 const displayedCustomerTierLabel = computed(() => {
-  const count = totalPurchasedOrderCount.value;
-  if (count >= 100) return t("Thành viên Kim cương", "Diamond Member");
-  if (count >= 60) return t("Thành viên Vàng", "Gold Member");
-  if (count >= 30) return t("Thành viên Bạc", "Silver Member");
-  return t("Thành viên thường", "Standard Member");
+  const userSpent = (auth.user?.totalSpent !== undefined && auth.user?.totalSpent > 0)
+    ? auth.user.totalSpent
+    : totalCustomerSpent.value;
+  return getTierLabel(userSpent, currentLanguage.value === 'en' ? 'en' : 'vi');
 });
 
 async function loadProducts() {

@@ -5,8 +5,9 @@ import Chart from 'primevue/chart'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Button from 'primevue/button'
-import { formatCurrency, getOrders, type Order } from '../services/orderApi'
+import { formatCurrency, getCustomers, getOrders, type Customer, type Order } from '../services/orderApi'
 import { getLowStock, getProducts, getStockReceipts, type Product, type StockReceipt } from '../services/productApi'
+import { calculateCustomerTierBreakdown, getTierConfig, getTierLabel, TIER_CONFIG } from '../services/customerTier'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
 import * as XLSX from 'xlsx'
@@ -20,6 +21,8 @@ import {
 
 const report = ref<DashboardReport | null>(null)
 const chart = ref<RevenueChart | null>(null)
+const customersList = ref<Customer[]>([])
+const tierBreakdown = computed(() => calculateCustomerTierBreakdown(customersList.value))
 const groupBy = ref<'day' | 'month'>('day')
 const loading = ref(true)
 const { t } = useLanguage()
@@ -466,10 +469,12 @@ async function load() {
       console.warn('Unable to load products for map:', err)
     }
 
-    const [apiReport, apiChart] = await Promise.all([
+    const [apiReport, apiChart, custs] = await Promise.all([
       getDashboardReport(),
       getRevenueChart(groupBy.value),
+      getCustomers().catch(() => []),
     ])
+    customersList.value = custs || []
 
     if (apiReport && (apiReport.orderCount > 0 || apiReport.revenueToday > 0 || apiReport.revenueThisMonth > 0)) {
       report.value = apiReport
@@ -484,7 +489,11 @@ async function load() {
   } catch (exception) {
     console.warn('Reports API error, fallback to local calculation:', exception)
     try {
-      const allOrders = await getOrders()
+      const [allOrders, custs] = await Promise.all([
+        getOrders(),
+        getCustomers().catch(() => []),
+      ])
+      customersList.value = custs || []
       report.value = calculateReport(allOrders)
       chart.value = calculateChart(allOrders, groupBy.value)
       await loadWarehouseStats(allOrders)
@@ -733,7 +742,7 @@ onMounted(load)
             </div>
             <div class="summary-metric">
               <span class="sm-label">{{ t('Trung bình / Kỳ', 'Average / Period') }}</span>
-              <strong class="sm-value">{{ formatCurrency(trendChartData.datasets[0].data.length ? totalChartRevenue / trendChartData.datasets[0].data.length : 0) }}</strong>
+              <strong class="sm-value">{{ formatCurrency(trendChartData.datasets?.[0]?.data?.length ? totalChartRevenue / (trendChartData.datasets[0].data.length || 1) : 0) }}</strong>
               <small class="sm-sub">{{ t('Doanh thu TB', 'Mean run rate') }}</small>
             </div>
             <div class="summary-metric">
@@ -794,6 +803,57 @@ onMounted(load)
           </div>
         </article>
       </div>
+
+      <!-- VIP Membership Tiers Executive Overview Card -->
+      <article class="panel vip-tiers-panel">
+        <div class="panel-header-row">
+          <div>
+            <span class="section-kicker">{{ t('PHÂN HẠNG THÀNH VIÊN VIP (THEO TỔNG CHI TIÊU)', 'VIP MEMBERSHIP TIERS (BY TOTAL SPENT)') }}</span>
+            <h3>{{ t('Cơ cấu & Đóng góp Doanh thu theo Hạng Khách hàng', 'Revenue Contribution & Customer Distribution by Tier') }}</h3>
+          </div>
+          <RouterLink to="/customers" class="view-all-link">
+            {{ t('Quản lý khách hàng', 'Manage Customers') }} <i class="pi pi-arrow-right" />
+          </RouterLink>
+        </div>
+
+        <div class="vip-tiers-grid">
+          <div
+            v-for="item in tierBreakdown"
+            :key="item.tier"
+            class="vip-tier-card"
+            :class="item.config.badgeClass"
+          >
+            <div class="tier-card-header">
+              <span class="tier-badge-pill" :class="item.config.badgeClass">
+                <i :class="item.config.icon" />
+                <span>{{ t(item.config.labelVi, item.config.labelEn) }}</span>
+              </span>
+              <span class="tier-cust-count">
+                <strong>{{ item.customerCount }}</strong> {{ t('khách', 'clients') }}
+              </span>
+            </div>
+
+            <div class="tier-revenue-box">
+              <span class="tier-rev-label">{{ t('Tổng chi tiêu tích lũy', 'Total Accumulated Spent') }}</span>
+              <strong class="tier-rev-val">{{ formatCurrency(item.totalRevenue) }}</strong>
+            </div>
+
+            <div class="tier-footer-strip">
+              <span class="tier-condition-badge">
+                {{ item.tier === 'Standard' ? '< 2.000.000 ₫' : `≥ ${formatCurrency(item.config.minSpent)}` }}
+              </span>
+              <span class="tier-share-tag">{{ item.percentageRevenue }}% {{ t('doanh thu', 'rev') }}</span>
+            </div>
+
+            <div class="tier-bar-track">
+              <div
+                class="tier-bar-fill"
+                :style="{ width: `${Math.max(item.percentageRevenue, item.customerCount > 0 ? 5 : 0)}%`, backgroundColor: item.config.color }"
+              />
+            </div>
+          </div>
+        </div>
+      </article>
 
       <!-- Bottom Tables Grid: Top Products & High-Value Customers -->
       <div class="grid-2">
@@ -876,6 +936,15 @@ onMounted(load)
               </template>
             </Column>
 
+            <Column :header="t('Hạng VIP', 'VIP Tier')" style="width: 135px; text-align: center">
+              <template #body="{ data }">
+                <span class="tier-badge-pill table-badge" :class="getTierConfig(data.revenue).badgeClass">
+                  <i :class="getTierConfig(data.revenue).icon" />
+                  {{ t(getTierConfig(data.revenue).labelVi, getTierConfig(data.revenue).labelEn) }}
+                </span>
+              </template>
+            </Column>
+
             <Column :header="t('Tổng chi tiêu', 'Total Spent')" style="width: 140px; text-align: right">
               <template #body="{ data }">
                 <strong class="spent-val">{{ formatCurrency(data.revenue) }}</strong>
@@ -895,6 +964,7 @@ onMounted(load)
           </DataTable>
         </article>
       </div>
+
     </template>
   </section>
 </template>
@@ -1425,6 +1495,182 @@ onMounted(load)
   color: #059669;
   font-size: 11px;
   font-weight: 750;
+}
+
+/* VIP Tiers Executive Panel */
+.vip-tiers-panel {
+  margin-top: 4px;
+}
+
+.vip-tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.vip-tier-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vip-tier-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.vip-tier-card.platinum {
+  border-top: 4px solid #8b5cf6;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.03) 0%, #ffffff 100%);
+}
+
+.vip-tier-card.gold {
+  border-top: 4px solid #f59e0b;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.03) 0%, #ffffff 100%);
+}
+
+.vip-tier-card.silver {
+  border-top: 4px solid #0ea5e9;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.03) 0%, #ffffff 100%);
+}
+
+.vip-tier-card.standard {
+  border-top: 4px solid #64748b;
+  background: linear-gradient(180deg, rgba(100, 116, 139, 0.03) 0%, #ffffff 100%);
+}
+
+.tier-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tier-cust-count {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.tier-cust-count strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.tier-revenue-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tier-rev-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.tier-rev-val {
+  font-size: 17px;
+  font-weight: 850;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.tier-footer-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.tier-condition-badge {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  font-size: 10.5px;
+}
+
+.tier-share-tag {
+  font-weight: 750;
+  color: var(--text-muted);
+}
+
+.tier-bar-track {
+  height: 5px;
+  border-radius: 99px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.tier-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* Tier Badge Pill */
+.tier-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.tier-badge-pill.table-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.tier-badge-pill.platinum {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.tier-badge-pill.gold {
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.tier-badge-pill.silver {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+.tier-badge-pill.standard {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+@media (max-width: 1200px) {
+  .vip-tiers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .vip-tiers-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1050px) {
