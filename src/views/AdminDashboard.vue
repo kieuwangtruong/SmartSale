@@ -8,6 +8,7 @@ import Button from 'primevue/button'
 import { formatCurrency, getCustomers, getOrders, type Customer, type Order } from '../services/orderApi'
 import { getLowStock, getProducts, getStockReceipts, type Product, type StockReceipt } from '../services/productApi'
 import { calculateCustomerTierBreakdown, getTierConfig, getTierLabel, TIER_CONFIG } from '../services/customerTier'
+import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 import { useLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
 import * as XLSX from 'xlsx'
@@ -824,10 +825,7 @@ onMounted(load)
             :class="item.config.badgeClass"
           >
             <div class="tier-card-header">
-              <span class="tier-badge-pill" :class="item.config.badgeClass">
-                <i :class="item.config.icon" />
-                <span>{{ t(item.config.labelVi, item.config.labelEn) }}</span>
-              </span>
+              <CustomerTierBadge :tier="item.tier" size="sm" variant="badge" :show-discount="true" />
               <span class="tier-cust-count">
                 <strong>{{ item.customerCount }}</strong> {{ t('khách', 'clients') }}
               </span>
@@ -936,12 +934,9 @@ onMounted(load)
               </template>
             </Column>
 
-            <Column :header="t('Hạng VIP', 'VIP Tier')" style="width: 135px; text-align: center">
+            <Column :header="t('Hạng VIP', 'VIP Tier')" style="width: 145px; text-align: center">
               <template #body="{ data }">
-                <span class="tier-badge-pill table-badge" :class="getTierConfig(data.revenue).badgeClass">
-                  <i :class="getTierConfig(data.revenue).icon" />
-                  {{ t(getTierConfig(data.revenue).labelVi, getTierConfig(data.revenue).labelEn) }}
-                </span>
+                <CustomerTierBadge :spent="data.revenue" size="xs" variant="badge" :show-discount="true" />
               </template>
             </Column>
 

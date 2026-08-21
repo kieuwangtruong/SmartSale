@@ -6,6 +6,7 @@ import { formatCurrency, getMyPurchases, getOrderStatusLabel, getPaymentMethodLa
 import { getMyProfile, type UserDto } from '../services/userApi'
 import { useLanguage } from '../services/i18n'
 import { getTierProgress, getTierConfig, getTierLabel, type TierProgress } from '../services/customerTier'
+import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 interface TimelineStep {
   key: string
@@ -237,10 +238,13 @@ onMounted(load)
         </div>
         <div class="banner-metrics">
           <div class="metric-glass-card tier-card" :class="currentTierConfig.badgeClass">
-            <i :class="currentTierConfig.icon" />
+            <CustomerTierBadge :tier="currentTierConfig.tier" size="lg" variant="logo-only" />
             <div>
               <small>{{ t('HẠNG THÀNH VIÊN', 'MEMBERSHIP TIER') }}</small>
               <strong>{{ currentTierLabel }}</strong>
+              <span class="tier-card-perk" v-if="currentTierConfig.discountPercent > 0">
+                -{{ currentTierConfig.discountPercent }}% {{ t('ưu đãi VIP', 'VIP perk') }}
+              </span>
             </div>
           </div>
           <div class="metric-glass-card">
@@ -263,8 +267,7 @@ onMounted(load)
         <div class="tier-progress-card">
           <div class="progress-info-row">
             <div class="current-tier-tag">
-              <i :class="currentTierConfig.icon" />
-              <span>{{ t(currentTierConfig.labelVi, currentTierConfig.labelEn) }}</span>
+              <CustomerTierBadge :tier="currentTierConfig.tier" size="xs" variant="badge" />
             </div>
             <div class="progress-status-copy">
               <span v-if="tierProgress.nextTier">
@@ -277,15 +280,14 @@ onMounted(load)
               </span>
             </div>
             <div v-if="tierProgress.nextTier" class="next-tier-tag">
-              <span>{{ t(tierProgress.nextTierConfig?.labelVi || '', tierProgress.nextTierConfig?.labelEn || '') }}</span>
-              <i :class="tierProgress.nextTierConfig?.icon" />
+              <CustomerTierBadge :tier="tierProgress.nextTier" size="xs" variant="badge" />
             </div>
           </div>
 
           <div class="progress-track-bar">
             <div
               class="progress-fill-bar"
-              :style="{ width: `${tierProgress.progressPercent}%`, backgroundColor: currentTierConfig.color }"
+              :style="{ width: `${tierProgress.progressPercent}%`, background: currentTierConfig.gradient || currentTierConfig.color }"
             />
           </div>
         </div>
@@ -342,6 +344,12 @@ onMounted(load)
                   <strong class="info-value">
                     {{ profile?.sex === 0 ? t('Nam', 'Male') : profile?.sex === 1 ? t('Nữ', 'Female') : t('Khác', 'Other') }}
                   </strong>
+                </div>
+                <div class="info-card">
+                  <span class="info-label">{{ t('Hạng thành viên', 'Membership Tier') }}</span>
+                  <div style="margin-top: 4px;">
+                    <CustomerTierBadge :tier="currentTierConfig.tier" size="sm" variant="badge" :show-discount="true" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -765,6 +773,13 @@ onMounted(load)
   font-size: 18px;
   font-weight: 800;
   color: white;
+}
+
+.tier-card-perk {
+  font-size: 11px;
+  font-weight: 750;
+  color: #fde047;
+  letter-spacing: 0.02em;
 }
 
 /* Tier Progress Tracker Card */
