@@ -1300,7 +1300,7 @@ const paginatedProducts = computed(() => {
 });
 
 const featuredProducts = computed(() => {
-  return visibleProducts.value.slice(0, 12);
+  return visibleProducts.value;
 });
 
 const activeSlide = ref(0);
