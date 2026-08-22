@@ -652,5 +652,10 @@ app.use((error, _req, res, _next) => {
   res.status(status).json({ message: error.message || 'Máy chủ gặp lỗi không mong muốn.' })
 })
 
-const port = Number(process.env.PORT || 10000)
-app.listen(port, () => console.log(`SmartSale API listening on ${port}`))
+export default app
+
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)
+if (!isServerless && (process.env.NODE_ENV !== 'test')) {
+  const port = Number(process.env.PORT || 10000)
+  app.listen(port, () => console.log(`SmartSale API listening on ${port}`))
+}
