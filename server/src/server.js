@@ -1103,14 +1103,47 @@ app.post('/api/payments/links', authenticate, requireRoles('Customer'), asyncRou
   })
   const orderCode = Date.now()
   const publicWebUrl = requireValue(process.env.PUBLIC_WEB_URL, 'PUBLIC_WEB_URL').replace(/\/$/, '')
+  const totalAmount = Math.round(data.total)
+
+  // Ensure PayOS items sum matches the final discounted total
+  let payosItems = []
+  if (data.totalDiscount > 0 && data.subtotal > 0) {
+    const factor = data.total / data.subtotal
+    let currentSum = 0
+    payosItems = data.items.map((item, idx) => {
+      if (idx === data.items.length - 1) {
+        const itemTotal = Math.max(0, totalAmount - currentSum)
+        const unitPrice = Math.max(0, Math.round(itemTotal / item.quantity))
+        return { name: item.productName.slice(0, 100), quantity: item.quantity, price: unitPrice }
+      }
+      const itemTotal = Math.round(item.subTotal * factor)
+      currentSum += itemTotal
+      const unitPrice = Math.max(0, Math.round(itemTotal / item.quantity))
+      return { name: item.productName.slice(0, 100), quantity: item.quantity, price: unitPrice }
+    })
+  } else {
+    payosItems = data.items.map((item) => ({
+      name: item.productName.slice(0, 100),
+      quantity: item.quantity,
+      price: Math.round(item.price),
+    }))
+  }
+
   const link = await payos().paymentRequests.create({
-    orderCode, amount: Math.round(data.total), description: `Thanh toan #${orderCode}`.slice(0, 25),
-    items: data.items.map((item) => ({ name: item.productName.slice(0, 100), quantity: item.quantity, price: Math.round(item.price) })),
+    orderCode,
+    amount: totalAmount,
+    description: `Thanh toan #${orderCode}`.slice(0, 25),
+    items: payosItems,
     returnUrl: `${publicWebUrl}/#/payment/success?orderCode=${orderCode}`,
     cancelUrl: `${publicWebUrl}/#/payment/cancelled?orderCode=${orderCode}`,
   })
   await query('UPDATE orders SET payment_order_code=$1, last_modified_at=now() WHERE id=$2', [orderCode, data.id])
-  res.status(201).json({ orderId: data.id, orderCode, checkoutUrl: link.checkoutUrl, expiresAt: link.expiredAt ? new Date(link.expiredAt * 1000).toISOString() : new Date(Date.now() + 15 * 60 * 1000).toISOString() })
+  res.status(201).json({
+    orderId: data.id,
+    orderCode,
+    checkoutUrl: link.checkoutUrl,
+    expiresAt: link.expiredAt ? new Date(link.expiredAt * 1000).toISOString() : new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  })
 }))
 
 app.get('/api/payments/:orderCode', asyncRoute(async (req, res) => {

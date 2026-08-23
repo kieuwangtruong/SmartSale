@@ -313,14 +313,23 @@ onMounted(() => {
           <i class="pi pi-check-circle" /> {{ success }}
         </p>
 
+        <!-- VIP Member Tier Highlight Card -->
+        <div v-if="tierDiscountPercent > 0" class="vip-benefit-banner">
+          <div class="vip-benefit-icon">
+            <i class="pi pi-crown" />
+          </div>
+          <div class="vip-benefit-text">
+            <strong>{{ t('Đặc quyền thành viên', 'VIP Member Privilege') }} {{ customerTier }}</strong>
+            <p>{{ t('Bạn được tự động chiết khấu', 'You receive an automatic discount of') }} <b>{{ tierDiscountPercent }}%</b> (-{{ formatCurrency(tierDiscountAmount) }}) {{ t('trực tiếp vào số tiền thanh toán trước khi tạo mã QR.', 'directly on your checkout total before QR code creation.') }}</p>
+          </div>
+        </div>
+
         <button class="submit-order" type="submit" :disabled="loading">
           <i v-if="loading" class="pi pi-spin pi-spinner" />
-          <span>
-            {{ loading
-              ? t('Đang xử lý...', 'Processing...')
-              : paymentMethod === 'payos'
-                ? t('Thanh toán PayOS', 'Pay with PayOS')
-                : t('Đặt hàng', 'Place order')
+          <span v-else>
+            {{ paymentMethod === 'payos'
+                ? `${t('Thanh toán QR PayOS', 'Pay with PayOS QR')} (${formatCurrency(finalTotal)})`
+                : `${t('Đặt hàng tiền mặt', 'Place Cash Order')} (${formatCurrency(finalTotal)})`
             }}
           </span>
         </button>
@@ -864,6 +873,44 @@ onMounted(() => {
 
 .coupon-discount .discount-value {
   color: #9333ea;
+}
+
+.vip-benefit-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  color: #92400e;
+  margin-top: 4px;
+}
+
+.vip-benefit-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.vip-benefit-text strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #78350f;
+}
+
+.vip-benefit-text p {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: #92400e;
+  line-height: 1.35;
 }
 
 @media (max-width: 900px) {
