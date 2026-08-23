@@ -56,6 +56,7 @@ const filter = ref<'All' | OrderStatus>('All')
 
 const form = reactive({
   customerId: null as number | null,
+  couponCode: '',
   discountAmount: 0,
   amountPaid: 0,
   items: [{ productId: 0, quantity: 1 }],
@@ -324,7 +325,11 @@ function reset() {
   showForm.value = false
   resetCustomerForm()
   Object.assign(form, {
-    customerId: null, discountAmount: 0, amountPaid: 0, items: [{ productId: 0, quantity: 1 }],
+    customerId: null,
+    couponCode: '',
+    discountAmount: 0,
+    amountPaid: 0,
+    items: [{ productId: 0, quantity: 1 }],
   })
 }
 
@@ -388,6 +393,7 @@ async function submit() {
     await createOrder({
       userId: auth.user.id,
       customerId: form.customerId,
+      couponCode: form.couponCode?.trim() || null,
       discountAmount: form.discountAmount,
       amountPaid: form.amountPaid,
       orderItems: items,
@@ -526,7 +532,8 @@ onMounted(load)
             <i class="pi pi-user-plus" /> {{ t('Thêm KH', 'Add Customer') }}
           </button>
         </div>
-        <label>{{ t('Giảm giá', 'Discount') }}<input v-model.number="form.discountAmount" type="number" min="0" /></label>
+        <label>{{ t('Mã giảm giá (Coupon Code nếu có)', 'Coupon Code (if any)') }}<input v-model="form.couponCode" type="text" placeholder="VD: SUMMER10, TECH200K..." class="uppercase" /></label>
+        <label>{{ t('Giảm giá thêm (₫)', 'Extra Discount') }}<input v-model.number="form.discountAmount" type="number" min="0" /></label>
         <label>{{ t('Đã thanh toán', 'Amount Paid') }}<input v-model.number="form.amountPaid" type="number" min="0" /></label>
 
         <div class="form-section-title">{{ t('Danh sách sản phẩm', 'Product List') }}</div>
@@ -663,9 +670,17 @@ onMounted(load)
             <span>{{ t('Tạm tính', 'Subtotal') }}</span>
             <strong>{{ formatCurrency(selectedOrder.subtotal) }}</strong>
           </div>
-          <div>
-            <span>{{ t('Giảm giá', 'Discount') }}</span>
-            <strong>{{ formatCurrency(selectedOrder.discountAmount) }}</strong>
+          <div v-if="selectedOrder.tierDiscountAmount">
+            <span>{{ t('Chiết khấu VIP', 'VIP Tier Discount') }} ({{ selectedOrder.tierDiscountPercent || 0 }}%)</span>
+            <strong class="text-amber-500">-{{ formatCurrency(selectedOrder.tierDiscountAmount) }}</strong>
+          </div>
+          <div v-if="selectedOrder.couponCode">
+            <span>{{ t('Mã giảm giá', 'Coupon') }} ({{ selectedOrder.couponCode }})</span>
+            <strong class="text-purple-500">-{{ formatCurrency(selectedOrder.couponDiscountAmount || 0) }}</strong>
+          </div>
+          <div v-if="selectedOrder.discountAmount">
+            <span>{{ t('Tổng giảm giá', 'Total Discount') }}</span>
+            <strong class="text-green-600">-{{ formatCurrency(selectedOrder.discountAmount) }}</strong>
           </div>
           <div>
             <span>{{ t('Đã thanh toán', 'Paid') }}</span>

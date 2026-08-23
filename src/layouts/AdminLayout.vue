@@ -34,6 +34,7 @@ const navSections = computed<NavSection[]>(() => [
       { to: '/dashboard', label: t('Tổng quan', 'Dashboard'), icon: 'pi pi-th-large', roles: ['Admin'] },
       { to: '/orders', label: t('Đơn hàng', 'Orders'), icon: 'pi pi-shopping-cart', roles: ['Admin', 'SalesStaff'] },
       { to: '/products', label: t('Sản phẩm', 'Products'), icon: 'pi pi-box', roles: ['Admin', 'WarehouseKeeper', 'SalesStaff'] },
+      { to: '/promotions', label: t('Ưu đãi & Sale', 'Promotions'), icon: 'pi pi-tag', roles: ['Admin', 'SalesStaff'], badge: 'Sale' },
       { to: '/customers', label: t('Khách hàng', 'Customers'), icon: 'pi pi-users', roles: ['Admin', 'SalesStaff'] },
       { to: '/admin/analytics', label: t('Báo cáo & BI', 'Reports'), icon: 'pi pi-file', roles: ['Admin'], badge: 'BI' },
     ],

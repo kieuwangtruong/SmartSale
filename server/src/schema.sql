@@ -130,7 +130,72 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS promotions (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+  discount_value NUMERIC(14,2) NOT NULL CHECK (discount_value > 0),
+  min_order_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  max_discount_amount NUMERIC(14,2),
+  applies_to TEXT NOT NULL DEFAULT 'all' CHECK (applies_to IN ('all', 'category', 'product')),
+  start_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+  end_date TIMESTAMPTZ,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_modified_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS promotion_items (
+  id BIGSERIAL PRIMARY KEY,
+  promotion_id BIGINT NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+  product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+  category_id BIGINT REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS coupons (
+  id BIGSERIAL PRIMARY KEY,
+  promotion_id BIGINT REFERENCES promotions(id) ON DELETE SET NULL,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+  discount_value NUMERIC(14,2) NOT NULL CHECK (discount_value > 0),
+  min_order_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  max_discount_amount NUMERIC(14,2),
+  max_uses INTEGER,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  max_uses_per_customer INTEGER DEFAULT 1,
+  applies_to TEXT NOT NULL DEFAULT 'all' CHECK (applies_to IN ('all', 'category', 'product')),
+  start_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+  end_date TIMESTAMPTZ,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_modified_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS coupon_items (
+  id BIGSERIAL PRIMARY KEY,
+  coupon_id BIGINT NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+  product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+  category_id BIGINT REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS coupon_usages (
+  id BIGSERIAL PRIMARY KEY,
+  coupon_id BIGINT NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+  order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  customer_id BIGINT REFERENCES customers(id) ON DELETE SET NULL,
+  user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  discount_applied NUMERIC(14,2) NOT NULL DEFAULT 0,
+  used_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS orders_customer_id_idx ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS orders_payment_order_code_idx ON orders(payment_order_code);
 CREATE INDEX IF NOT EXISTS products_low_stock_idx ON products(quantity, reserve_stock);
 CREATE INDEX IF NOT EXISTS chat_messages_session_id_idx ON chat_messages(session_id, id);
+CREATE INDEX IF NOT EXISTS coupons_code_idx ON coupons(code);
+CREATE INDEX IF NOT EXISTS coupon_usages_coupon_id_idx ON coupon_usages(coupon_id);

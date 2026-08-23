@@ -33,6 +33,14 @@
 
 ---
 
+## 🌐 Production Deployment
+
+- **Frontend (Static Site):** [https://www.smartsale-dev.me](https://www.smartsale-dev.me) — Deploy trên **Vercel**
+- **Backend API:** Deploy trên **Render** (`smartsale-api` service)
+- **Database:** Neon Serverless PostgreSQL
+
+---
+
 ## 🔑 Tài khoản Demo hệ thống
 
 | Vai trò / Hạng thành viên | Họ và tên | Email đăng nhập | Mật khẩu (Password) | Tổng chi tiêu / Ghi chú |
@@ -40,16 +48,74 @@
 | **Quản trị viên (Admin)** | Nguyễn Thế Dân | `admin@smartsale.com` | `Admin@123456` | Toàn quyền quản trị & Dashboard |
 | **Nhân viên bán hàng (Sales)** | Trần Phương Linh | `sales@smartsale.com` | `Admin@123456` | Quản lý đơn & khách hàng |
 | **Thủ kho (Warehouse)** | Lê Hoàng Hải | `warehouse@smartsale.com` | `Admin@123456` | Nhập kho & Tồn kho |
-| 💎 **Khách VIP Kim Cương** | Phạm Quốc Việt | `diamond@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 20.000.000 ₫ (27.5M ₫) |
-| 🥇 **Khách VIP Vàng** | Nguyễn Thị Tuyết Mai | `gold@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 8.000.000 ₫ (12.9M ₫) |
-| 🥈 **Khách VIP Bạc** | Lê Thu Hương | `silver@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 2.000.000 ₫ (4.2M ₫) |
+| 💎 **Khách VIP Kim Cương** | Phạm Quốc Việt | `diamond@smartsale.com` | `Admin@123456` | Chi tiêu ≥ 20.000.000 ₫ (27.5M ₫) |
+| 🥇 **Khách VIP Vàng** | Nguyễn Thị Tuyết Mai | `gold@smartsale.com` | `Admin@123456` | Chi tiêu ≥ 8.000.000 ₫ (12.9M ₫) |
+| 🥈 **Khách VIP Bạc** | Lê Thu Hương | `silver@smartsale.com` | `Admin@123456` | Chi tiêu ≥ 2.000.000 ₫ (4.2M ₫) |
 | 👤 **Khách Thành viên Thường** | Trần Minh Đức | `standard@smartsale.com` | `Admin@123456` | Chi tiêu < 2.000.000 ₫ (640k ₫) |
 | 💎 **Khách VIP (Legacy)** | Phạm Quốc Việt | `customer@smartsale.com` | `Admin@123456` | Tài khoản khách hàng mặc định |
 
+---
+
+## ⚙️ Cấu hình Biến Môi Trường
+
+### Frontend (`/.env`) — Chỉ dùng khi chạy local
+
+```env
+VITE_ENABLE_MOCK_FALLBACK=false
+VITE_API_URL=http://localhost:3001
+```
+
+> ⚠️ Khi deploy lên **Vercel**, phải set `VITE_API_URL` tại **Vercel Dashboard → Settings → Environment Variables** rồi **Redeploy** lại. File `.env` local KHÔNG có tác dụng trên production.
+
+### Backend (`/server/.env`) — Chỉ dùng khi chạy local
+
+```env
+# Neon Database
+DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require&channel_binding=require
+
+# URL production của Frontend
+PUBLIC_WEB_URL=https://www.smartsale-dev.me
+
+# Các domain được phép gọi API (CORS)
+CORS_ORIGINS=https://www.smartsale-dev.me,http://localhost:5173
+
+# JWT (tối thiểu 32 ký tự)
+JWT_SECRET=...
+
+# Tài khoản Admin mặc định (dùng khi chạy migrate)
+ADMIN_EMAIL=admin@smartsale.com
+ADMIN_PASSWORD=Admin@123456
+
+# PayOS
+PAYOS_CLIENT_ID=...
+PAYOS_API_KEY=...
+PAYOS_CHECKSUM_KEY=...
+
+# OpenAI (Chatbot)
+OPENAI_API_KEY=...
+```
+
+> ⚠️ Khi deploy lên **Render**, phải set tất cả biến trên tại **Render Dashboard → smartsale-api → Environment**. File `.env` local KHÔNG được đẩy lên git và KHÔNG có tác dụng trên production.
 
 ---
 
-## 💻 Cài đặt & Chạy ứng dụng
+## 🚀 Hướng dẫn Deploy Production
+
+### Frontend → Vercel
+
+1. Push code lên GitHub
+2. Vào **Vercel Dashboard → Settings → Environment Variables** → set `VITE_API_URL` = URL backend Render
+3. **Deployments → Tái triển khai (Redeploy)**
+
+### Backend → Render
+
+1. Vào **Render Dashboard → smartsale-api → Environment** → set đầy đủ các biến môi trường
+2. **Manual Deploy → Deploy latest commit**
+3. Webhook PayOS: `https://<render-api-url>/api/webhooks/payos`
+
+---
+
+## 💻 Cài đặt & Chạy ứng dụng (Local)
 
 ### 1. Khởi chạy Frontend:
 ```bash

@@ -80,12 +80,70 @@ function clearPurchasedCart() {
   localStorage.removeItem(CART_STORAGE_KEY)
 }
 
+import { TIER_CONFIG } from '../services/customerTier'
+import { validateCoupon, type CouponValidationResult } from '../services/promotionApi'
+
+const couponInput = ref('')
+const appliedCoupon = ref<CouponValidationResult['coupon'] | null>(null)
+const couponError = ref('')
+const couponLoading = ref(false)
+
+const tierDiscountPercent = computed(() => {
+  return TIER_CONFIG[customerTier.value]?.discountPercent || 0
+})
+
+const tierDiscountAmount = computed(() => {
+  if (tierDiscountPercent.value <= 0) return 0
+  return Math.round(cartTotal.value * (tierDiscountPercent.value / 100))
+})
+
+const couponDiscountAmount = computed(() => {
+  return appliedCoupon.value ? appliedCoupon.value.discountAmount : 0
+})
+
+const totalDiscountAmount = computed(() => {
+  return Math.min(cartTotal.value, tierDiscountAmount.value + couponDiscountAmount.value)
+})
+
+const finalTotal = computed(() => {
+  return Math.max(0, cartTotal.value - totalDiscountAmount.value)
+})
+
+async function applyCoupon() {
+  if (!couponInput.value.trim()) return
+  couponLoading.value = true
+  couponError.value = ''
+  try {
+    const result = await validateCoupon({
+      code: couponInput.value.trim(),
+      items: cart.value.map((line) => ({
+        productId: line.product.id,
+        quantity: line.quantity,
+      })),
+      userId: auth.user?.id || null,
+    })
+    appliedCoupon.value = result.coupon
+  } catch (err: any) {
+    couponError.value = err.message || 'Mã giảm giá không hợp lệ.'
+    appliedCoupon.value = null
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+function removeAppliedCoupon() {
+  appliedCoupon.value = null
+  couponInput.value = ''
+  couponError.value = ''
+}
+
 function buildPayload(): CustomerCheckoutPayload {
   return {
     fullName: form.fullName.trim(),
     phone: form.phone.trim(),
     email: form.email.trim() || null,
     address: form.address.trim(),
+    couponCode: appliedCoupon.value ? appliedCoupon.value.code : null,
     orderItems: cart.value.map((line) => ({
       productId: line.product.id,
       productVariantId: line.variant.id,
@@ -109,7 +167,7 @@ async function submitOrder() {
 
     if (paymentMethod.value === 'payos') {
       try {
-        eventTracker.track('payment_started', { amount: cartTotal.value, paymentMethod: 'payos' })
+        eventTracker.track('payment_started', { amount: finalTotal.value, paymentMethod: 'payos' })
       } catch {}
       const payment = await createPaymentLink(payload)
       window.location.assign(payment.checkoutUrl)
@@ -176,7 +234,15 @@ onMounted(() => {
           <strong>{{ t('Thanh toán tiền mặt', 'Cash payment') }}</strong>
         </div>
         <div>
-          <span>{{ t('Tổng tiền', 'Total') }}</span>
+          <span>{{ t('Tạm tính', 'Subtotal') }}</span>
+          <span>{{ formatCurrency(placedOrder.subtotal) }}</span>
+        </div>
+        <div v-if="placedOrder.discountAmount > 0">
+          <span>{{ t('Tổng giảm giá', 'Discount') }}</span>
+          <strong class="text-green-600">-{{ formatCurrency(placedOrder.discountAmount) }}</strong>
+        </div>
+        <div>
+          <span>{{ t('Tổng thanh toán', 'Final Total') }}</span>
           <strong>{{ formatCurrency(placedOrder.total) }}</strong>
         </div>
         <div>
@@ -185,7 +251,6 @@ onMounted(() => {
         </div>
       </div>
       <div class="result-actions">
-        
         <RouterLink to="/">{{ t('Tiếp tục mua sắm', 'Continue shopping') }}</RouterLink>
       </div>
     </section>
@@ -198,7 +263,7 @@ onMounted(() => {
     </section>
 
     <section v-else class="checkout-grid">
-      <form class="checkout-card checkout-form" @submit.prevent="submitOrder">
+      <form class="checkout-form checkout-card" @submit.prevent="submitOrder">
         <div class="section-title">
           <span>{{ t('Thông tin nhận hàng', 'Shipping Information') }}</span>
           <div class="checkout-title-row">
@@ -279,11 +344,71 @@ onMounted(() => {
           </article>
         </div>
 
-        <div class="summary-total">
-          <span>{{ t('Tổng tiền', 'Total') }}</span>
-          <strong>{{ formatCurrency(cartTotal) }}</strong>
+        <!-- Coupon Voucher Input Box -->
+        <div class="coupon-section">
+          <label class="coupon-label">{{ t('Mã giảm giá (Coupon)', 'Discount Coupon') }}</label>
+          <div v-if="!appliedCoupon" class="coupon-input-group">
+            <input
+              v-model="couponInput"
+              type="text"
+              class="coupon-input"
+              placeholder="VD: SUMMER10, WELCOME50K..."
+              @keyup.enter.prevent="applyCoupon"
+            />
+            <button type="button" class="coupon-btn" :disabled="couponLoading" @click="applyCoupon">
+              <i v-if="couponLoading" class="pi pi-spin pi-spinner" />
+              <span v-else>{{ t('Áp dụng', 'Apply') }}</span>
+            </button>
+          </div>
+
+          <div v-else class="applied-coupon-pill">
+            <div class="applied-coupon-info">
+              <i class="pi pi-tag text-purple-600" />
+              <div>
+                <strong class="coupon-code-badge">{{ appliedCoupon.code }}</strong>
+                <span class="coupon-name-text">{{ appliedCoupon.name }}</span>
+              </div>
+            </div>
+            <button type="button" class="remove-coupon-btn" title="Hủy mã" @click="removeAppliedCoupon">
+              <i class="pi pi-times" />
+            </button>
+          </div>
+
+          <p v-if="couponError" class="coupon-error-msg">
+            <i class="pi pi-exclamation-triangle" /> {{ couponError }}
+          </p>
         </div>
-  
+
+        <!-- Pricing Breakdown -->
+        <div class="pricing-breakdown">
+          <div class="breakdown-row">
+            <span>{{ t('Tạm tính', 'Subtotal') }}</span>
+            <span>{{ formatCurrency(cartTotal) }}</span>
+          </div>
+
+          <!-- Loyalty Tier Discount -->
+          <div v-if="tierDiscountAmount > 0" class="breakdown-row discount-row tier-discount">
+            <span>
+              <i class="pi pi-crown text-amber-500 mr-1" />
+              {{ t('Ưu đãi hạng', 'Loyalty Tier') }} ({{ customerTier }} -{{ tierDiscountPercent }}%)
+            </span>
+            <span class="discount-value">-{{ formatCurrency(tierDiscountAmount) }}</span>
+          </div>
+
+          <!-- Coupon Discount -->
+          <div v-if="couponDiscountAmount > 0" class="breakdown-row discount-row coupon-discount">
+            <span>
+              <i class="pi pi-ticket text-purple-500 mr-1" />
+              {{ t('Mã giảm giá', 'Coupon') }} ({{ appliedCoupon?.code }})
+            </span>
+            <span class="discount-value">-{{ formatCurrency(couponDiscountAmount) }}</span>
+          </div>
+
+          <div class="summary-total">
+            <span>{{ t('Tổng thanh toán', 'Total') }}</span>
+            <strong>{{ formatCurrency(finalTotal) }}</strong>
+          </div>
+        </div>
       </aside>
     </section>
   </main>
@@ -607,6 +732,138 @@ onMounted(() => {
   padding: 13px 18px;
   color: white;
   background: #0f766e;
+}
+
+.coupon-section {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+}
+
+.coupon-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.coupon-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.coupon-input {
+  flex: 1;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.coupon-input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.coupon-btn {
+  padding: 0.65rem 1rem;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.coupon-btn:hover {
+  background: #7c3aed;
+}
+
+.applied-coupon-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: #f3e8ff;
+  border: 1px solid #d8b4fe;
+  border-radius: 8px;
+}
+
+.applied-coupon-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coupon-code-badge {
+  font-family: monospace;
+  font-weight: 800;
+  color: #7e22ce;
+  margin-right: 0.4rem;
+}
+
+.coupon-name-text {
+  font-size: 0.8rem;
+  color: #6b21a8;
+}
+
+.remove-coupon-btn {
+  background: none;
+  border: none;
+  color: #9333ea;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px;
+}
+
+.remove-coupon-btn:hover {
+  color: #dc2626;
+}
+
+.coupon-error-msg {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.8rem;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pricing-breakdown {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.discount-row {
+  font-weight: 600;
+}
+
+.tier-discount .discount-value {
+  color: #d97706;
+}
+
+.coupon-discount .discount-value {
+  color: #9333ea;
 }
 
 @media (max-width: 900px) {

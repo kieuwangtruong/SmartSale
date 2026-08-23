@@ -55,6 +55,11 @@ export interface Order {
   paymentMethod?: OrderPaymentMethod | string | null
   subtotal: number
   discountAmount: number
+  couponId?: number | null
+  couponCode?: string | null
+  couponDiscountAmount?: number | null
+  tierDiscountAmount?: number | null
+  tierDiscountPercent?: number | null
   total: number
   amountPaid: number
   debtAmount: number
@@ -87,6 +92,10 @@ function normalizeOrder(order: OrderApiResponse): Order {
     salesStaffName: order.salesStaffName ?? order.SalesStaffName ?? null,
     createdByUserId: order.createdByUserId ?? order.CreatedByUserId ?? null,
     createdByUserName: order.createdByUserName ?? order.CreatedByUserName ?? null,
+    couponCode: order.couponCode ?? null,
+    couponDiscountAmount: order.couponDiscountAmount ?? 0,
+    tierDiscountAmount: order.tierDiscountAmount ?? 0,
+    tierDiscountPercent: order.tierDiscountPercent ?? 0,
   }
 }
 
@@ -143,8 +152,9 @@ export interface Supplier {
 export interface CreateOrderPayload {
   userId: number
   customerId?: number | null
-  discountAmount: number
-  amountPaid: number
+  discountAmount?: number
+  couponCode?: string | null
+  amountPaid?: number
   orderItems: Array<{ productId: number; productVariantId?: number | null; productVariantColorId?: number | null; quantity: number }>
 }
 
@@ -153,7 +163,8 @@ export interface CustomerCheckoutPayload {
   phone: string
   email?: string | null
   address: string
-  orderItems: Array<{ productId: number; productVariantId: number; productVariantColorId: number; quantity: number }>
+  couponCode?: string | null
+  orderItems: Array<{ productId: number; productVariantId?: number | null; productVariantColorId?: number | null; quantity: number }>
 }
 
 export interface PaymentLink {
