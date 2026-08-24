@@ -4,7 +4,9 @@ function normalizeUrl(value?: string) {
 }
 
 export const ENABLE_MOCK_FALLBACK = import.meta.env.VITE_ENABLE_MOCK_FALLBACK !== 'false'
-const sharedApiUrl = normalizeUrl(import.meta.env.VITE_API_URL)
+const defaultApi = import.meta.env.PROD ? 'https://smartsale-api.onrender.com' : 'http://localhost:3001'
+const rawApiUrl = import.meta.env.VITE_API_URL
+const sharedApiUrl = normalizeUrl(rawApiUrl && rawApiUrl !== 'http://localhost:3001' ? rawApiUrl : (import.meta.env.PROD ? defaultApi : (rawApiUrl || defaultApi)))
 
 export const API_URLS = {
   // Production Render setup uses a single SmartSale API. The three explicit values
