@@ -1193,6 +1193,13 @@ app.get('/api/reports/revenue-chart', authenticate, requireRoles('Admin'), async
   res.json({ groupBy, from: rows[0]?.label ?? '', to: rows.at(-1)?.label ?? '', labels: rows.map((r)=>r.label), revenue:rows.map((r)=>number(r.revenue)), orderCount:rows.map((r)=>integer(r.orderCount)) })
 }))
 
+async function activeChatSession(userId) {
+  const [existing] = await query('SELECT id FROM chat_sessions WHERE user_id=$1 AND ended_at IS NULL ORDER BY id DESC LIMIT 1', [userId])
+  if (existing) return Number(existing.id)
+  const [created] = await query('INSERT INTO chat_sessions (user_id) VALUES ($1) RETURNING id', [userId])
+  return Number(created.id)
+}
+
 async function buildRoleContext(user, userMessage) {
   const role = user.role || 'Customer'
   let contextInfo = ''
