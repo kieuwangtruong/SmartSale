@@ -22,10 +22,14 @@ services:
         sync: false
       - key: ADMIN_FULL_NAME
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
-        value: gpt-5.6
+        value: gpt-4o-mini
       - key: PAYOS_CLIENT_ID
         sync: false
       - key: PAYOS_API_KEY
