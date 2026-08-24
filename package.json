@@ -12,7 +12,9 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint src --fix",
     "lint:eslint": "eslint src --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "start": "node server/src/server.js",
+    "migrate": "node server/src/migrate.js"
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
