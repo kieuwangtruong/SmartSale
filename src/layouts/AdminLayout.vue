@@ -6,6 +6,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
+import AdminAIChatbot from '../components/AdminAIChatbot.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -271,6 +272,7 @@ onUnmounted(() => {
       </main>
     </div>
   </div>
+  <AdminAIChatbot />
   <Toast />
   <ConfirmDialog />
 </template>

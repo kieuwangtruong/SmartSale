@@ -1193,11 +1193,237 @@ app.get('/api/reports/revenue-chart', authenticate, requireRoles('Admin'), async
   res.json({ groupBy, from: rows[0]?.label ?? '', to: rows.at(-1)?.label ?? '', labels: rows.map((r)=>r.label), revenue:rows.map((r)=>number(r.revenue)), orderCount:rows.map((r)=>integer(r.orderCount)) })
 }))
 
-async function activeChatSession(userId) {
-  const [existing] = await query('SELECT id FROM chat_sessions WHERE user_id=$1 AND ended_at IS NULL ORDER BY id DESC LIMIT 1', [userId])
-  if (existing) return Number(existing.id)
-  const [created] = await query('INSERT INTO chat_sessions (user_id) VALUES ($1) RETURNING id', [userId])
-  return Number(created.id)
+async function buildRoleContext(user, userMessage) {
+  const role = user.role || 'Customer'
+  let contextInfo = ''
+  let roleTitle = ''
+
+  if (role === 'Customer') {
+    roleTitle = `Khách hàng (Tên: ${user.fullName || user.userName})`
+    // 1. Customer profile & VIP Tier
+    const [cust] = await query('SELECT full_name, phone, tier FROM customers WHERE user_id=$1', [user.id])
+    const [spentRow] = await query("SELECT COALESCE(SUM(total),0) AS total_spent, COUNT(*) AS order_count FROM orders WHERE user_id=$1 AND status NOT IN ('Cancelled','PaymentCancelled','PaymentExpired')", [user.id])
+    const totalSpent = Number(spentRow?.total_spent || 0)
+    const orderCount = Number(spentRow?.order_count || 0)
+
+    let tierName = 'Đồng (Bronze)'
+    if (totalSpent >= 20000000) tierName = 'Kim Cương (Diamond) - Giảm 10%'
+    else if (totalSpent >= 10000000) tierName = 'Vàng (Gold) - Giảm 5%'
+    else if (totalSpent >= 3000000) tierName = 'Bạc (Silver) - Giảm 2%'
+
+    // 2. Recent orders
+    const recentOrders = await query(`
+      SELECT id, status, payment_method, total, created_at 
+      FROM orders 
+      WHERE user_id=$1 
+      ORDER BY id DESC LIMIT 4
+    `, [user.id])
+
+    const orderText = recentOrders.map(o => `• Đơn #${o.id}: ${Math.round(number(o.total)).toLocaleString('vi-VN')}đ | Trạng thái: ${o.status} | Thanh toán: ${o.payment_method}`).join('\n') || 'Chưa có đơn hàng nào.'
+
+    // 3. Active promotions
+    const promos = await query(`
+      SELECT name, description, discount_type, discount_value, min_order_amount 
+      FROM promotions 
+      WHERE is_active=true AND (end_date IS NULL OR end_date >= now()) 
+      ORDER BY id DESC LIMIT 4
+    `)
+    const promoText = promos.map(p => `• ${p.name}: ${p.discount_type === 'percent' ? `Giảm ${p.discount_value}%` : `Giảm ${Math.round(number(p.discount_value)).toLocaleString('vi-VN')}đ`}${p.min_order_amount > 0 ? ` cho đơn từ ${Math.round(number(p.min_order_amount)).toLocaleString('vi-VN')}đ` : ''}`).join('\n') || 'Hiện chưa có mã ưu đãi mới.'
+
+    // 4. Products for customer
+    const products = await query('SELECT id, name, COALESCE(NULLIF(sale_price,0), selling_price) AS price, quantity FROM products WHERE quantity > 0 ORDER BY id DESC LIMIT 10')
+    const catalog = products.map((p) => `#${p.id} ${p.name} — ${Math.round(number(p.price)).toLocaleString('vi-VN')}đ (còn ${p.quantity})`).join('\n') || 'Kho hiện tại đang cập nhật sản phẩm.'
+
+    contextInfo = `
+[THÔNG TIN KHÁCH HÀNG HIỆN TẠI]
+- Tên: ${user.fullName || user.userName}
+- Tổng chi tiêu tích lũy: ${totalSpent.toLocaleString('vi-VN')}đ (${orderCount} đơn thành công)
+- Hạng thành viên hiện tại: ${tierName}
+
+[ĐƠN HÀNG GẦN ĐÂY CỦA KHÁCH]
+${orderText}
+
+[ƯU ĐÃI & KHUYẾN MÃI ĐANG HOẠT ĐỘNG]
+${promoText}
+
+[SẢN PHẨM NỔI BẬT ĐANG CÓ SẴN]
+${catalog}
+`
+  } else if (role === 'SalesStaff' || role === 'Admin') {
+    roleTitle = role === 'Admin' ? 'Quản trị viên (Admin)' : 'Nhân viên Bán hàng (Sales Staff)'
+    // 1. Revenue today & pending orders
+    const [revToday] = await query(`
+      SELECT COALESCE(SUM(total),0) AS revenue, COUNT(*) AS count 
+      FROM orders 
+      WHERE created_at >= CURRENT_DATE AND status NOT IN ('Cancelled','PaymentCancelled','PaymentExpired')
+    `)
+    const [pendingCount] = await query(`
+      SELECT COUNT(*) AS count FROM orders WHERE status IN ('Pending','PendingPayment','ProcessingPayment','Processing')
+    `)
+    
+    // 2. Top 5 customers by spending
+    const topCustomers = await query(`
+      SELECT u.full_name, u.email, COALESCE(SUM(o.total),0) AS total_spent, COUNT(o.id) AS orders_count
+      FROM users u
+      JOIN orders o ON o.user_id = u.id
+      WHERE o.status NOT IN ('Cancelled','PaymentCancelled','PaymentExpired')
+      GROUP BY u.id, u.full_name, u.email
+      ORDER BY total_spent DESC LIMIT 5
+    `)
+    const topCustText = topCustomers.map((c, i) => `${i+1}. ${c.full_name || c.email}: ${Math.round(number(c.total_spent)).toLocaleString('vi-VN')}đ (${c.orders_count} đơn)`).join('\n') || 'Chưa có dữ liệu khách hàng.'
+
+    // 3. Top 5 selling products
+    const topProducts = await query(`
+      SELECT oi.product_name, SUM(oi.quantity) AS sold_qty, SUM(oi.sub_total) AS total_sales
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      WHERE o.status NOT IN ('Cancelled','PaymentCancelled','PaymentExpired')
+      GROUP BY oi.product_name
+      ORDER BY sold_qty DESC LIMIT 5
+    `)
+    const topProdText = topProducts.map((p, i) => `${i+1}. ${p.product_name}: Đã bán ${p.sold_qty} cái (Doanh thu: ${Math.round(number(p.total_sales)).toLocaleString('vi-VN')}đ)`).join('\n') || 'Chưa có dữ liệu bán lẻ.'
+
+    // 4. Recent orders needing action
+    const recentOrders = await query(`
+      SELECT id, status, total, payment_method, to_char(created_at, 'HH24:MI DD/MM') AS time
+      FROM orders
+      ORDER BY id DESC LIMIT 5
+    `)
+    const recentOrdersText = recentOrders.map(o => `• Đơn #${o.id} (${o.time}): ${Math.round(number(o.total)).toLocaleString('vi-VN')}đ | ${o.status} | ${o.payment_method}`).join('\n') || 'Chưa có đơn hàng nào.'
+
+    contextInfo = `
+[TỔNG QUAN BÁN HÀNG HÔM NAY]
+- Doanh thu hôm nay: ${Math.round(number(revToday?.revenue || 0)).toLocaleString('vi-VN')}đ (${revToday?.count || 0} đơn)
+- Đơn hàng chờ xử lý: ${pendingCount?.count || 0} đơn
+
+[TOP 5 KHÁCH HÀNG VIP / CHI TIÊU CAO NHẤT]
+${topCustText}
+
+[TOP 5 SẢN PHẨM BÁN CHẠY NHẤT]
+${topProdText}
+
+[5 ĐƠN HÀNG GẦN NHẤT]
+${recentOrdersText}
+`
+  } else if (role === 'WarehouseKeeper') {
+    roleTitle = 'Thủ kho (Warehouse Keeper)'
+    // 1. Low stock products
+    const lowStock = await query(`
+      SELECT id, name, quantity, reserve_stock 
+      FROM products 
+      WHERE quantity <= 10 
+      ORDER BY quantity ASC LIMIT 8
+    `)
+    const lowStockText = lowStock.map(p => `• #${p.id} ${p.name} -> TỒN: ${p.quantity} (Dự trữ: ${p.reserve_stock}) ${p.quantity === 0 ? '⚠️ [HẾT HÀNG]' : '⚠️ [SẮP HẾT]'}`).join('\n') || '✅ Tất cả sản phẩm đều tồn kho an toàn (> 10).'
+
+    // 2. Suppliers
+    const suppliers = await query(`
+      SELECT name, contact_name, phone, email, address 
+      FROM suppliers 
+      ORDER BY id ASC LIMIT 6
+    `)
+    const suppliersText = suppliers.map(s => `• ${s.name}: Liên hệ: ${s.contact_name || 'N/A'} - SĐT: ${s.phone || 'N/A'} | Email: ${s.email || 'N/A'} | ĐC: ${s.address || 'N/A'}`).join('\n') || 'Chưa có dữ liệu nhà cung cấp.'
+
+    // 3. Recent stock receipts
+    const receipts = await query(`
+      SELECT sr.invoice_number, sr.import_date, sr.status, s.name AS supplier_name
+      FROM stock_receipts sr
+      LEFT JOIN suppliers s ON s.id = sr.supplier_id
+      ORDER BY sr.id DESC LIMIT 4
+    `)
+    const receiptsText = receipts.map(r => `• Phiếu #${r.invoice_number} (NCC: ${r.supplier_name || 'N/A'}) - Ngày: ${r.import_date} - TT: ${r.status}`).join('\n') || 'Chưa có phiếu nhập kho gần đây.'
+
+    contextInfo = `
+[BÁO ĐỘNG TỒN KHO (HẾT HÀNG & SẮP HẾT)]
+${lowStockText}
+
+[DANH SÁCH NHÀ CUNG CẤP]
+${suppliersText}
+
+[PHIẾU NHẬP KHO GẦN ĐÂY]
+${receiptsText}
+`
+  }
+
+  return { role, roleTitle, contextInfo }
+}
+
+async function callAIEngine({ systemPrompt, history, userMessage }) {
+  const geminiKey = process.env.GEMINI_API_KEY
+  const openaiKey = process.env.OPENAI_API_KEY
+
+  if (geminiKey) {
+    const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`
+    const contents = [
+      ...history.map((h) => ({
+        role: h.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: h.content }],
+      })),
+      {
+        role: 'user',
+        parts: [{ text: userMessage }],
+      },
+    ]
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
+        contents,
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1000,
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Gemini API Error:', errorText)
+      throw new Error(`Google Gemini API phản hồi lỗi (${response.status}): ${errorText.slice(0, 200)}`)
+    }
+
+    const data = await response.json()
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (reply) return reply.trim()
+  }
+
+  if (openaiKey) {
+    const client = new OpenAI({ apiKey: openaiKey })
+    try {
+      const response = await client.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...history.map((h) => ({ role: h.role, content: h.content })),
+          { role: 'user', content: userMessage },
+        ],
+        max_tokens: 1000,
+        temperature: 0.4,
+      })
+      const reply = response.choices?.[0]?.message?.content
+      if (reply) return reply.trim()
+    } catch (openAiErr) {
+      console.warn('OpenAI chat completions fallback attempt failed, trying responses API:', openAiErr.message)
+      const resp = await client.responses.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        store: false,
+        instructions: systemPrompt,
+        input: [...history.map((item) => ({ role: item.role, content: item.content })), { role: 'user', content: userMessage }],
+      })
+      if (resp.output_text) return resp.output_text.trim()
+    }
+  }
+
+  if (!geminiKey && !openaiKey) {
+    throw apiError(503, 'Hệ thống chưa được cấu hình API Key. Vui lòng thêm GEMINI_API_KEY (miễn phí) hoặc OPENAI_API_KEY vào file .env.')
+  }
+
+  return 'Xin lỗi, tôi chưa thể xử lý yêu cầu lúc này.'
 }
 
 app.get('/api/chatbot/session', authenticate, asyncRoute(async (req, res) => {
@@ -1208,22 +1434,39 @@ app.get('/api/chatbot/session', authenticate, asyncRoute(async (req, res) => {
 
 app.post('/api/chatbot/messages', authenticate, asyncRoute(async (req, res) => {
   const message = requireValue(req.body.message, 'Tin nhắn').slice(0, 2000)
-  if (!process.env.OPENAI_API_KEY) throw apiError(503, 'OPENAI_API_KEY chưa được cấu hình trên Render.')
   const sessionId = await activeChatSession(req.user.id)
-  const history = await query('SELECT role, content FROM chat_messages WHERE session_id=$1 ORDER BY id DESC LIMIT 12', [sessionId])
-  const products = await query('SELECT id, name, COALESCE(NULLIF(sale_price,0), selling_price) AS price, quantity FROM products WHERE quantity > 0 ORDER BY id DESC LIMIT 12')
-  const catalog = products.map((p) => `#${p.id} ${p.name} — ${Math.round(number(p.price)).toLocaleString('vi-VN')}đ (còn ${p.quantity})`).join('\n') || 'Chưa có sản phẩm nào trong cơ sở dữ liệu.'
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  const response = await client.responses.create({
-    model: process.env.OPENAI_MODEL || 'gpt-5.6', store: false,
-    instructions: `Bạn là trợ lý SmartSale. Trả lời bằng tiếng Việt, ngắn gọn, chính xác. Chỉ tư vấn dựa trên danh mục dưới đây; không bịa giá, tồn kho hoặc chính sách. Nếu không có dữ liệu, nói rõ và mời khách liên hệ nhân viên.\n\nDanh mục:\n${catalog}`,
-    input: [...history.reverse().map((item) => ({ role: item.role, content: item.content })), { role: 'user', content: message }],
-  })
-  const reply = response.output_text?.trim() || 'Xin lỗi, tôi chưa thể trả lời ngay lúc này.'
+  
+  // Rolling window: lấy 6 tin nhắn gần nhất để tiết kiệm token
+  const rawHistory = await query('SELECT role, content FROM chat_messages WHERE session_id=$1 ORDER BY id DESC LIMIT 6', [sessionId])
+  const history = rawHistory.reverse()
+
+  const { role, roleTitle, contextInfo } = await buildRoleContext(req.user, message)
+
+  const systemPrompt = `Bạn là Trợ lý AI Thông minh SmartSale cho nền tảng Quản lý Bán hàng & Tồn kho.
+Người dùng hiện tại: ${roleTitle}.
+Nhiệm vụ của bạn:
+- Trả lời bằng tiếng Việt lịch sự, ngắn gọn, súc tích, chuyên nghiệp.
+- Sử dụng định dạng markdown rõ ràng (bullet points, bảng ngắn, in đậm, emoji phù hợp) để người dùng dễ nhìn.
+- CHỈ tư vấn và đưa số liệu dựa trên dữ liệu hệ thống được cung cấp dưới đây. Tuyệt đối KHÔNG tự bịa đặt số liệu tài chính, khách hàng hoặc sản phẩm.
+- Nếu người dùng hỏi điều gì không có trong dữ liệu, hãy trả lời trung thực và hướng dẫn họ thao tác trên hệ thống.
+
+${contextInfo}`
+
+  const reply = await callAIEngine({ systemPrompt, history, userMessage: message })
+
   await query('INSERT INTO chat_messages (session_id, role, content) VALUES ($1,$2,$3),($1,$4,$5)', [sessionId, 'user', message, 'assistant', reply])
-  const matched = products.filter((product) => message.toLowerCase().includes(String(product.name).toLowerCase().slice(0, 12))).slice(0, 3)
+
+  // Gợi ý hành động xem sản phẩm nếu có nhắc đến tên sản phẩm
+  const allProducts = await query('SELECT id, name FROM products WHERE quantity > 0 ORDER BY id DESC LIMIT 15')
+  const matched = allProducts.filter((product) => message.toLowerCase().includes(String(product.name).toLowerCase().slice(0, 10))).slice(0, 3)
+
   const messages = await query('SELECT role, content, created_at AS "createdAt" FROM chat_messages WHERE session_id=$1 ORDER BY id', [sessionId])
-  res.json({ sessionId, reply, actions: matched.map((product) => ({ type: 'open-product', productId: Number(product.id), label: `Xem ${product.name}` })), messages: messages.map((item) => ({ ...item, createdAt: toIso(item.createdAt) })) })
+  res.json({
+    sessionId,
+    reply,
+    actions: matched.map((product) => ({ type: 'open-product', productId: Number(product.id), label: `Xem ${product.name}` })),
+    messages: messages.map((item) => ({ ...item, createdAt: toIso(item.createdAt) })),
+  })
 }))
 
 app.post('/api/chatbot/session/end', authenticate, asyncRoute(async (req, res) => {

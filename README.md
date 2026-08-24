@@ -1,137 +1,156 @@
 # 🛍️ SmartSale - Omnichannel Sales & Real-Time Inventory Management System
 
-**SmartSale** là nền tảng quản lý bán hàng đa kênh và kiểm soát tồn kho thông minh thế hệ mới. Hệ thống tích hợp cổng thanh toán trực tuyến PayOS QR, báo cáo phân tích kinh doanh nâng cao (BI Analytics), trợ lý ảo AI Chatbot và hệ thống phân quyền đa người dùng.
+**SmartSale** là nền tảng quản lý bán hàng đa kênh, kiểm soát tồn kho thông minh và tích hợp trợ lý ảo AI thế hệ mới. Hệ thống được xây dựng với kiến trúc hiện đại, hỗ trợ thanh toán tự động qua mã VietQR PayOS, hệ thống phân tích kinh doanh (BI Analytics), quản lý khuyến mãi linh hoạt và trợ lý AI phân quyền theo từng vai trò người dùng.
 
 ---
 
-## 🚀 Tính năng nổi bật
+## 🌟 Tổng quan các phân hệ chức năng
 
-- **Cửa hàng trực tuyến (Storefront):**
-  - Trải nghiệm mua sắm hiện đại, hỗ trợ bộ lọc và tìm kiếm chuyên biệt theo từng danh mục.
-  - Trình xem ảnh lớn sắc nét (Image Lightbox Viewer) với thư viện ảnh chi tiết.
-  - Giỏ hàng thời gian thực, đồng bộ tồn kho trực tiếp.
-  - Thanh toán tự động qua mã QR PayOS và Tiền mặt.
-  - Lộ trình theo dõi trạng thái đơn hàng trực quan.
-- **Quản trị bán hàng & CRM:**
-  - Quản lý danh sách đơn hàng, xuất Excel, xử lý trạng thái đơn và công nợ.
-  - Quản lý hồ sơ khách hàng, phân cấp bậc thành viên (*Standard, Silver, Gold, Platinum*).
-- **Quản lý kho & Nhà cung cấp:**
-  - Lập và phê duyệt phiếu nhập kho nhiều bước (*Draft $\rightarrow$ Pending $\rightarrow$ Confirmed*).
-  - Cảnh báo tồn kho an toàn (`reserve_stock`), theo dõi biến động hàng hóa.
-- **Báo cáo & Phân tích kinh doanh (BI Analytics):**
-  - Trực quan hóa doanh thu, lợi nhuận, phân khúc khách hàng, tỷ lệ chuyển đổi, phân tích vòng đời khách hàng (LTV) và biểu đồ giữ chân (Cohort Retention).
-- **Trợ lý AI Chatbot:**
-  - Hỗ trợ tư vấn sản phẩm, tra cứu đơn hàng và gợi ý mua sắm thông minh 24/7.
+### 1. 🛒 Cửa hàng trực tuyến & Trải nghiệm Khách hàng (Storefront)
+- **Trải nghiệm mua sắm hiện đại:** Giao diện tối ưu, tìm kiếm sản phẩm thông minh theo tên, danh mục và mã hàng hóa.
+- **Thư viện ảnh đa góc nhìn (Lightbox Viewer):** Phóng to hình ảnh sản phẩm chất lượng cao với thanh trượt chuyển ảnh linh hoạt.
+- **Giỏ hàng & Quản lý đơn:** Tự động tính toán tổng tiền, chiết khấu theo hạng VIP và áp dụng mã giảm giá.
+- **Thanh toán trực tuyến PayOS:** Tạo link và quét mã QR thanh toán ngân hàng tự động (VietQR), đồng bộ trạng thái đơn hàng theo thời gian thực (Webhook).
+- **Hệ thống Hạng thành viên VIP:** Tự động xếp hạng (*Đồng, Bạc, Vàng, Kim Cương*) dựa trên tổng chi tiêu tích lũy và áp dụng ưu đãi chiết khấu trực tiếp trên từng đơn hàng.
+- **Cổng thông tin khách hàng (Customer Profile):** Tra cứu lịch sử đơn hàng, tiến độ vận chuyển và yêu cầu hủy/hoàn tiền.
+
+---
+
+### 2. 🏷️ Phân hệ Khuyến mãi & Ưu đãi (Promotions)
+- **Tạo & Quản lý mã giảm giá:** Hỗ trợ giảm giá theo phần trăm (%) hoặc giảm theo số tiền cố định (VNĐ).
+- **Phạm vi áp dụng linh hoạt:** Áp dụng cho toàn bộ cửa hàng, theo danh mục sản phẩm hoặc từng mặt hàng cụ thể.
+- **Quy tắc & Giới hạn:** Thiết lập giá trị đơn hàng tối thiểu, mức giảm tối đa và thời gian hiệu lực của chương trình.
+
+---
+
+### 3. 💼 Quản lý Bán hàng & Đơn hàng (Sales Management)
+- **Xử lý đơn hàng toàn diện:** Quản lý quy trình xử lý đơn hàng qua các trạng thái: *Pending, Paid, Processing, Shipped, Completed, Cancelled, Refunded*.
+- **Xuất / Nhập dữ liệu Excel:** Hỗ trợ xuất danh sách đơn hàng, doanh số và dữ liệu khách hàng ra file Excel.
+- **Quản lý thông tin khách hàng:** Theo dõi lịch sử mua sắm, công nợ, phân khúc khách hàng và thông tin liên hệ.
+
+---
+
+### 4. 📦 Quản lý Kho & Chuỗi cung ứng (Inventory & Supply Chain)
+- **Kiểm soát hàng hóa & Tồn kho:** Theo dõi tồn kho thực tế, tồn kho dự trữ an toàn (`reserve_stock`).
+- **Quy trình nhập kho chuẩn hóa:** Quản lý phiếu nhập kho qua nhiều bước phê duyệt (*Draft $\rightarrow$ Pending Approval $\rightarrow$ Confirmed*).
+- **Quản lý Nhà cung cấp (Suppliers):** Lưu trữ danh bạ đối tác, số điện thoại, email, địa chỉ và lịch sử cung ứng hàng hóa.
+- **Cảnh báo tồn kho báo động:** Tự động cảnh báo các mặt hàng sắp hết hàng (tồn $\le$ 10) hoặc đã hết hàng.
+
+---
+
+### 5. 📊 Báo cáo & Phân tích Kinh doanh nâng cao (BI Analytics)
+- **Dashboard Doanh thu:** Trực quan hóa doanh thu theo ngày, tuần, tháng và năm với biểu đồ tương tác cao.
+- **Phân tích Khách hàng:** Phân tích giá trị vòng đời khách hàng (LTV), phân khúc khách hàng chi tiêu cao.
+- **Hiệu suất Sản phẩm:** Top 5/Top 10 sản phẩm bán chạy nhất (Best Sellers), tỷ lệ hoàn vốn và lợi nhuận gộp.
+
+---
+
+### 6. 🤖 Trợ lý Chatbot AI Đa Quyền (Role-Based Smart AI Assistant)
+- **Động cơ AI tối ưu:** Tích hợp **Google Gemini 3.6 Flash** (Context window 1.000.000 tokens, 100% miễn phí, phản hồi < 1s) cùng cơ chế fallback **OpenAI**.
+- **Tối ưu hóa Token:** Kỹ thuật *Rolling History Window* và *Dynamic Context Injection* giúp giảm 80% dung lượng token và tăng tốc độ xử lý.
+- **Phân quyền ngữ cảnh thông minh theo từng Role:**
+  - **🛍️ Khách hàng (`Customer`):** Tra cứu hạng thành viên VIP, tổng chi tiêu tích lũy, tra cứu đơn hàng gần nhất, ưu đãi đang áp dụng và tư vấn sản phẩm có sẵn.
+  - **💼 Nhân viên Sale (`SalesStaff` / `Admin`):** Báo cáo doanh thu & số đơn hôm nay, Top 5 khách hàng VIP, Top 5 sản phẩm bán chạy, đơn hàng cần xử lý.
+  - **📦 Thủ kho (`WarehouseKeeper` / `Admin`):** Cảnh báo tồn kho báo động (hết hàng/sắp hết hàng), thông tin liên hệ nhà cung cấp, phiếu nhập kho mới nhất.
+  - **⚡ Quản trị viên (`Admin`):** Báo cáo tổng thể tình hình kinh doanh, dòng tiền, hiệu suất kho hàng và nhân sự.
 
 ---
 
 ## 🛠️ Công nghệ sử dụng
 
-- **Frontend:** Vue 3 (Composition API), Vite, TypeScript, PrimeVue, Chart.js, Pinia.
-- **Backend:** Node.js, Express.js, JWT, Bcrypt, OpenAI API, PayOS SDK.
-- **Database:** PostgreSQL trên nền tảng đám mây **Neon Serverless**.
+| Phân tầng | Công nghệ |
+| :--- | :--- |
+| **Frontend** | Vue 3 (Composition API), TypeScript, Vite, Pinia, PrimeVue, PrimeIcons, Chart.js, Tailwind / CSS3 |
+| **Backend API** | Node.js, Express.js (RESTful API), JWT Authentication, Bcrypt |
+| **Database** | PostgreSQL trên nền tảng đám mây **Neon Serverless** |
+| **Thanh toán** | PayOS SDK (VietQR Payment Gateway & Webhook) |
+| **Trí tuệ nhân tạo** | Google Gemini API (`gemini-3.6-flash`), OpenAI Responses / Completions API |
+| **Triển khai (Cloud)** | **Vercel** (Frontend SPA) + **Render** (Backend Node API) |
 
 ---
 
-## 🌐 Production Deployment
+## 🌐 Đường dẫn Production
 
-- **Frontend (Static Site):** [https://www.smartsale-dev.me](https://www.smartsale-dev.me) — Deploy trên **Vercel**
-- **Backend API:** Deploy trên **Render** (`smartsale-api` service)
-- **Database:** Neon Serverless PostgreSQL
+- **Frontend Application:** [https://www.smartsale-dev.me](https://www.smartsale-dev.me)
+- **Backend API Docs:** Deploy trên **Render** (`smartsale-api` service)
+- **Cơ sở dữ liệu:** Neon Serverless PostgreSQL
 
 ---
 
 ## 🔑 Tài khoản Demo hệ thống
 
-| Vai trò / Hạng thành viên | Họ và tên | Email đăng nhập | Mật khẩu (Password) | Tổng chi tiêu / Ghi chú |
+| Vai trò / Phân quyền | Họ và tên | Email đăng nhập | Mật khẩu (Password) | Ghi chú & Quyền hạn |
 | :--- | :--- | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | Nguyễn Thế Dân | `admin@smartsale.com` | `Admin@123456` | Toàn quyền quản trị & Dashboard |
-| **Nhân viên bán hàng (Sales)** | Trần Phương Linh | `sales@smartsale.com` | `Admin@123456` | Quản lý đơn & khách hàng |
-| **Thủ kho (Warehouse)** | Lê Hoàng Hải | `warehouse@smartsale.com` | `Admin@123456` | Nhập kho & Tồn kho |
-| 💎 **Khách VIP Kim Cương** | Phạm Quốc Việt | `diamond@smartsale.com` | `Admin@123456` | Chi tiêu ≥ 20.000.000 ₫ (27.5M ₫) |
-| 🥇 **Khách VIP Vàng** | Nguyễn Thị Tuyết Mai | `gold@smartsale.com` | `Admin@123456` | Chi tiêu ≥ 8.000.000 ₫ (12.9M ₫) |
-| 🥈 **Khách VIP Bạc** | Lê Thu Hương | `silver@smartsale.com` | `Admin@123456` | Chi tiêu ≥ 2.000.000 ₫ (4.2M ₫) |
-| 👤 **Khách Thành viên Thường** | Trần Minh Đức | `standard@smartsale.com` | `Admin@123456` | Chi tiêu < 2.000.000 ₫ (640k ₫) |
-| 💎 **Khách VIP (Legacy)** | Phạm Quốc Việt | `customer@smartsale.com` | `Admin@123456` | Tài khoản khách hàng mặc định |
+| **⚡ Quản trị viên (Admin)** | Nguyễn Thế Dân | `admin@smartsale.com` | `Admin@123456` | Toàn quyền quản trị, BI & cấu hình hệ thống |
+| **💼 Nhân viên Bán hàng (Sales)** | Trần Phương Linh | `sales@smartsale.com` | `Admin@123456` | Quản lý đơn hàng, khách hàng, khuyến mãi |
+| **📦 Thủ kho (Warehouse)** | Lê Hoàng Hải | `warehouse@smartsale.com` | `Admin@123456` | Quản lý tồn kho, nhập hàng, nhà cung cấp |
+| 💎 **Khách VIP Kim Cương** | Phạm Quốc Việt | `diamond@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 20.000.000 ₫ (Giảm 10%) |
+| 🥇 **Khách VIP Vàng** | Nguyễn Thị Tuyết Mai | `gold@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 10.000.000 ₫ (Giảm 5%) |
+| 🥈 **Khách VIP Bạc** | Lê Thu Hương | `silver@smartsale.com` | `Admin@123456` | Chi tiêu $\ge$ 3.000.000 ₫ (Giảm 2%) |
+| 👤 **Khách Thành viên Thường** | Trần Minh Đức | `standard@smartsale.com` | `Admin@123456` | Chi tiêu < 3.000.000 ₫ |
 
 ---
 
-## ⚙️ Cấu hình Biến Môi Trường
+## ⚙️ Cấu hình Biến Môi Trường (Environment Variables)
 
-### Frontend (`/.env`) — Chỉ dùng khi chạy local
-
+### 1. Frontend (`/.env`) — Môi trường chạy Local:
 ```env
 VITE_ENABLE_MOCK_FALLBACK=false
 VITE_API_URL=http://localhost:3001
 ```
 
-> ⚠️ Khi deploy lên **Vercel**, phải set `VITE_API_URL` tại **Vercel Dashboard → Settings → Environment Variables** rồi **Redeploy** lại. File `.env` local KHÔNG có tác dụng trên production.
-
-### Backend (`/server/.env`) — Chỉ dùng khi chạy local
-
+### 2. Backend (`/server/.env`):
 ```env
-# Neon Database
-DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require&channel_binding=require
+# Neon Serverless PostgreSQL Database
+DATABASE_URL=postgresql://neondb_owner:password@ep-noisy-forest-...aws.neon.tech/neondb?sslmode=require
 
-# URL production của Frontend
+# Cấu hình App & CORS
+PORT=3001
 PUBLIC_WEB_URL=https://www.smartsale-dev.me
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174,https://www.smartsale-dev.me
 
-# Các domain được phép gọi API (CORS)
-CORS_ORIGINS=https://www.smartsale-dev.me,http://localhost:5173
+# JWT Secret
+JWT_SECRET=smartsale-neon-database-jwt-secret-key-production-ready-2026-auth
 
-# JWT (tối thiểu 32 ký tự)
-JWT_SECRET=...
-
-# Tài khoản Admin mặc định (dùng khi chạy migrate)
+# Tài khoản Admin mặc định (dùng khi migrate DB)
 ADMIN_EMAIL=admin@smartsale.com
 ADMIN_PASSWORD=Admin@123456
+ADMIN_FULL_NAME=Quản trị viên
 
-# PayOS
-PAYOS_CLIENT_ID=...
-PAYOS_API_KEY=...
-PAYOS_CHECKSUM_KEY=...
+# Cổng thanh toán PayOS
+PAYOS_CLIENT_ID=your-payos-client-id
+PAYOS_API_KEY=your-payos-api-key
+PAYOS_CHECKSUM_KEY=your-payos-checksum-key
 
-# OpenAI (Chatbot)
-OPENAI_API_KEY=...
+# Trợ lý AI Chatbot (Google Gemini - Miễn phí từ aistudio.google.com/apikey)
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-3.6-flash
+
+# OpenAI Fallback (Nếu có)
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
 ```
 
-> ⚠️ Khi deploy lên **Render**, phải set tất cả biến trên tại **Render Dashboard → smartsale-api → Environment**. File `.env` local KHÔNG được đẩy lên git và KHÔNG có tác dụng trên production.
-
 ---
 
-## 🚀 Hướng dẫn Deploy Production
-
-### Frontend → Vercel
-
-1. Push code lên GitHub
-2. Vào **Vercel Dashboard → Settings → Environment Variables** → set `VITE_API_URL` = URL backend Render
-3. **Deployments → Tái triển khai (Redeploy)**
-
-### Backend → Render
-
-1. Vào **Render Dashboard → smartsale-api → Environment** → set đầy đủ các biến môi trường
-2. **Manual Deploy → Deploy latest commit**
-3. Webhook PayOS: `https://<render-api-url>/api/webhooks/payos`
-
----
-
-## 💻 Cài đặt & Chạy ứng dụng (Local)
+## 💻 Cài đặt & Khởi chạy ứng dụng
 
 ### 1. Khởi chạy Frontend:
 ```bash
 npm install
 npm run dev
 ```
-Truy cập tại: `http://localhost:5173/` hoặc `http://localhost:5174/`
+Truy cập tại: `http://localhost:5173/`
 
-### 2. Khởi chạy Backend & Database:
+### 2. Khởi chạy Backend Server:
 ```bash
 cd server
 npm install
 node src/server.js
 ```
+API server chạy tại: `http://localhost:3001`
 
-### 3. Khởi tạo & nạp dữ liệu Database lên Neon:
+### 3. Nạp dữ liệu mẫu lên cơ sở dữ liệu Neon:
 ```bash
 cd server
 node src/apply_complete_seed.mjs
@@ -140,4 +159,4 @@ node src/apply_complete_seed.mjs
 ---
 
 ## 📄 Bản quyền
-Phát triển bởi **Kiều Quang Trưởng Vĩ** & SmartSale Team. Bảo lưu mọi quyền © 2026.
+Dự án được phát triển bởi **Kiều Quang Trưởng Vĩ** & SmartSale Team. Bảo lưu mọi quyền © 2026.
