@@ -29,3 +29,5 @@ dist-ssr
 *.code-workspace
 *.vue.js
 *.vue.js.map
+.vercel
+.env*

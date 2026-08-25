@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { endChatSession, getChatSession, sendChatMessage, type ChatAction, type ChatMessage } from '../services/chatbotApi'
+import { computed, nextTick, ref } from 'vue'
+import { endChatSession, getChatSession, sendChatMessage, type ChatMessage } from '../services/chatbotApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
+import { useVerticalDraggableChat } from '../utils/useDraggableChat'
+import ChatStructuredMessage from './ChatStructuredMessage.vue'
 
 const auth = useAuthStore()
 const { t } = useLanguage()
@@ -15,6 +17,26 @@ const errorMessage = ref('')
 const inputMessage = ref('')
 const messages = ref<ChatMessage[]>([])
 const chatContainer = ref<HTMLElement | null>(null)
+const chatbotRootRef = ref<HTMLElement | null>(null)
+
+const {
+  isDragging,
+  hasMovedSignificantly,
+  isCustomPositioned,
+  dragStyle,
+  startDrag,
+  resetPosition,
+} = useVerticalDraggableChat(chatbotRootRef, {
+  defaultBottom: 24,
+  defaultRight: 24,
+  buttonHeight: 54,
+  padding: 20,
+})
+
+function handleFabClick() {
+  if (hasMovedSignificantly.value) return
+  toggleChat()
+}
 
 const roleName = computed(() => {
   const role = auth.role
@@ -76,10 +98,10 @@ async function loadSession() {
     messages.value = session.messages
     if (!messages.value.length) {
       const welcomeText = auth.role === 'SalesStaff'
-        ? `Xin chào **${auth.user?.fullName || 'bạn'}**! Tôi là Trợ lý AI SmartSale hỗ trợ **Bán hàng & Doanh thu**. Bạn muốn kiểm tra doanh thu, top khách hàng hay sản phẩm bán chạy hôm nay?`
+        ? `Xin chào **${auth.user?.fullName || 'bạn'}**! Tôi là **SmartSale AI** trợ lý hỗ trợ **Bán hàng & Doanh thu**.\nBạn muốn kiểm tra doanh thu, top khách hàng hay sản phẩm bán chạy hôm nay?`
         : auth.role === 'WarehouseKeeper'
-        ? `Xin chào **${auth.user?.fullName || 'bạn'}**! Tôi là Trợ lý AI SmartSale hỗ trợ **Kho & Tồn kho**. Tôi có thể giúp bạn kiểm tra sản phẩm sắp hết hàng, phiếu nhập kho hoặc liên hệ nhà cung cấp.`
-        : `Xin chào **${auth.user?.fullName || 'Quản trị viên'}**! Tôi là Trợ lý AI SmartSale. Bạn có thể tra cứu nhanh số liệu kinh doanh, top khách hàng VIP, tồn kho báo động hoặc đơn hàng hệ thống.`
+        ? `Xin chào **${auth.user?.fullName || 'bạn'}**! Tôi là **SmartSale AI** trợ lý hỗ trợ **Kho & Tồn kho**.\nTôi có thể giúp bạn kiểm tra sản phẩm sắp hết hàng, phiếu nhập kho hoặc liên hệ nhà cung cấp.`
+        : `Xin chào **${auth.user?.fullName || 'Quản trị viên'}**! Tôi là **SmartSale AI** trợ lý thông minh.\nBạn có thể tra cứu nhanh số liệu kinh doanh, top khách hàng VIP, tồn kho báo động hoặc đơn hàng hệ thống.`
 
       messages.value = [
         {
@@ -144,52 +166,41 @@ async function resetSession() {
   isLoaded.value = false
   await loadSession()
 }
-
-// Convert markdown-like formatting to HTML safely
-function formatMarkdown(content: string) {
-  if (!content) return ''
-  let escaped = content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-  // Bold **text**
-  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-  
-  // Bullet lists
-  escaped = escaped.replace(/^[•\-\*]\s+(.*)$/gm, '<li class="ml-4 list-disc">$1</li>')
-  
-  // Numbered list
-  escaped = escaped.replace(/^(\d+)\.\s+(.*)$/gm, '<li class="ml-4 list-decimal"><strong>$1.</strong> $2</li>')
-
-  // Line breaks
-  escaped = escaped.replace(/\n/g, '<br/>')
-
-  return escaped
-}
 </script>
 
 <template>
-  <div class="admin-ai-chatbot-root">
-    <!-- Floating Launcher Trigger Button -->
+  <div
+    ref="chatbotRootRef"
+    class="admin-ai-chatbot-root"
+    :class="{ 'is-dragging': isDragging }"
+    :style="dragStyle"
+  >
+    <!-- Floating Launcher Trigger Button (Clean Message Logo, draggable vertically) -->
     <button
       type="button"
       class="ai-floating-btn"
       :class="{ 'ai-floating-btn--active': isOpen }"
-      :title="t('Trợ lý AI SmartSale', 'SmartSale AI Assistant')"
-      @click="toggleChat"
+      :title="t('Kéo lên/xuống để đổi vị trí • Nhấp để mở chat', 'Drag up/down to move • Click to toggle chat')"
+      @pointerdown="startDrag"
+      @mousedown="startDrag"
+      @touchstart="startDrag"
+      @click="handleFabClick"
     >
-      <div class="ai-btn-glow" />
-      <span class="ai-sparkle-icon">✨</span>
-      <span class="ai-btn-text">{{ isOpen ? '✕' : 'AI Assistant' }}</span>
-      <span v-if="!isOpen" class="ai-pulse-dot" />
+      <span class="ai-btn-icon">{{ isOpen ? '✕' : '🤖' }}</span>
     </button>
 
     <!-- Chat Modal Window -->
     <transition name="ai-drawer">
-      <div v-if="isOpen" class="ai-chat-window">
+      <div
+        v-if="isOpen"
+        class="ai-chat-window"
+      >
         <!-- Header -->
-        <div class="ai-chat-header">
+        <div
+          class="ai-chat-header"
+          :title="t('Trợ lý AI SmartSale', 'SmartSale AI Assistant')"
+          @dblclick="resetPosition"
+        >
           <div class="ai-header-left">
             <div class="ai-avatar-ring">
               <span class="ai-avatar-sparkle">🤖</span>
@@ -200,11 +211,21 @@ function formatMarkdown(content: string) {
                 <span class="ai-role-badge" :class="roleBadgeColor">{{ roleName }}</span>
               </div>
               <small class="ai-header-sub">
-                ⚡ {{ t('Google Gemini 3.6 Flash • Tối ưu token', 'Google Gemini 3.6 Flash • Token Efficient') }}
+                <span class="ai-online-dot"></span>
+                {{ t('Trợ lý quản trị & kinh doanh thông minh', 'Smart Management & Business Assistant') }}
               </small>
             </div>
           </div>
-          <div class="ai-header-actions">
+          <div class="ai-header-actions" @mousedown.stop @touchstart.stop>
+            <button
+              v-if="isCustomPositioned"
+              type="button"
+              class="ai-action-btn"
+              :title="t('Đặt lại vị trí góc phải', 'Reset window position')"
+              @click="resetPosition"
+            >
+              📍
+            </button>
             <button
               type="button"
               class="ai-action-btn"
@@ -215,7 +236,7 @@ function formatMarkdown(content: string) {
             </button>
             <button
               type="button"
-              class="ai-action-btn"
+              class="ai-action-btn ai-close-btn"
               :title="t('Đóng', 'Close')"
               @click="isOpen = false"
             >
@@ -256,8 +277,11 @@ function formatMarkdown(content: string) {
                 {{ msg.role === 'user' ? (auth.user?.fullName?.charAt(0) || 'U') : '🤖' }}
               </div>
               <div class="ai-msg-bubble">
-                <!-- eslint-disable-next-line vue/no-v-html -->
-                <div class="ai-msg-content" v-html="formatMarkdown(msg.content)" />
+                <ChatStructuredMessage
+                  :content="msg.content"
+                  :role="msg.role"
+                  :is-storefront="false"
+                />
               </div>
             </div>
 
@@ -288,6 +312,7 @@ function formatMarkdown(content: string) {
           <button
             type="submit"
             class="ai-send-button"
+            :title="t('Gửi tin nhắn', 'Send message')"
             :disabled="!inputMessage.trim() || isSending || isLoading"
           >
             <span v-if="isSending" class="ai-spinner-sm" />
@@ -302,117 +327,117 @@ function formatMarkdown(content: string) {
 <style scoped>
 .admin-ai-chatbot-root {
   position: fixed;
-  bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 99999;
   font-family: inherit;
 }
 
+.admin-ai-chatbot-root.is-dragging {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
 .ai-floating-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #2563eb 100%);
   color: #ffffff;
   border: none;
-  border-radius: 9999px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  cursor: grab;
+  touch-action: none;
   box-shadow: 0 8px 24px rgba(13, 148, 136, 0.4), 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.is-dragging .ai-floating-btn {
+  cursor: grabbing !important;
+  transform: scale(1.08) !important;
+  transition: none !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35) !important;
 }
 
 .ai-floating-btn:hover {
-  transform: translateY(-3px) scale(1.03);
+  transform: scale(1.08);
   box-shadow: 0 12px 30px rgba(13, 148, 136, 0.55);
 }
 
 .ai-floating-btn--active {
   background: #334155;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  font-size: 1.1rem;
 }
 
-.ai-sparkle-icon {
-  font-size: 1.2rem;
-  animation: sparkle-pulse 2s infinite ease-in-out;
-}
-
-@keyframes sparkle-pulse {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.25) rotate(15deg); }
-}
-
-.ai-pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 8px #34d399;
-  animation: pulse-ring 1.5s infinite;
-}
-
-@keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 0.8; }
-  50% { transform: scale(1.4); opacity: 1; }
-  100% { transform: scale(0.8); opacity: 0.8; }
+.ai-btn-icon {
+  line-height: 1;
+  display: inline-block;
 }
 
 /* Chat Window */
 .ai-chat-window {
   position: absolute;
-  bottom: 64px;
+  bottom: 68px;
   right: 0;
-  width: 420px;
+  width: 440px;
   max-width: calc(100vw - 32px);
-  height: 580px;
-  max-height: calc(100vh - 120px);
+  height: 600px;
+  max-height: calc(100vh - 110px);
   background: #ffffff;
   border-radius: 20px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  z-index: 10000;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 :global(.app-dark) .ai-chat-window {
   background: #111827;
   border-color: #374151;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .ai-chat-header {
-  padding: 14px 18px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #0369a1 100%);
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  user-select: none;
 }
 
 :global(.app-dark) .ai-chat-header {
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  border-bottom-color: #374151;
+  background: linear-gradient(135deg, #134e4a 0%, #1e293b 70%, #0f172a 100%);
+  border-bottom-color: #334155;
 }
 
 .ai-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .ai-avatar-ring {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #10b981, #3b82f6);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .ai-header-title {
@@ -420,36 +445,51 @@ function formatMarkdown(content: string) {
   align-items: center;
   gap: 8px;
   font-size: 0.95rem;
-  color: #0f172a;
-}
-
-:global(.app-dark) .ai-header-title {
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 .ai-role-badge {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 9999px;
-  border: 1px solid;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   text-transform: uppercase;
 }
 
 .ai-header-sub {
   font-size: 0.72rem;
-  color: #64748b;
-  display: block;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  display: inline-block;
+  box-shadow: 0 0 6px #34d399;
 }
 
 .ai-header-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .ai-action-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   width: 28px;
   height: 28px;
   border-radius: 8px;
@@ -457,25 +497,25 @@ function formatMarkdown(content: string) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #64748b;
+  color: #ffffff;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
 .ai-action-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.08);
 }
 
-:global(.app-dark) .ai-action-btn:hover {
-  background: #374151;
-  color: #f8fafc;
+.ai-close-btn:hover {
+  background: rgba(239, 68, 68, 0.8);
 }
 
 /* Quick Suggestion Chips */
 .ai-suggestions-wrap {
   padding: 8px 12px;
   background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   gap: 6px;
   overflow-x: auto;
@@ -489,11 +529,11 @@ function formatMarkdown(content: string) {
 
 .ai-suggestion-chip {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding: 5px 12px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   font-weight: 500;
   color: #334155;
   cursor: pointer;
@@ -505,6 +545,7 @@ function formatMarkdown(content: string) {
   background: #ecfdf5;
   border-color: #10b981;
   color: #047857;
+  transform: translateY(-1px);
 }
 
 :global(.app-dark) .ai-suggestion-chip {
@@ -527,6 +568,11 @@ function formatMarkdown(content: string) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  background: #f8fafc;
+}
+
+:global(.app-dark) .ai-messages-body {
+  background: #0b1120;
 }
 
 .ai-loading-box {
@@ -552,6 +598,7 @@ function formatMarkdown(content: string) {
 
 .ai-row--assistant {
   align-self: flex-start;
+  width: 100%;
 }
 
 .ai-msg-avatar {
@@ -569,41 +616,27 @@ function formatMarkdown(content: string) {
 }
 
 .ai-row--user .ai-msg-avatar {
-  background: #059669;
+  background: #0f766e;
   color: #ffffff;
 }
 
 .ai-msg-bubble {
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.ai-row--user .ai-msg-bubble {
-  background: #059669;
-  color: #ffffff;
-  border-bottom-right-radius: 4px;
-}
-
-.ai-row--assistant .ai-msg-bubble {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-bottom-left-radius: 4px;
-  border: 1px solid #e2e8f0;
-}
-
-:global(.app-dark) .ai-row--assistant .ai-msg-bubble {
-  background: #1f2937;
-  color: #f3f4f6;
-  border-color: #374151;
+  width: 100%;
 }
 
 .ai-typing-bubble {
   display: flex;
   gap: 4px;
   padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  width: fit-content;
+}
+
+:global(.app-dark) .ai-typing-bubble {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .ai-typing-dot {
@@ -633,7 +666,7 @@ function formatMarkdown(content: string) {
 
 /* Input Form */
 .ai-input-form {
-  padding: 12px;
+  padding: 12px 14px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
   display: flex;
@@ -654,12 +687,13 @@ function formatMarkdown(content: string) {
   outline: none;
   background: #f8fafc;
   color: #0f172a;
+  transition: all 0.2s;
 }
 
 .ai-text-input:focus {
-  border-color: #10b981;
+  border-color: #0d9488;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
 :global(.app-dark) .ai-text-input {
@@ -672,7 +706,7 @@ function formatMarkdown(content: string) {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #059669;
+  background: #0f766e;
   color: #ffffff;
   border: none;
   display: flex;
@@ -680,10 +714,11 @@ function formatMarkdown(content: string) {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .ai-send-button:hover:not(:disabled) {
-  background: #047857;
+  background: #0d9488;
   transform: scale(1.05);
 }
 
@@ -697,7 +732,7 @@ function formatMarkdown(content: string) {
   width: 24px;
   height: 24px;
   border: 3px solid #cbd5e1;
-  border-top-color: #10b981;
+  border-top-color: #0d9488;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

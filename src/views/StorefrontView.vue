@@ -12,6 +12,9 @@ import { translateProductName } from "../services/productTranslations";
 import { PRODUCT_MOCKS } from "../services/productMocks";
 import { getTierByTotalSpent, getTierConfig, getTierLabel } from "../services/customerTier";
 import CustomerTierBadge from "../components/CustomerTierBadge.vue";
+import ChatStructuredMessage from "../components/ChatStructuredMessage.vue";
+import { renderChatMarkdown } from "../utils/chatMarkdown";
+import { useVerticalDraggableChat } from "../utils/useDraggableChat";
 
 const { t, currentLanguage, setLanguage } = useLanguage();
 function toggleLang() {
@@ -195,6 +198,45 @@ const customerPanelLoading = ref(false);
 const customerPanelError = ref("");
 const customerPanelLoaded = ref(false);
 const showChatbot = ref(false);
+const storefrontChatWidgetRef = ref<HTMLElement | null>(null);
+const {
+  isDragging: isChatDragging,
+  hasMovedSignificantly: hasChatMovedSignificantly,
+  isCustomPositioned: isChatCustomPositioned,
+  dragStyle: chatDragStyle,
+  startDrag: startChatDrag,
+  resetPosition: resetChatPosition,
+} = useVerticalDraggableChat(storefrontChatWidgetRef, {
+  defaultBottom: 24,
+  defaultRight: 24,
+  buttonHeight: 56,
+  padding: 20,
+});
+
+function handleStorefrontFabClick() {
+  if (hasChatMovedSignificantly.value) return;
+  toggleChatbot();
+}
+
+function handleOpenProductFromChat(productId: number) {
+  const p = products.value.find((item) => item.id === productId);
+  if (p) {
+    openProductDetail(p);
+  } else {
+    chatbotError.value = t("Sản phẩm không tồn tại hoặc đã hết hàng.", "Product not found or out of stock.");
+  }
+}
+
+function handleAddToCartFromChat(productId: number) {
+  const p = products.value.find((item) => item.id === productId);
+  if (p) {
+    quickAddToCart(p);
+    showCart.value = true;
+  } else {
+    chatbotError.value = t("Sản phẩm không tồn tại hoặc đã hết hàng.", "Product not found or out of stock.");
+  }
+}
+
 const chatbotLoaded = ref(false);
 const chatbotLoading = ref(false);
 const chatbotSending = ref(false);
@@ -749,7 +791,10 @@ async function loadChatbotSession() {
     if (!chatbotMessages.value.length) {
       chatbotMessages.value = [{
         role: "assistant",
-        content: t("Chào bạn, mình có thể giúp xem sản phẩm, tồn kho, khuyến mãi, hạng thành viên và đơn hàng của bạn.", "Hi, I can help with products, stock, promotions, membership and your orders."),
+        content: t(
+          "Xin chào! Tôi là **SmartSale AI** trợ lý mua sắm của bạn.\nTôi có thể hỗ trợ bạn tra cứu sản phẩm, xem khuyến mãi, kiểm tra đơn hàng và hạng thành viên.",
+          "Hi! I'm **SmartSale AI** your shopping assistant.\nI can help you explore products, check promotions, track orders and view membership tiers."
+        ),
         createdAt: new Date().toISOString(),
       }];
     }
@@ -2587,21 +2632,82 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <section v-show="!showCart" class="chatbot-widget" :class="{ open: showChatbot }">
-    <button class="chatbot-fab" type="button" @click="toggleChatbot" :title="t('Trợ lý mua hàng', 'Shopping assistant')">
-      <i class="pi pi-comments" />
-    </button>
+    <section
+      v-show="!showCart"
+      ref="storefrontChatWidgetRef"
+      class="chatbot-widget"
+      :class="{ open: showChatbot, 'is-dragging': isChatDragging, 'is-custom-pos': isChatCustomPositioned }"
+      :style="chatDragStyle"
+    >
+      <button
+        class="chatbot-fab"
+        type="button"
+        :title="t('Kéo lên/xuống để đổi vị trí • Nhấp để mở chat', 'Drag up/down to move • Click to toggle chat')"
+        @pointerdown="startChatDrag"
+        @mousedown="startChatDrag"
+        @touchstart="startChatDrag"
+        @click="handleStorefrontFabClick"
+      >
+        <i :class="showChatbot ? 'pi pi-times' : 'pi pi-comments'" />
+      </button>
 
       <Transition name="chat-slide">
-      <aside v-if="showChatbot" class="chatbot-panel">
-          <header class="chatbot-head">
-            <div>
-              <strong>Smart Store AI</strong>
-              <small>{{ t('Trợ lý mua sắm thông minh', 'Smart Shopping Assistant') }}</small>
+        <aside
+          v-if="showChatbot"
+          class="chatbot-panel"
+        >
+          <header
+            class="chatbot-head"
+            :title="t('Bấm giữ để kéo di chuyển • Nhấp đúp để về vị trí gốc', 'Click & drag to move • Double-click to reset position')"
+            @mousedown="startChatDrag"
+            @touchstart="startChatDrag"
+            @dblclick="resetChatPosition"
+          >
+            <div class="chatbot-head-left">
+              <div class="chatbot-drag-handle" :title="t('Kéo để di chuyển', 'Drag to move')">
+                <span class="drag-dots">⋮⋮</span>
+              </div>
+              <div class="chatbot-avatar-ring">
+                <span>🤖</span>
+              </div>
+              <div>
+                <div class="chatbot-title-row">
+                  <strong>SmartSale AI</strong>
+                  <span class="chatbot-badge">{{ t('Mua sắm', 'Shopping') }}</span>
+                </div>
+                <small class="chatbot-sub">
+                  <span class="chatbot-online-dot"></span>
+                  {{ t('Trợ lý mua sắm thông minh', 'Smart Shopping Assistant') }}
+                </small>
+              </div>
             </div>
-            <button class="chatbot-close-btn" type="button" @click="showChatbot = false" :aria-label="t('Đóng', 'Close')">
-              <i class="pi pi-times" />
-            </button>
+            <div class="chatbot-head-actions" @mousedown.stop @touchstart.stop>
+              <button
+                v-if="isChatCustomPositioned"
+                class="chatbot-action-btn"
+                type="button"
+                :title="t('Đặt lại vị trí góc phải', 'Reset window position')"
+                @click="resetChatPosition"
+              >
+                📍
+              </button>
+              <button
+                class="chatbot-action-btn"
+                type="button"
+                :title="t('Làm mới phiên chat', 'Reset chat')"
+                @click="resetChatbotSession"
+              >
+                🔄
+              </button>
+              <button
+                class="chatbot-action-btn chatbot-close-btn"
+                type="button"
+                @click="showChatbot = false"
+                :aria-label="t('Đóng', 'Close')"
+              >
+                ✕
+              </button>
+            </div>
           </header>
 
           <div class="chatbot-body">
@@ -2616,40 +2722,14 @@ onUnmounted(() => {
                 class="chat-message"
                 :class="message.role === 'user' ? 'from-user' : 'from-bot'"
               >
-                <div
-                  class="message-bubble"
-                  :class="{ 'product-list-bubble': getChatProductList(message.content).products.length }"
-                >
-                  <div v-if="getChatProductList(message.content).products.length" class="chat-product-list">
-                    <strong>{{ getChatProductList(message.content).title }}</strong>
-                    <article
-                      v-for="product in getChatProductList(message.content).products"
-                      :key="product.id"
-                      class="chat-product-row"
-                    >
-                      <div>
-                        <b>{{ product.name }}</b>
-                        <small>#{{ product.id }}</small>
-                      </div>
-                      <dl>
-                        <div>
-                          <dt>{{ t('Giá bán', 'Sale') }}</dt>
-                          <dd>{{ formatCurrency(product.salePrice) }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ t('Giá gốc', 'Original') }}</dt>
-                          <dd>{{ formatCurrency(product.originalPrice) }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ t('Tồn kho', 'Stock') }}</dt>
-                          <dd :class="{ empty: product.stock <= 0 }">
-                            {{ product.stock > 0 ? `${product.stock} ${t('sản phẩm', 'items')}` : t('Hết hàng', 'Out of stock') }}
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
-                  </div>
-                  <p v-else>{{ message.content }}</p>
+                <div class="message-bubble">
+                  <ChatStructuredMessage
+                    :content="message.content"
+                    :role="message.role"
+                    :is-storefront="true"
+                    @open-product="handleOpenProductFromChat"
+                    @add-to-cart="handleAddToCartFromChat"
+                  />
                 </div>
               </article>
               <div v-if="chatbotSending" class="chat-message from-bot loading-message">
@@ -2696,7 +2776,7 @@ onUnmounted(() => {
               :placeholder="t('Hỏi về sản phẩm, đơn hàng, tồn kho...', 'Ask about products, orders, stock...')"
               :disabled="chatbotSending"
             />
-            <button type="submit" :disabled="chatbotSending || !chatbotInput.trim()">
+            <button type="submit" :title="t('Gửi', 'Send')" :disabled="chatbotSending || !chatbotInput.trim()">
               <i class="pi pi-send" />
             </button>
           </form>
@@ -7262,129 +7342,232 @@ border: 1px solid #23304c !important;
 }
 
 /* AI Chatbot Floating Redesign Styles */
+.chatbot-widget,
 .store .chatbot-widget {
   position: fixed !important;
-  bottom: 24px !important;
   right: 24px !important;
+  bottom: 24px;
+  width: 54px !important;
+  height: 54px !important;
   z-index: 99999 !important;
+  display: block !important;
 }
 
+.chatbot-widget.is-dragging,
+.store .chatbot-widget.is-dragging {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+.chatbot-fab,
 .store .chatbot-fab {
-  width: 56px !important;
-  height: 56px !important;
+  width: 54px !important;
+  height: 54px !important;
   border-radius: 50% !important;
-  background: #0f766e !important;
+  background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0284c7 100%) !important;
   color: white !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  cursor: pointer !important;
-  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.35) !important;
+  cursor: grab !important;
+  touch-action: none !important;
+  user-select: none !important;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.4), 0 2px 6px rgba(0, 0, 0, 0.1) !important;
   border: 0 !important;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease !important;
   z-index: 99999 !important;
 }
 
+.is-dragging .chatbot-fab {
+  cursor: grabbing !important;
+  transform: scale(1.08) !important;
+  transition: none !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35) !important;
+}
+
+.chatbot-fab i,
 .store .chatbot-fab i {
   color: white !important;
-  font-size: 24px !important;
+  font-size: 22px !important;
   display: inline-block !important;
 }
 
+.chatbot-fab:hover,
 .store .chatbot-fab:hover {
-  transform: scale(1.08) rotate(5deg) !important;
-  background: #0b5f59 !important;
-  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.5) !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 12px 30px rgba(13, 148, 136, 0.55) !important;
 }
 
 .chatbot-panel {
-  position: fixed;
-  bottom: 96px;
-  right: 24px;
-  width: 380px;
-  height: 540px;
-  max-height: calc(100vh - 140px);
-  max-width: calc(100vw - 48px);
+  position: absolute !important;
+  bottom: 68px !important;
+  right: 0 !important;
+  width: 440px !important;
+  height: 600px !important;
+  max-height: calc(100vh - 110px) !important;
+  max-width: calc(100vw - 32px) !important;
   background: #ffffff;
   color: #111827;
-  border: 1px solid #e8e7e1;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 100;
-  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+  z-index: 100000;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .app-dark .chatbot-panel {
-  background: #151d30 !important;
-  border-color: #23304c !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+  background: #111827 !important;
+  border-color: #374151 !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   color: #e2e8f0 !important;
 }
 
 .chatbot-head {
-  padding: 16px 20px;
-  background: #0f766e;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #0369a1 100%);
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: grab;
+  user-select: none;
+}
+
+.chatbot-panel.is-dragging .chatbot-head {
+  cursor: grabbing;
 }
 
 .app-dark .chatbot-head {
-  background: #1e293b;
+  background: linear-gradient(135deg, #134e4a 0%, #1e293b 70%, #0f172a 100%);
+  border-bottom-color: #334155;
 }
 
-.chatbot-head div {
+.chatbot-head-left {
   display: flex;
-  flex-direction: column;
-  text-align: left;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.chatbot-head strong {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.chatbot-head small {
-  font-size: 11px;
-  opacity: 0.8;
-  margin-top: 2px;
-}
-
-.chatbot-close-btn {
-  background: transparent !important;
-  border: 0 !important;
-  color: white !important;
-  width: 28px;
-  height: 28px;
+.chatbot-drag-handle {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50% !important;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  padding: 2px 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: grab;
+}
+
+.chatbot-drag-handle:hover {
+  color: #ffffff;
+}
+
+.chatbot-avatar-ring {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.chatbot-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+
+.chatbot-title-row strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.chatbot-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.chatbot-sub {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.chatbot-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  display: inline-block;
+  box-shadow: 0 0 6px #34d399;
+}
+
+.chatbot-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.chatbot-action-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  color: #ffffff !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s !important;
+}
+
+.chatbot-action-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: scale(1.08);
 }
 
 .chatbot-close-btn:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(239, 68, 68, 0.8) !important;
 }
 
 .chatbot-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   background: #f8fafc;
 }
 
 .app-dark .chatbot-body {
-  background: #0b0f19 !important;
+  background: #0b1120 !important;
 }
 
 .chatbot-state {
@@ -7406,7 +7589,7 @@ border: 1px solid #23304c !important;
 .chat-message {
   display: flex;
   flex-direction: column;
-  max-width: 80%;
+  max-width: 90%;
   width: fit-content;
 }
 
@@ -7419,37 +7602,113 @@ border: 1px solid #23304c !important;
 }
 
 .message-bubble {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 0.88rem;
+  line-height: 1.55;
   text-align: left;
   word-break: break-word;
 }
 
 .from-user .message-bubble {
-  background: #0f766e;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
   color: white;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.15);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
 }
 
 .from-bot .message-bubble {
   background: #ffffff;
   color: #111827;
   border-bottom-left-radius: 4px;
-  border: 1px solid #e8e7e1;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .app-dark .from-bot .message-bubble {
   background: #1e293b !important;
-  border-color: #23304c !important;
-  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+  color: #f3f4f6 !important;
 }
 
 .chat-message p {
   margin: 0;
+}
+
+/* Markdown formatted styling inside Storefront chat */
+:deep(.chat-callout-badge) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.82rem;
+  margin: 3px 0;
+}
+
+.app-dark :deep(.chat-callout-badge) {
+  background: rgba(14, 165, 233, 0.2);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+:deep(.chat-list-item) {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+:deep(.item-bullet) {
+  color: #0d9488;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+:deep(.item-num) {
+  color: #0d9488;
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+:deep(.chat-price-highlight) {
+  font-weight: 700;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.app-dark :deep(.chat-price-highlight) {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.18);
+}
+
+:deep(.chat-inline-code) {
+  background: rgba(100, 116, 139, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.82rem;
+}
+
+:deep(.chat-paragraph-gap) {
+  height: 8px;
+}
+
+:deep(.chat-md-divider) {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  margin: 10px 0;
+}
+
+.app-dark :deep(.chat-md-divider) {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .loading-message {
@@ -8053,66 +8312,7 @@ border: 1px solid #23304c !important;
    GLOBAL OVERRIDES FOR STOREFRONT UI (BUILT-IN CONTRAST & SPECIFICITY FIXES)
    ========================================================================= */
 
-/* Floating Chatbot Widget Launcher & Panel Positioning (Anchored bottom-right) */
-.chatbot-widget {
-  position: fixed !important;
-  bottom: 20px !important;
-  right: 20px !important;
-  left: auto !important;
-  width: 0px !important;
-  height: 0px !important;
-  z-index: 99999 !important;
-}
 
-.chatbot-fab {
-  position: absolute !important;
-  bottom: 0 !important;
-  right: 0 !important;
-  left: auto !important;
-  width: 56px !important;
-  height: 56px !important;
-  border-radius: 50% !important;
-  background: #0f766e !important;
-  color: #ffffff !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  box-shadow: 0 4px 16px rgba(15, 118, 110, 0.35) !important;
-  border: 0 !important;
-  z-index: 99999 !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.chatbot-fab i {
-  color: #ffffff !important;
-  font-size: 24px !important;
-}
-
-.chatbot-fab:hover {
-  transform: scale(1.08) !important;
-  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.45) !important;
-}
-
-.chatbot-panel {
-  position: absolute !important;
-  bottom: 70px !important; /* Floats perfectly above the FAB button */
-  right: 0 !important;
-  left: auto !important;
-  width: 380px !important;
-  height: 540px !important;
-  max-height: calc(100vh - 140px) !important;
-  max-width: calc(100vw - 40px) !important;
-  background: #ffffff !important;
-  border: 1px solid #e8e7e1 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  z-index: 99999 !important;
-  color: #111827 !important;
-}
 
 /* Dark mode chatbot panel */
 .app-dark .chatbot-panel {
@@ -8582,27 +8782,7 @@ background: rgba(56, 189, 248, 0.1) !important;
   border-radius: 10px !important;
 }
 
-.chatbot-widget {
-  right: 18px !important;
-  bottom: 18px !important;
-  width: auto !important;
-  height: auto !important;
-}
 
-.chatbot-fab {
-  position: relative !important;
-  width: 52px !important;
-  height: 52px !important;
-}
-
-.chatbot-panel {
-  position: fixed !important;
-  right: 18px !important;
-  bottom: 82px !important;
-  width: min(380px, calc(100vw - 36px)) !important;
-  height: min(540px, calc(100vh - 110px)) !important;
-  border-radius: 18px !important;
-}
 
 @media (max-width: 640px) {
   .store .header-right {
@@ -8683,22 +8863,7 @@ background: rgba(56, 189, 248, 0.1) !important;
     font-size: 14px !important;
   }
 
-  .chatbot-widget {
-    right: 14px !important;
-    bottom: 14px !important;
-  }
 
-  .chatbot-panel {
-    right: 10px !important;
-    bottom: 76px !important;
-    width: calc(100vw - 20px) !important;
-    height: min(560px, calc(100vh - 96px)) !important;
-    border-radius: 16px !important;
-  }
-
-  .chatbot-suggestions {
-    max-height: 92px !important;
-  }
 }
 
 .app-dark .store .header-right {
@@ -8851,10 +9016,7 @@ background: rgba(56, 189, 248, 0.1) !important;
   color: #ffffff !important;
 }
 
-/* Chatbot visual refinement */
-.chatbot-widget {
-  z-index: 80 !important;
-}
+
 
 .chatbot-panel {
   width: min(400px, calc(100vw - 28px)) !important;
