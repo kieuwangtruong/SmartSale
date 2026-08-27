@@ -282,6 +282,54 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/Order/{id}/cancel-request': {
+      post: {
+        summary: 'Yêu cầu huỷ đơn hàng hoặc hoàn tiền (Khách hàng / Admin)',
+        tags: ['Orders'],
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  reason: { type: 'string', example: 'Thay đổi ý định' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Yêu cầu huỷ hoặc chuyển trạng thái thành công' },
+        },
+      },
+    },
+    '/api/Order/{id}/confirm-refund': {
+      post: {
+        summary: 'Xác nhận đã hoàn tiền cho đơn hàng (Admin / SalesStaff)',
+        tags: ['Orders'],
+        security: [{ BearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  refundAmount: { type: 'number', example: 500000 },
+                  refundReason: { type: 'string', example: 'Khách yêu cầu hoàn tiền qua STK' },
+                  refundTransactionReference: { type: 'string', example: 'FT24010199999' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Xác nhận hoàn tiền thành công' },
+        },
+      },
+    },
     '/api/stock-receipts': {
       get: {
         summary: 'Lấy danh sách phiếu nhập kho',

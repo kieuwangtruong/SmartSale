@@ -256,7 +256,15 @@ async function orderDto(row) {
     tierDiscountPercent: number(row.tierDiscountPercent),
     total: number(row.total), amountPaid: number(row.amountPaid),
     debtAmount: number(row.debtAmount), paymentOrderCode: row.paymentOrderCode === null ? null : Number(row.paymentOrderCode),
-    payOsTransactionReference: row.payOsTransactionReference, createdAt: toIso(row.createdAt),
+    payOsTransactionReference: row.payOsTransactionReference,
+    refundAmount: row.refundAmount !== null && row.refundAmount !== undefined ? number(row.refundAmount) : (row.refund_amount !== null && row.refund_amount !== undefined ? number(row.refund_amount) : null),
+    refundReason: row.refundReason || row.refund_reason || null,
+    refundTransactionReference: row.refundTransactionReference || row.refund_transaction_reference || null,
+    refundRequestedAt: toIso(row.refundRequestedAt || row.refund_requested_at),
+    refundedAt: toIso(row.refundedAt || row.refunded_at),
+    refundedByUserId: row.refundedByUserId ? Number(row.refundedByUserId) : (row.refunded_by_user_id ? Number(row.refunded_by_user_id) : null),
+    refundSourceStatus: row.refundSourceStatus || row.refund_source_status || null,
+    createdAt: toIso(row.createdAt),
     lastModifiedAt: toIso(row.lastModifiedAt), orderItems: await listOrderItems(row.id),
   }
 }
@@ -268,6 +276,10 @@ const orderSelect = `SELECT o.*, o.user_id AS "userId", o.customer_id AS "custom
   o.tier_discount_percent AS "tierDiscountPercent",
   o.amount_paid AS "amountPaid", o.debt_amount AS "debtAmount",
   o.payment_order_code AS "paymentOrderCode", o.payos_transaction_reference AS "payOsTransactionReference",
+  o.refund_amount AS "refundAmount", o.refund_reason AS "refundReason",
+  o.refund_transaction_reference AS "refundTransactionReference",
+  o.refund_requested_at AS "refundRequestedAt", o.refunded_at AS "refundedAt",
+  o.refunded_by_user_id AS "refundedByUserId", o.refund_source_status AS "refundSourceStatus",
   o.created_at AS "createdAt", o.last_modified_at AS "lastModifiedAt",
   c.full_name AS "customerName", s.full_name AS "salesStaffName"
   FROM orders o
@@ -1170,6 +1182,23 @@ app.post('/api/webhooks/payos', asyncRoute(async (req, res) => {
   res.status(200).send('OK')
 }))
 
+app.get('/api/orders', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (_req, res) => {
+  const rows = await query(`${orderSelect} ORDER BY o.id DESC`)
+  res.json(await Promise.all(rows.map(orderDto)))
+}))
+
+app.get('/api/Order/:id', authenticate, asyncRoute(async (req, res) => {
+  const orderId = integer(req.params.id)
+  const order = await getOrder(orderId)
+  if (!order) throw apiError(404, 'Không tìm thấy đơn hàng.')
+  if (req.user.role === 'Customer') {
+    const [cust] = await query('SELECT id FROM customers WHERE user_id=$1', [req.user.id])
+    const isOwner = order.userId === req.user.id || (cust && order.customerId === Number(cust.id))
+    if (!isOwner) throw apiError(403, 'Bạn không có quyền xem đơn hàng này.')
+  }
+  res.json(order)
+}))
+
 app.put('/api/Order/:id/status', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
   const status = requireValue(req.body.status, 'Trạng thái')
   if (!orderStatuses.has(status)) throw apiError(400, 'Trạng thái đơn hàng không hợp lệ.')
@@ -1177,6 +1206,99 @@ app.put('/api/Order/:id/status', authenticate, requireRoles('Admin', 'SalesStaff
   const order = await getOrder(integer(req.params.id))
   if (!order) throw apiError(404, 'Không tìm thấy đơn hàng.')
   res.json(order)
+}))
+
+app.post('/api/Order/:id/cancel-request', authenticate, asyncRoute(async (req, res) => {
+  const orderId = integer(req.params.id)
+  const order = await getOrder(orderId)
+  if (!order) throw apiError(404, 'Không tìm thấy đơn hàng.')
+
+  if (req.user.role === 'Customer') {
+    const [cust] = await query('SELECT id FROM customers WHERE user_id=$1', [req.user.id])
+    const isOwner = order.userId === req.user.id || (cust && order.customerId === Number(cust.id))
+    if (!isOwner) throw apiError(403, 'Bạn không có quyền huỷ đơn hàng này.')
+  }
+
+  const terminalStatuses = ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed', 'Refunded', 'RefundRejected']
+  if (terminalStatuses.includes(order.status)) {
+    throw apiError(400, `Đơn hàng #${orderId} đã ở trạng thái "${order.status}", không thể gửi yêu cầu huỷ.`)
+  }
+  if (order.status === 'RefundRequested') {
+    throw apiError(400, `Đơn hàng #${orderId} đang trong quá trình chờ hoàn tiền, không thể gửi thêm yêu cầu.`)
+  }
+
+  const reason = text(req.body.reason, 1000) || 'Khách hàng yêu cầu huỷ đơn'
+  const isPayOs = String(order.paymentMethod || '').toLowerCase() === 'payos'
+  const isPaidOrProcessing = ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status) || number(order.amountPaid) > 0
+
+  let newStatus = 'Cancelled'
+  let refundAmount = null
+  const refundSourceStatus = order.status
+
+  if (isPayOs && isPaidOrProcessing) {
+    newStatus = 'RefundRequested'
+    refundAmount = number(order.amountPaid) > 0 ? number(order.amountPaid) : number(order.total)
+  } else if (!isPayOs && isPaidOrProcessing && order.status === 'Completed') {
+    newStatus = 'RefundRequested'
+    refundAmount = number(order.total)
+  } else {
+    newStatus = 'Cancelled'
+  }
+
+  await query(
+    `UPDATE orders 
+     SET status = $1, 
+         refund_reason = $2, 
+         refund_amount = $3, 
+         refund_requested_at = now(), 
+         refund_source_status = $4,
+         last_modified_at = now() 
+     WHERE id = $5`,
+    [newStatus, reason, refundAmount, refundSourceStatus, orderId],
+  )
+
+  const updatedOrder = await getOrder(orderId)
+  res.json(updatedOrder)
+}))
+
+app.post('/api/Order/:id/confirm-refund', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
+  const orderId = integer(req.params.id)
+  const order = await getOrder(orderId)
+  if (!order) throw apiError(404, 'Không tìm thấy đơn hàng.')
+
+  const refundAmount = req.body.refundAmount !== undefined && req.body.refundAmount !== null 
+    ? Math.max(0, number(req.body.refundAmount)) 
+    : (order.refundAmount || order.amountPaid || order.total)
+  const refundReason = text(req.body.refundReason, 1000) || order.refundReason || 'Hoàn tiền cho khách hàng'
+  const refundTransactionReference = text(req.body.refundTransactionReference, 255) || null
+
+  await query(
+    `UPDATE orders 
+     SET status = 'Refunded', 
+         refund_amount = $1, 
+         refund_reason = $2, 
+         refund_transaction_reference = $3, 
+         refunded_at = now(), 
+         refunded_by_user_id = $4,
+         debt_amount = 0,
+         last_modified_at = now() 
+     WHERE id = $5`,
+    [refundAmount, refundReason, refundTransactionReference, req.user.id, orderId],
+  )
+
+  const updatedOrder = await getOrder(orderId)
+  res.json(updatedOrder)
+}))
+
+app.delete('/api/Order/:id', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
+  const orderId = integer(req.params.id)
+  const order = await getOrder(orderId)
+  if (!order) throw apiError(404, 'Không tìm thấy đơn hàng.')
+
+  await query('DELETE FROM order_items WHERE order_id = $1', [orderId])
+  await query('DELETE FROM coupon_usages WHERE order_id = $1', [orderId])
+  await query('DELETE FROM orders WHERE id = $1', [orderId])
+  res.status(204).end()
 }))
 
 app.get('/api/reports/dashboard', authenticate, requireRoles('Admin'), asyncRoute(async (_req, res) => {

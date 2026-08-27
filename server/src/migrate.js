@@ -13,6 +13,20 @@ for (const statement of schema.split(/;\s*(?:\r?\n|$)/)) {
   if (sql) await query(sql)
 }
 
+// Ensure columns exist on existing orders table
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_id BIGINT REFERENCES coupons(id) ON DELETE SET NULL`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code TEXT`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount_amount NUMERIC(14,2) NOT NULL DEFAULT 0`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS tier_discount_amount NUMERIC(14,2) NOT NULL DEFAULT 0`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS tier_discount_percent NUMERIC(5,2) NOT NULL DEFAULT 0`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_amount NUMERIC(14,2)`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_reason TEXT`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_transaction_reference TEXT`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_requested_at TIMESTAMPTZ`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refunded_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL`)
+await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_source_status TEXT`)
+
 const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_FULL_NAME = 'Quản trị viên' } = process.env
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12)
@@ -25,3 +39,4 @@ if (ADMIN_EMAIL && ADMIN_PASSWORD) {
 }
 
 console.log('Neon schema is ready.')
+
