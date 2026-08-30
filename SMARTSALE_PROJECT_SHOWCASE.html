@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>SmartSale - Báo Cáo Dự Án & Hồ Sơ Năng Lực Kỹ Thuật</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 10mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.4;
+      font-size: 9pt;
+    }
+
+    .header-container {
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .title-area h1 {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+      margin-bottom: 2px;
+    }
+
+    .title-area .subtitle {
+      font-size: 9.5pt;
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .meta-area {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    .meta-area a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      background-color: #f1f5f9;
+      color: #334155;
+      font-size: 7.5pt;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .badge-primary {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+
+    .badge-success {
+      background-color: #ecfdf5;
+      color: #047857;
+      border-color: #a7f3d0;
+    }
+
+    .section-title {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-left: 3.5px solid #2563eb;
+      padding-left: 6px;
+      margin-top: 8px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .metric-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 5px 6px;
+      text-align: center;
+    }
+
+    .metric-box .value {
+      font-size: 12pt;
+      font-weight: 800;
+      color: #1e3a8a;
+    }
+
+    .metric-box .label {
+      font-size: 7pt;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .metric-box .subtext {
+      font-size: 6.8pt;
+      color: #059669;
+      font-weight: 600;
+    }
+
+    .pillar-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 9px;
+      margin-bottom: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .pillar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3px;
+    }
+
+    .pillar-title {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .pillar-tag {
+      font-size: 7pt;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    ul.bullet-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    ul.bullet-list li {
+      position: relative;
+      padding-left: 11px;
+      margin-bottom: 2.5px;
+      font-size: 8.2pt;
+      color: #334155;
+    }
+
+    ul.bullet-list li::before {
+      content: "▪";
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: bold;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      margin-bottom: 6px;
+      font-size: 7.8pt;
+    }
+
+    table.data-table th {
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-weight: 700;
+      text-align: left;
+      padding: 4px 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    table.data-table td {
+      padding: 4px 6px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    table.data-table tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 5px;
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.2pt;
+      color: #94a3b8;
+    }
+
+    .page-break-before {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== TRANG 1 ==================== -->
+  <div class="header-container">
+    <div class="title-area">
+      <h1>🛍️ HỆ THỐNG QUẢN TRỊ BÁN HÀNG & PHÂN TÍCH DỮ LIỆU SMARTSALE</h1>
+      <div class="subtitle">Báo Cáo Tổng Hợp Kiến Trúc Kỹ Thuật, Data Analytics & Business Intelligence</div>
+    </div>
+    <div class="meta-area">
+      <div><strong>Tác giả:</strong> Kiều Quang Trưởng Vĩ & Team</div>
+      <div><strong>Web App:</strong> <a href="https://www.smartsale-dev.me">smartsale-dev.me</a></div>
+      <div><strong>BI Dashboard:</strong> <a href="https://smartsale-analytics.streamlit.app">streamlit.app</a></div>
+      <div><strong>GitHub:</strong> <a href="https://github.com/kieuwangtruong/SmartSale">kieuwangtruong/SmartSale</a></div>
+    </div>
+  </div>
+
+  <!-- BADGE BAR -->
+  <div class="badge-bar">
+    <span class="badge badge-primary">Vue 3 (Composition API)</span>
+    <span class="badge badge-primary">TypeScript & Vite</span>
+    <span class="badge badge-primary">Node.js / Express REST API</span>
+    <span class="badge badge-primary">PostgreSQL (Neon Serverless)</span>
+    <span class="badge badge-success">Google Gemini 3.6 Flash</span>
+    <span class="badge badge-success">Cổng PayOS (VietQR Webhook)</span>
+    <span class="badge badge-success">Streamlit Cloud Dashboard</span>
+    <span class="badge badge-success">Python (Pandas, Scipy, Statsmodels)</span>
+    <span class="badge">Power BI Star Schema & DAX</span>
+  </div>
+
+  <!-- KEY METRICS BANNER -->
+  <div class="metric-grid">
+    <div class="metric-box">
+      <div class="value">45.2%</div>
+      <div class="label">Đóng Góp Doanh Thu VIP</div>
+      <div class="subtext">Quy luật Pareto (20% User)</div>
+    </div>
+    <div class="metric-box">
+      <div class="value">+50.6%</div>
+      <div class="label">Uplift A/B Test Voucher</div>
+      <div class="subtext">p-value = 0.00018 &lt; 0.05</div>
+    </div>
+    <div class="metric-box">
+      <div class="value">22.0%</div>
+      <div class="label">Tỷ Lệ Chat-To-Cart AI</div>
+      <div class="subtext">Phễu Gemini 3.6 Flash</div>
+    </div>
+    <div class="metric-box">
+      <div class="value">+14.0%</div>
+      <div class="label">Mức Tăng Trưởng AOV</div>
+      <div class="subtext">Nhờ AI Cross-Selling</div>
+    </div>
+  </div>
+
+  <!-- 1. TỔNG QUAN -->
+  <div class="section-title">1. Tổng Quan Kiến Trúc & Giá Trị Dự Án</div>
+  <div class="pillar-card">
+    <p style="font-size: 8.2pt; color: #334155; margin-bottom: 3px;">
+      <strong>SmartSale</strong> là nền tảng quản trị bán lẻ đa kênh toàn diện kết hợp kiểm soát tồn kho thông minh, tự động hóa dòng tiền qua cổng thanh toán số VietQR (PayOS), tích hợp Trợ lý ảo AI phân quyền đa vai trò (Role-based Gemini) và phân hệ Phân tích Kinh doanh chuyên sâu (Data Analytics & BI Data Mart).
+    </p>
+    <ul class="bullet-list">
+      <li><strong>Mục tiêu cốt lõi:</strong> Chuẩn hóa luồng luân chuyển hàng hóa từ nhà cung cấp đến khách hàng cuối, đồng thời biến dữ liệu giao dịch thành các quyết định kinh doanh sinh lời (Data-Driven Decisions).</li>
+      <li><strong>Mô hình triển khai Cloud:</strong> Kiến trúc Serverless hiện đại với Frontend trên <em>Vercel</em>, Backend API trên <em>Render</em>, Database trên <em>Neon Serverless PostgreSQL</em> và Dashboard BI trên <em>Streamlit Cloud</em>.</li>
+    </ul>
+  </div>
+
+  <!-- 2. CHI TIẾT CÁC PHÂN HỆ KỸ THUẬT (PHẦN 1) -->
+  <div class="section-title">2. Chi Tiết Các Phân Hệ Kỹ Thuật Đã Triển Khai</div>
+
+  <div class="pillar-card">
+    <div class="pillar-header">
+      <span class="pillar-title">⚙️ Phân Hệ 1: Full-Stack Web Application & Cơ Sở Dữ Liệu PostgreSQL</span>
+      <span class="pillar-tag">Storefront & Sales Engine</span>
+    </div>
+    <ul class="bullet-list">
+      <li><strong>Frontend SPA:</strong> Xây dựng trên <em>Vue 3 (Composition API)</em>, TypeScript, Vite, Pinia State Management và thư viện PrimeVue UI tối ưu hiệu năng tải trang &lt; 1s.</li>
+      <li><strong>Backend REST API:</strong> Node.js/Express bảo mật đa tầng với JWT Authentication, cơ chế RBAC phân quyền 4 nhóm đối tượng (<em>Admin, SalesStaff, WarehouseKeeper, Customer</em>).</li>
+      <li><strong>Database Neon PostgreSQL:</strong> Thiết kế chuẩn hóa 20+ bảng dữ liệu quan hệ (<em>users, products, categories, suppliers, orders, order_items, stock_receipts, coupons, chat_sessions, chat_messages</em>) kèm Indexing tối ưu tốc độ truy vấn.</li>
+    </ul>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-header">
+      <span class="pillar-title">💳 Phân Hệ 2: Cổng Thanh Toán Trực Tuyến Tự Động VietQR PayOS</span>
+      <span class="pillar-tag">FinTech Integration</span>
+    </div>
+    <ul class="bullet-list">
+      <li>Tích hợp PayOS SDK sinh mã VietQR động theo thời gian thực cho từng đơn hàng với mã đơn định danh duy nhất.</li>
+      <li>Xây dựng hệ thống <strong>Webhook Listener</strong> tự động đồng bộ trạng thái thanh toán tức thì (<em>PendingPayment &rarr; Paid &rarr; Processing</em>) với chữ ký mã hóa Checksum SHA256 chống giả mạo giao dịch.</li>
+    </ul>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-header">
+      <span class="pillar-title">🤖 Phân Hệ 3: Trợ Lý AI Chatbot Đa Quyền (Google Gemini 3.6 Flash)</span>
+      <span class="pillar-tag">Generative AI Commerce</span>
+    </div>
+    <ul class="bullet-list">
+      <li>Ứng dụng mô hình <strong>Google Gemini 3.6 Flash</strong> với context window lớn, tốc độ phản hồi dưới 1 giây và chi phí token tối ưu.</li>
+      <li><strong>Dynamic Context Injection & Role-Based Guardrails:</strong> Phân quyền ngữ cảnh dữ liệu thông minh theo 4 vai trò:
+        <em>Khách hàng</em> (tra cứu hạng VIP, đơn hàng gần nhất, tư vấn sản phẩm); <em>Nhân viên Bán hàng</em> (báo cáo doanh số ngày, Top đơn cần duyệt); <em>Thủ kho</em> (cảnh báo tồn kho báo động, thông tin nhà cung cấp); <em>Admin</em> (báo cáo dòng tiền và hiệu suất tổng thể).
+      </li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <div>Trang 1 / 2 | SmartSale Technical Project Showcase &copy; 2026</div>
+    <div>Live Web: www.smartsale-dev.me | GitHub: kieuwangtruong/SmartSale</div>
+  </div>
+
+  <!-- ==================== TRANG 2 ==================== -->
+  <div class="page-break-before"></div>
+
+  <div class="header-container" style="margin-top: 0;">
+    <div class="title-area">
+      <h1>📊 PHÂN HỆ DATA ANALYTICS & BI DASHBOARD</h1>
+      <div class="subtitle">Data Engineering, Thống Kê Suy Luận, Star Schema & Streamlit Cloud Dashboard</div>
+    </div>
+    <div class="meta-area">
+      <div><strong>Thư mục mã nguồn:</strong> <code>/analytics/</code></div>
+      <div><strong>BI Live Link:</strong> <a href="https://smartsale-analytics.streamlit.app">smartsale-analytics.streamlit.app</a></div>
+    </div>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-header">
+      <span class="pillar-title">📊 Phân Hệ 4: Data Analytics Engineering & Data Mart (analytics/)</span>
+      <span class="pillar-tag">Analytics Layer</span>
+    </div>
+    <ul class="bullet-list">
+      <li><strong>Bộ SQL Scripts Nâng Cao (<code>analytics/sql/</code>):</strong>
+        <br>&bull; <code>01_rfm_segmentation.sql</code>: Sử dụng CTEs và Window Function <code>NTILE(4)</code> phân khúc khách hàng 4 cấp bậc VIP (*Bronze, Silver, Gold, Diamond*), chứng minh quy luật Pareto (nhóm VIP chiếm ~20% khách hàng nhưng tạo ra <strong>45.2% tổng doanh thu GMV</strong>).
+        <br>&bull; <code>02_cohort_retention.sql</code>: Ma trận giữ chân khách hàng (Cohort Retention Matrix M0 &rarr; M6) theo dõi hành vi mua lặp lại (Repeat Purchase Rate tăng từ 38.5% lên 46.2%).
+        <br>&bull; <code>03_inventory_health.sql</code>: Tính toán tốc độ bán (STR %), vòng quay tồn kho (Inventory Turnover) và tự động lọc danh sách SKU chạm ngưỡng cảnh báo hết hàng (&le; 10 sản phẩm).
+      </li>
+      <li><strong>Data Pipeline & Thống Kê Suy Luận (<code>analytics/notebooks/</code>):</strong>
+        <br>&bull; <code>01_data_cleaning_etl.ipynb</code>: Pipeline làm sạch dữ liệu, xử lý missing values, chuẩn hóa timezone UTC sang <code>Asia/Ho_Chi_Minh</code> (GMT+7), loại bỏ ngoại lai đơn hủy/lỗi PayOS, Feature Engineering (<em>net_revenue, days_since_last_order, cart_abandonment_flag</em>).
+        <br>&bull; <code>02_ab_test_promotions.ipynb</code>: Kiểm định giả thuyết <strong>Two-Proportion Z-Test</strong> (p-value = 0.00018 &lt; 0.05) khẳng định Voucher % (CR 13.44%) vượt trội có ý nghĩa thống kê so với Voucher cố định tiền mặt (CR 8.96%) với mức tăng tương đối <strong>+50.6%</strong>.
+        <br>&bull; <code>03_conversational_funnel.ipynb</code>: Đo lường phễu chuyển đổi thương mại hội thoại AI: Tỷ lệ Chat-to-Cart đạt <strong>22.0%</strong> và mức tăng trưởng giỏ hàng đạt <strong>+14.0% AOV Lift</strong> (p &lt; 0.001).
+      </li>
+      <li><strong>Data Modeling & DAX Catalog (<code>analytics/docs/</code>):</strong>
+        <br>&bull; <code>DATA_DICTIONARY.md</code>: Bảng từ điển dữ liệu Data Mart (<em>fact_orders, dim_customers_rfm, dim_inventory_sku, fact_ai_chat_logs, dim_date</em>).
+        <br>&bull; <code>POWER_BI_MODELING.md</code>: Thiết kế mô hình Star Schema chuẩn Enterprise và danh mục công thức DAX chuẩn (<em>Total GMV, AOV, VIP Revenue Contribution %, Stockout Risk Index</em>).
+      </li>
+    </ul>
+  </div>
+
+  <div class="pillar-card">
+    <div class="pillar-header">
+      <span class="pillar-title">📈 Phân Hệ 5: Bảng Điều Khiển Trực Quan Tương Tác Streamlit Cloud Dashboard</span>
+      <span class="pillar-tag">analytics/dashboard/</span>
+    </div>
+    <ul class="bullet-list">
+      <li>Xây dựng Multi-page Interactive Dashboard với thư viện <em>Plotly & Streamlit</em> kết nối trực tiếp cơ sở dữ liệu Neon Cloud.</li>
+      <li>Bao gồm 4 trang điều hành chuyên biệt: <strong>Executive Overview</strong> (Doanh thu & Pareto VIP), <strong>Customer RFM & Cohorts</strong> (Bản đồ định vị 4 màu & Heatmap Retention), <strong>Inventory & Supply Chain</strong> (Đo lường STR & Cảnh báo SKU &le; 10 kèm chi phí nhập), <strong>AI Conversational & A/B Test Lab</strong> (Bộ mô phỏng tính Z-Test trực tiếp).</li>
+    </ul>
+  </div>
+
+  <!-- 3. BẢNG TỔNG KẾT CHỈ SỐ KINH DOANH -->
+  <div class="section-title">3. Bảng Tổng Hợp Chỉ Số & Tác Động Kinh Doanh</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 20%;">Hạng Mục Phân Tích</th>
+        <th style="width: 25%;">Phương Pháp / Kỹ Thuật</th>
+        <th style="width: 22%;">Chỉ Số Đạt Được</th>
+        <th style="width: 33%;">Ý Nghĩa Nghiệp Vụ & Quyết Định Kinh Doanh</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Phân Khúc VIP (RFM)</strong></td>
+        <td>SQL <code>NTILE(4)</code>, Window Functions</td>
+        <td><strong>45.2% GMV</strong> từ 20% VIP</td>
+        <td>Tập trung nguồn lực CRM chăm sóc nhóm VIP Kim Cương/Vàng, tối ưu LTV.</td>
+      </tr>
+      <tr>
+        <td><strong>A/B Test Voucher</strong></td>
+        <td>Two-Proportion Z-Test (scipy/statsmodels)</td>
+        <td><strong>CR 13.44% vs 8.96%</strong> (p &lt; 0.05)</td>
+        <td>Triển khai Voucher giảm giá theo % làm mặc định, tối ưu chi phí khuyến mãi.</td>
+      </tr>
+      <tr>
+        <td><strong>AI Commerce Funnel</strong></td>
+        <td>Gemini Log Tracking & Funnel Analysis</td>
+        <td><strong>22% Chat-to-Cart, +14% AOV</strong></td>
+        <td>AI đề xuất combo phụ kiện chuẩn xác giúp tăng quy mô giỏ hàng tự nhiên.</td>
+      </tr>
+      <tr>
+        <td><strong>Giữ Chân Khách Hàng</strong></td>
+        <td>Cohort Retention Matrix (M0 &rarr; M6)</td>
+        <td><strong>M1 Retention: 46.2%</strong></td>
+        <td>Cải thiện tỷ lệ mua lại thông qua ưu đãi chiết khấu thành viên theo bậc.</td>
+      </tr>
+      <tr>
+        <td><strong>Kiểm Soát Tồn Kho</strong></td>
+        <td>Sell-Through Rate & Safety Stock Index</td>
+        <td><strong>100% SKU &le; 10</strong> được cảnh báo</td>
+        <td>Tự động tính chi phí và số lượng đề xuất nhập hàng, triệt tiêu đứt gãy kho.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>Trang 2 / 2 | SmartSale Technical Project Showcase &copy; 2026 | Tác giả: <strong>Kiều Quang Trưởng Vĩ</strong> & Team</div>
+    <div>Live Web: www.smartsale-dev.me | BI Dashboard: smartsale-analytics.streamlit.app</div>
+  </div>
+
+</body>
+</html>
