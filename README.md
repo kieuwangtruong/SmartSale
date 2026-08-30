@@ -38,10 +38,17 @@
 
 ---
 
-### 5. 📊 Báo cáo & Phân tích Kinh doanh nâng cao (BI Analytics)
-- **Dashboard Doanh thu:** Trực quan hóa doanh thu theo ngày, tuần, tháng và năm với biểu đồ tương tác cao.
-- **Phân tích Khách hàng:** Phân tích giá trị vòng đời khách hàng (LTV), phân khúc khách hàng chi tiêu cao.
-- **Hiệu suất Sản phẩm:** Top 5/Top 10 sản phẩm bán chạy nhất (Best Sellers), tỷ lệ hoàn vốn và lợi nhuận gộp.
+### 5. 📊 Phân hệ Data Analytics & Business Intelligence (Analytics Engineering)
+Hệ thống tích hợp kiến trúc phân tích dữ liệu chuyên sâu tại thư mục [`analytics/`](./analytics/), hỗ trợ ra quyết định kinh doanh dựa trên dữ liệu (Data-Driven Decisions) với 3 phát hiện cốt lõi:
+- 💎 **Quy luật Pareto 80/20 & Phân khúc VIP:** Phân tích RFM (`NTILE(4)`) chứng minh nhóm khách hàng VIP (*Kim Cương & Vàng*) chỉ chiếm ~20% tập khách hàng nhưng đóng góp tới **~45% tổng doanh thu GMV**.
+- 🧪 **Kiểm định A/B Testing Khuyến mãi:** Phân tích Two-Proportion Z-Test ($p\text{-value} = 0.00018 < 0.05$) khẳng định chiến lược voucher giảm theo phần trăm (%) mang lại tỷ lệ hoàn tất đơn hàng vượt trội (+50.6% relative uplift) so với voucher tiền mặt cố định.
+- 🤖 **Thương mại Hội thoại AI (Conversational Funnel):** Trợ lý ảo Google Gemini tạo tỷ lệ chuyển đổi Chat-to-Cart đạt **22%** và thúc đẩy mức tăng trưởng **+14% giá trị đơn hàng trung bình (AOV Lift)** nhờ tư vấn combo phụ kiện cá nhân hóa.
+
+📂 **Tài nguyên Phân hệ Analytics:**
+- 📜 [SQL Scripts Nâng Cao](./analytics/sql/): [01_rfm_segmentation.sql](./analytics/sql/01_rfm_segmentation.sql) | [02_cohort_retention.sql](./analytics/sql/02_cohort_retention.sql) | [03_inventory_health.sql](./analytics/sql/03_inventory_health.sql)
+- 📓 [Jupyter Data Pipelines & Testing](./analytics/notebooks/): [01_data_cleaning_etl.ipynb](./analytics/notebooks/01_data_cleaning_etl.ipynb) | [02_ab_test_promotions.ipynb](./analytics/notebooks/02_ab_test_promotions.ipynb) | [03_conversational_funnel.ipynb](./analytics/notebooks/03_conversational_funnel.ipynb)
+- 📚 [Data Modeling & DAX Docs](./analytics/docs/): [DATA_DICTIONARY.md](./analytics/docs/DATA_DICTIONARY.md) | [POWER_BI_MODELING.md](./analytics/docs/POWER_BI_MODELING.md)
+- 📊 [BI Dashboard Workspace](./analytics/bi/): [README.md](./analytics/bi/README.md)
 
 ---
 
