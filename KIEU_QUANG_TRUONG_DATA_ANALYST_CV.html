@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>CV Kiều Quang Trường - Data Analyst & BI Specialist</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 9mm 12mm 9mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.36;
+      font-size: 8.6pt;
+    }
+
+    /* HEADER */
+    .header {
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 7px;
+      margin-bottom: 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .header-left h1 {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.4px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .header-left .job-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 0.2px;
+    }
+
+    .header-right {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    .header-right a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 9.8pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-left: 3.5px solid #2563eb;
+      padding-left: 6px;
+      margin-top: 6.5px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* SUMMARY BOX */
+    .summary-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 5px 8px;
+      margin-bottom: 5.5px;
+      font-size: 8.3pt;
+      color: #334155;
+      text-align: justify;
+    }
+
+    /* SKILLS GRID */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+      margin-bottom: 5.5px;
+    }
+
+    .skill-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 3.5px 6px;
+      font-size: 7.8pt;
+    }
+
+    .skill-item strong {
+      color: #1e3a8a;
+    }
+
+    /* PROJECT CARD */
+    .project-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 5.5px 8px;
+      margin-bottom: 5.5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 2px;
+    }
+
+    .project-title {
+      font-size: 9.2pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .project-date {
+      font-size: 7.8pt;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .project-role {
+      font-size: 8pt;
+      font-weight: 600;
+      color: #2563eb;
+      margin-bottom: 2px;
+    }
+
+    .project-links {
+      font-size: 7.5pt;
+      color: #475569;
+      margin-bottom: 3px;
+    }
+
+    .project-links a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .tech-stack {
+      font-size: 7.6pt;
+      background: #f1f5f9;
+      color: #334155;
+      padding: 2px 5px;
+      border-radius: 3px;
+      margin-bottom: 3px;
+      display: inline-block;
+    }
+
+    /* BULLET LIST */
+    ul.bullet-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    ul.bullet-list li {
+      position: relative;
+      padding-left: 10px;
+      margin-bottom: 2px;
+      font-size: 7.9pt;
+      color: #334155;
+      text-align: justify;
+    }
+
+    ul.bullet-list li::before {
+      content: "▪";
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: bold;
+    }
+
+    /* EDUCATION TABLE */
+    .edu-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 5px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 5px 8px;
+      margin-bottom: 5.5px;
+      font-size: 8pt;
+    }
+
+    .edu-grid div strong {
+      color: #0f172a;
+    }
+
+    .tag-badge {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 7.2pt;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #bfdbfe;
+    }
+
+    .footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 4px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+
+    .page-break-before {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================= -->
+  <!-- TRANG 1: THÔNG TIN CÁ NHÂN, MỤC TIÊU, HỌC VẤN, KỸ NĂNG & DỰ ÁN 1 (SMARTSALE) -->
+  <!-- ========================================================================= -->
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>KIỀU QUANG TRƯỜNG</h1>
+      <div class="job-title">DATA ANALYST & BUSINESS INTELLIGENCE SPECIALIST</div>
+    </div>
+    <div class="header-right">
+      <div>📞 <strong>Điện thoại:</strong> 0347490811 | 📍 <strong>Địa chỉ:</strong> Hà Nội</div>
+      <div>✉️ <strong>Email:</strong> <a href="mailto:kieuquangtruong2005tn@gmail.com">kieuquangtruong2005tn@gmail.com</a></div>
+      <div>💻 <strong>GitHub:</strong> <a href="https://github.com/kieuwangtruong/">github.com/kieuwangtruong</a></div>
+    </div>
+  </div>
+
+  <!-- 1. TÓM TẮT & MỤC TIÊU NGHỀ NGHIỆP -->
+  <div class="section-title">1. Tóm Tắt Chuyên Môn & Mục Tiêu Nghề Nghiệp</div>
+  <div class="summary-card">
+    Chuyên viên Phân tích Dữ liệu (Data Analyst / BI Specialist) với tư duy phân tích thực chiến, nền tảng toán thống kê vững chắc (GPA: <strong>3.3/4.0</strong>, TOEIC: <strong>650</strong>) và kinh nghiệm xây dựng trọn vẹn Data Pipeline từ Ingestion, Data Modeling (Star Schema), A/B Testing đến triển khai Interactive BI Dashboard trên Cloud. Thành thạo phân tích dữ liệu kinh doanh đa kênh (E-Commerce) và luồng vận hành y tế số (Healthcare Queue Optimization). Mục tiêu ngắn hạn là ứng tuyển vị trí Data Analyst (Fresher/Junior) để trực tiếp giải quyết các bài toán tối ưu hóa chuyển đổi doanh thu, đối soát tài chính và tự động hóa báo cáo phục vụ ra quyết định chiến lược (Data-Driven Decisions).
+  </div>
+
+  <!-- 2. HỌC VẤN & CHỨNG CHỈ -->
+  <div class="section-title">2. Học Vấn & Chứng Chỉ Quốc Tế</div>
+  <div class="edu-grid">
+    <div>
+      <strong>Cử Nhân Công Nghệ Thông Tin / Phân Tích Dữ Liệu</strong><br>
+      <span style="color: #64748b;">Dự kiến tốt nghiệp: <strong>Tháng 03/2027</strong></span>
+    </div>
+    <div>
+      <strong>GPA Tích Lũy:</strong> <span class="tag-badge">3.3 / 4.0</span><br>
+      <span style="color: #64748b;">Xếp loại: Khá - Giỏi</span>
+    </div>
+    <div>
+      <strong>Chứng chỉ Ngoại ngữ:</strong><br>
+      <span class="tag-badge">TOEIC 650</span> (Giao tiếp tốt)
+    </div>
+  </div>
+
+  <!-- 3. KỸ NĂNG CHUYÊN MÔN -->
+  <div class="section-title">3. Kỹ Năng Kỹ Thuật (Technical Skills)</div>
+  <div class="skills-grid">
+    <div class="skill-item">
+      <strong>Truy vấn & Cơ sở Dữ liệu:</strong> SQL (PostgreSQL, Neon Serverless, MySQL), Window Functions (<code>NTILE</code>, <code>RANK</code>, <code>LEAD/LAG</code>), CTEs, Indexing, Query Optimization.
+    </div>
+    <div class="skill-item">
+      <strong>Lập trình & Thống kê:</strong> Python (Pandas, NumPy, SciPy, Statsmodels, Scikit-learn), Feature Engineering, Hypothesis Testing (Two-Proportion Z-Test, T-Test).
+    </div>
+    <div class="skill-item">
+      <strong>Business Intelligence & Dashboard:</strong> Streamlit Cloud, Microsoft Power BI (Star Schema, DAX Studio, VertiPaq), Plotly, Seaborn, Cohort & Funnel Charts.
+    </div>
+    <div class="skill-item">
+      <strong>Kỹ thuật Dữ liệu & Tích hợp:</strong> ETL Pipelines, Data Dictionary, Star Schema Data Mart, Webhook Telemetry, FinTech VietQR PayOS, Google Gemini AI LLM.
+    </div>
+  </div>
+
+  <!-- 4. KINH NGHIỆM DỰ ÁN THỰC CHIẾN (DỰ ÁN 1: SMARTSALE) -->
+  <div class="section-title">4. Dự Án Tiêu Biểu 1: Phân Tích Dữ Liệu Thương Mại Đa Kênh & AI</div>
+  <div class="project-card">
+    <div class="project-header">
+      <span class="project-title">🛍️ SMARTSALE – NỀN TẢNG PHÂN TÍCH KINH DOANH ĐA KÊNH & TRÍ TUỆ HỘI THOẠI AI</span>
+      <span class="project-date">12/2025 – Hiện tại</span>
+    </div>
+    <div class="project-role">Vai trò: Chuyên viên Phân tích Dữ liệu & BI (Business Intelligence & Analytics Specialist)</div>
+    <div class="project-links">
+      🔗 <strong>Demo Trực Tuyến:</strong> <a href="https://www.smartsale-dev.me">Live Web App</a> | <a href="https://smartsale-analytics.streamlit.app/">Live Streamlit BI Dashboard</a> | <a href="https://github.com/kieuwangtruong/SmartSale">GitHub Repo</a>
+    </div>
+    <div class="tech-stack"><strong>Tech Stack:</strong> PostgreSQL (Neon Cloud), Python (Pandas, SciPy, Statsmodels), Streamlit, Power BI (DAX, Star Schema), VietQR PayOS, Gemini 3.6 Flash.</div>
+    <ul class="bullet-list">
+      <li><strong>Thu thập Dữ liệu & Đối soát Tài chính Thời gian thực:</strong> Xây dựng hệ thống Webhook Telemetry xác thực chữ ký SHA256 cho các giao dịch VietQR PayOS, tự động lọc bỏ các đơn hàng lỗi/treo thanh toán và thực hiện đối soát sổ cái để đảm bảo tính toàn vẹn <strong>100% cho dữ liệu doanh thu GMV</strong>.</li>
+      <li><strong>Phân khúc Khách hàng RFM (Pareto Analysis):</strong> Viết các hàm cửa sổ SQL nâng cao (<code>NTILE(4)</code>, <code>CTEs</code>) phân tầng 4 cấp bậc khách hàng VIP (<em>Bronze, Silver, Gold, Diamond</em>), chứng minh quy luật Pareto với nhóm 20% khách VIP đóng góp <strong>45.2% tổng doanh thu GMV</strong>.</li>
+      <li><strong>Kiểm định Thống kê A/B Testing Khuyến Mãi:</strong> Thiết lập kiểm định giả thuyết Two-Proportion Z-Test (p-value = 0.00018 &lt; 0.05), chứng minh chương trình Voucher chiết khấu theo % đạt mức tăng trưởng tỷ lệ hoàn tất đơn hàng tương đối <strong>+50.6%</strong> (CR 13.44% vs 8.96%) so với Voucher cố định tiền mặt.</li>
+      <li><strong>Phân tích Phễu Chuyển đổi AI & Quản trị Tồn kho:</strong> Khai thác nhật ký truy vấn trợ lý ảo Gemini AI, đo lường tỷ lệ chuyển đổi Chat-to-Cart đạt <strong>22.0%</strong> (AOV giỏ hàng tăng <strong>+14.0%</strong>) và xây dựng cảnh báo ngưỡng tồn kho an toàn (SKU &le; 10) tự động tính chi phí tái đặt hàng, triệt tiêu rủi ro đứt gãy nguồn cung.</li>
+      <li><strong>Triển khai Dashboard Điều Hành:</strong> Xây dựng Interactive Streamlit Cloud Dashboard đa trang kết nối trực tiếp cơ sở dữ liệu Neon Cloud, trực quan hóa biểu đồ Pareto 2 trục, ma trận giữ chân khách hàng (Cohort Retention M0 &rarr; M6) và bộ tính toán A/B Testing thời gian thực.</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <div>Trang 1 / 2 | CV Kiều Quang Trường - Data Analyst & BI Specialist</div>
+    <div>Live Portfolio: smartsale-analytics.streamlit.app | GitHub: github.com/kieuwangtruong</div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- TRANG 2: DỰ ÁN 2 (MEDFLOW) & BẢNG MA TRẬN KỸ THUẬT SO SÁNH -->
+  <!-- ========================================================================= -->
+  <div class="page-break-before"></div>
+
+  <div class="header">
+    <div class="header-left">
+      <h1>KIỀU QUANG TRƯỜNG</h1>
+      <div class="job-title">DATA ANALYST & BUSINESS INTELLIGENCE SPECIALIST</div>
+    </div>
+    <div class="header-right">
+      <div>📞 <strong>SĐT:</strong> 0347490811 | ✉️ <strong>Email:</strong> kieuquangtruong2005tn@gmail.com</div>
+      <div>🌐 <strong>GitHub:</strong> <a href="https://github.com/kieuwangtruong/">github.com/kieuwangtruong</a></div>
+    </div>
+  </div>
+
+  <!-- 5. DỰ ÁN TIÊU BIỂU 2: MEDFLOW -->
+  <div class="section-title">5. Dự Án Tiêu Biểu 2: Phân Tích Dữ Liệu & Tối Ưu Vận Hành Y Tế Số</div>
+  <div class="project-card">
+    <div class="project-header">
+      <span class="project-title">🏥 MEDFLOW – NỀN TẢNG PHÂN TÍCH DỮ LIỆU & TỐI ƯU HÓA VẬN HÀNH HÀNG ĐỢI BỆNH VIỆN</span>
+      <span class="project-date">10/2025 – Hiện tại</span>
+    </div>
+    <div class="project-role">Vai trò: Data Analyst (Fresher/Junior) | Bài toán Chuyển đổi số Y tế / VNPT VAIC Case Study</div>
+    <div class="project-links">
+      🔗 <strong>Tài liệu & Demo:</strong> <a href="https://github.com/kieuwangtruong/">Live Streamlit Dashboard</a> | <a href="https://github.com/kieuwangtruong/">Data Mart Docs</a> | <a href="https://github.com/kieuwangtruong/">GitHub Repo</a>
+    </div>
+    <div class="tech-stack"><strong>Tech Stack:</strong> Python (Pandas, NumPy, SciPy, Streamlit, Plotly), PostgreSQL/Neon, Discrete-Event Simulation, Star Schema.</div>
+    <ul class="bullet-list">
+      <li><strong>Data Modeling & Data Mart Design [MF-01]:</strong> Khảo sát nghiệp vụ tiếp đón và luồng khám chữa bệnh ngoại trú y tế số (Case study VNPT/VAIC), chuẩn hóa bộ từ điển dữ liệu (Data Dictionary) và thiết kế Data Mart Star Schema (<code>fact_patient_journey</code>, <code>dim_departments</code>) quản lý hơn <strong>10.000+ lượt khám</strong> tại 12 chuyên khoa lâm sàng.</li>
+      <li><strong>ETL & Data Preprocessing Pipeline [MF-02]:</strong> Xây dựng pipeline Python (Pandas) tự động xử lý missing values, loại bỏ bản ghi log ngoại lai (thời gian chờ âm, thời gian khám phi thực tế &gt; 180 phút) và chuẩn hóa đồng bộ múi giờ từ ISO UTC sang <code>Asia/Ho_Chi_Minh</code> (GMT+7).</li>
+      <li><strong>Phân Tích Thống Kê & Điểm Nghẽn Luồng Khám [MF-03]:</strong> Ứng dụng SciPy/SQL tính toán các phân vị <strong>P50, P80, P90</strong> thay thế giá trị trung bình (Mean) bị lệch phải; cô lập và chỉ ra điểm nghẽn nghiêm trọng nhất tại khâu cận lâm sàng/CĐHA với thời gian chờ P80 kéo dài <strong>48 phút</strong> trong quy trình khép kín 3 bước ($A \rightarrow B \rightarrow A'$: Khám ban đầu &rarr; Cận lâm sàng &rarr; Tái khám kết luận).</li>
+      <li><strong>Mô Phỏng San Tải & Dashboard Điều Hành [MF-04, MF-05]:</strong> Lập trình thuật toán mô phỏng hàng đợi ngẫu nhiên rời rạc (Discrete-Event Simulation) chứng minh giải pháp <em>AI Dynamic Routing</em> giúp <strong>giảm 18% – 25% thời gian chờ trung vị (P50)</strong> trong khung giờ cao điểm; triển khai Streamlit Dashboard trực quan hóa Heatmap mật độ buồng khám và ma trận cảnh báo vi phạm cam kết SLA y tế theo thời gian thực.</li>
+    </ul>
+  </div>
+
+  <!-- 6. BẢNG TỔNG HỢP NĂNG LỰC ĐỊNH LƯỢNG (PROJECT IMPACT MATRIX) -->
+  <div class="section-title">6. Ma Trận Đóng Góp Kỹ Thuật & Tác Động Kinh Doanh / Vận Hành</div>
+  <table style="width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 6px; font-size: 7.7pt;">
+    <thead>
+      <tr style="background-color: #f1f5f9; color: #1e293b; font-weight: 700; border: 1px solid #cbd5e1;">
+        <th style="padding: 4px 6px; text-align: left; width: 18%;">Lĩnh Vực / Dự Án</th>
+        <th style="padding: 4px 6px; text-align: left; width: 26%;">Kỹ Thuật Dữ Liệu Sử Dụng</th>
+        <th style="padding: 4px 6px; text-align: left; width: 22%;">Chỉ Số Đo Lường Đạt Được</th>
+        <th style="padding: 4px 6px; text-align: left; width: 34%;">Tác Động Thực Tế Đến Quyết Định</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;"><strong>SmartSale (E-Commerce)</strong></td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">SQL <code>NTILE(4)</code>, Window Function, RFM Modeling</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0; color: #1e3a8a; font-weight: 700;">45.2% Doanh Thu từ 20% VIP</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Tối ưu ngân sách CRM tiếp thị tập trung vào nhóm khách hàng sinh lời cao nhất.</td>
+      </tr>
+      <tr style="background-color: #f8fafc;">
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;"><strong>SmartSale (A/B Test)</strong></td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Two-Proportion Z-Test, Scipy, Statsmodels</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0; color: #059669; font-weight: 700;">+50.6% Uplift (p = 0.00018)</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Thay thế Voucher tiền mặt bằng Voucher % làm mặc định trên toàn hệ thống.</td>
+      </tr>
+      <tr>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;"><strong>SmartSale (AI Commerce)</strong></td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Conversational Funnel & Two-Sample T-Test</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0; color: #1e3a8a; font-weight: 700;">22% Chat-to-Cart, +14% AOV</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">AI tư vấn combo phụ kiện cá nhân hóa giúp mở rộng quy mô giỏ hàng tự nhiên.</td>
+      </tr>
+      <tr style="background-color: #f8fafc;">
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;"><strong>MedFlow (Healthcare)</strong></td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Percentiles P50/P80/P90, Skewed Distribution</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0; color: #dc2626; font-weight: 700;">P80 Chờ Cận Lâm Sàng: 48p</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Xác định chính xác nút thắt nghẽn 3 bước ($A \rightarrow B \rightarrow A'$) để phân bổ lại nhân lực.</td>
+      </tr>
+      <tr>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;"><strong>MedFlow (Simulation)</strong></td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Discrete-Event Simulation, AI Dynamic Routing</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0; color: #059669; font-weight: 700;">Giảm 18% - 25% Giờ Chờ P50</td>
+        <td style="padding: 3.5px 5px; border: 1px solid #e2e8f0;">Tự động điều phối bệnh nhân vào buồng khám vắng, giải tỏa áp lực giờ cao điểm.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 7. HOẠT ĐỘNG & ĐỊNH HƯỚNG PHÁT TRIỂN -->
+  <div class="section-title">7. Định Hướng Phát Triển & Cam Kết Làm Việc</div>
+  <div class="summary-card" style="margin-bottom: 3px;">
+    <strong>Cam kết & Tác phong làm việc:</strong> Khả năng tự học công nghệ mới nhanh chóng, tư duy làm việc độc lập và phối hợp nhóm hiệu quả; sẵn sàng làm việc toàn thời gian (Full-time) tại Hà Nội hoặc On-site theo yêu cầu của doanh nghiệp. Liên tục cập nhật các phương pháp Analytics Engineering hiện đại (dbt, Airflow, DuckDB) và ứng dụng Generative AI để tự động hóa quy trình phân tích dữ liệu.
+  </div>
+
+  <div class="footer">
+    <div>Trang 2 / 2 | CV Kiều Quang Trường - Data Analyst & BI Specialist</div>
+    <div>SĐT: 0347490811 | Email: kieuquangtruong2005tn@gmail.com | GitHub: github.com/kieuwangtruong</div>
+  </div>
+
+</body>
+</html>
