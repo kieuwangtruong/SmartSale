@@ -8,7 +8,6 @@ if not os.path.exists(chrome_path):
     chrome_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 files_to_compile = [
-    ("KIEU_QUANG_TRUONG_DATA_ANALYST_CV.html", "KIEU_QUANG_TRUONG_DATA_ANALYST_CV.pdf"),
     ("SMARTSALE_PROJECT_SHOWCASE.html", "SMARTSALE_PROJECT_SHOWCASE.pdf")
 ]
 

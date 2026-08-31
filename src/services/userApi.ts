@@ -99,6 +99,62 @@ const DEFAULT_MOCK_USERS: UserDto[] = [
     address: 'Đà Nẵng, Việt Nam',
     createdAt: '2026-01-01T00:00:00Z',
   },
+  {
+    id: 5,
+    userName: 'cust_diamond',
+    fullName: 'Phạm Quốc Việt (VIP Kim Cương)',
+    email: 'diamond@smartsale.com',
+    role: 'Customer',
+    customerTier: 'Platinum',
+    customerTierLabel: 'Kim Cương',
+    totalSpent: 27520000,
+    dateOfBirth: '1994-06-15',
+    sex: 0,
+    address: 'Số 45 Lê Duẩn, Quận 1, TP. HCM',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 6,
+    userName: 'cust_gold',
+    fullName: 'Nguyễn Thị Tuyết Mai (VIP Vàng)',
+    email: 'gold@smartsale.com',
+    role: 'Customer',
+    customerTier: 'Gold',
+    customerTierLabel: 'Vàng',
+    totalSpent: 12930000,
+    dateOfBirth: '1998-09-20',
+    sex: 1,
+    address: 'Số 18 Nguyễn Trãi, Thanh Xuân, Hà Nội',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 7,
+    userName: 'cust_silver',
+    fullName: 'Lê Thu Hương (VIP Bạc)',
+    email: 'silver@smartsale.com',
+    role: 'Customer',
+    customerTier: 'Silver',
+    customerTierLabel: 'Bạc',
+    totalSpent: 4230000,
+    dateOfBirth: '1996-03-12',
+    sex: 1,
+    address: 'Số 88 Hoàng Hoa Thám, Tây Hồ, Hà Nội',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 8,
+    userName: 'cust_bronze',
+    fullName: 'Lê Hải Đăng (VIP Đồng)',
+    email: 'bronze@smartsale.com',
+    role: 'Customer',
+    customerTier: 'Bronze',
+    customerTierLabel: 'Đồng',
+    totalSpent: 1500000,
+    dateOfBirth: '1999-11-05',
+    sex: 0,
+    address: 'Số 12 Quang Trung, Hà Đông, Hà Nội',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
 ]
 
 function normalizeUser(user: UserDto): UserDto {
@@ -126,29 +182,62 @@ export async function loginUser(payload: { email: string; password: string }): P
 
   // Standalone / Vercel demo fallback authentication
   const emailLower = payload.email.toLowerCase().trim()
-  let role: UserRole = 'Admin'
-  let fullName = 'Quản trị viên (Demo Admin)'
+  let role: UserRole = 'Customer'
+  let fullName = 'Khách hàng Thành viên'
+  let customerTier: string | undefined = undefined
+  let customerTierLabel: string | undefined = undefined
+  let totalSpent: number | undefined = undefined
 
-  if (emailLower.includes('thukho') || emailLower.includes('khanh')) {
+  if (emailLower.includes('admin') || emailLower.includes('quantri') || emailLower.startsWith('string@') || emailLower.includes('manager')) {
+    role = 'Admin'
+    fullName = 'Quản trị viên (Demo Admin)'
+  } else if (emailLower.includes('thukho') || emailLower.includes('khanh') || emailLower.includes('warehouse')) {
     role = 'WarehouseKeeper'
     fullName = 'Khánh (Thủ kho)'
-  } else if (emailLower.includes('nv') || emailLower.includes('thuan') || emailLower.includes('staff')) {
+  } else if (emailLower.includes('nv') || emailLower.includes('thuan') || emailLower.includes('staff') || emailLower.includes('sale')) {
     role = 'SalesStaff'
     fullName = 'Thuận (Nhân viên Sales)'
-  } else if (emailLower.includes('minhquan') || emailLower.includes('customer')) {
+  } else if (emailLower.includes('diamond')) {
+    role = 'Customer'
+    fullName = 'Phạm Quốc Việt (VIP Kim Cương)'
+    customerTier = 'Platinum'
+    customerTierLabel = 'Kim Cương'
+    totalSpent = 27520000
+  } else if (emailLower.includes('gold')) {
+    role = 'Customer'
+    fullName = 'Nguyễn Thị Tuyết Mai (VIP Vàng)'
+    customerTier = 'Gold'
+    customerTierLabel = 'Vàng'
+    totalSpent = 12930000
+  } else if (emailLower.includes('silver')) {
+    role = 'Customer'
+    fullName = 'Lê Thu Hương (VIP Bạc)'
+    customerTier = 'Silver'
+    customerTierLabel = 'Bạc'
+    totalSpent = 4230000
+  } else if (emailLower.includes('bronze')) {
+    role = 'Customer'
+    fullName = 'Lê Hải Đăng (VIP Đồng)'
+    customerTier = 'Bronze'
+    customerTierLabel = 'Đồng'
+    totalSpent = 1500000
+  } else if (emailLower.includes('minhquan')) {
     role = 'Customer'
     fullName = 'Minh Quân (Khách hàng)'
   }
 
   const mockUser: AuthUser = {
     id: 1,
-    userName: emailLower.split('@')[0] || 'admin',
+    userName: emailLower.split('@')[0] || 'customer',
     fullName: fullName,
     email: payload.email,
     role: role,
     dateOfBirth: '1998-01-01',
     sex: 1,
     address: 'Hà Nội, Việt Nam',
+    customerTier,
+    customerTierLabel,
+    totalSpent,
     createdAt: new Date().toISOString(),
   }
 
