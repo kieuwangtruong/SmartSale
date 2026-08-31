@@ -1482,8 +1482,15 @@ async function callAIEngine({ systemPrompt, history, userMessage }) {
   const openaiKey = process.env.OPENAI_API_KEY
 
   if (geminiKey) {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`
+    const rawModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    const candidateModels = [
+      rawModel.replace('3.6', '2.5'),
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+    ].filter((v, i, a) => a.indexOf(v) === i)
+
     const contents = [
       ...history.map((h) => ({
         role: h.role === 'assistant' ? 'model' : 'user',
@@ -1495,30 +1502,36 @@ async function callAIEngine({ systemPrompt, history, userMessage }) {
       },
     ]
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        contents,
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 1000,
-        },
-      }),
-    })
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemPrompt }],
+            },
+            contents,
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 1000,
+            },
+          }),
+        })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Gemini API Error:', errorText)
-      throw new Error(`Google Gemini API phản hồi lỗi (${response.status}): ${errorText.slice(0, 200)}`)
+        if (response.ok) {
+          const data = await response.json()
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
+          if (reply) return reply.trim()
+        } else {
+          const errorText = await response.text()
+          console.warn(`Gemini model ${model} failed (${response.status}):`, errorText.slice(0, 150))
+        }
+      } catch (geminiErr) {
+        console.warn(`Gemini invocation failed with model ${model}:`, geminiErr.message)
+      }
     }
-
-    const data = await response.json()
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (reply) return reply.trim()
   }
 
   if (openaiKey) {
