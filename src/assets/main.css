@@ -3,8 +3,8 @@
 :root {
   --surface-ground: #f8fafc;
   --surface-card: #ffffff;
-  --surface-border: #e2e8f0;
-  --surface-border-subtle: #f1f5f9;
+  --surface-border: #cbd5e1;
+  --surface-border-subtle: #e2e8f0;
   --text-main: #0f172a;
   --text-muted: #64748b;
   --primary: #1b5e4a;
@@ -17,9 +17,22 @@
   --accent-sky: #0ea5e9;
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
-  --sidebar: #090d16;
-  --sidebar-card: #111827;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar: #ffffff;
+  --sidebar-card: #f8fafc;
+  --sidebar-border: #e2e8f0;
+}
+
+html.app-dark,
+.app-dark {
+  --surface-ground: #0b0f19;
+  --surface-card: #151d30;
+  --surface-border: #23304c;
+  --surface-border-subtle: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --sidebar: #0b0f19;
+  --sidebar-card: #151d30;
+  --sidebar-border: #23304c;
 }
 
 * {
@@ -1354,30 +1367,31 @@ td small {
    ========================================================================== */
 .theme-pill-toggle {
   position: relative;
-  width: 58px;
-  height: 30px;
+  width: 62px;
+  height: 32px;
   border-radius: 999px;
-  border: 1.5px solid rgba(0, 0, 0, 0.15);
-  background: #232b35;
+  border: 2.5px solid #1e293b;
+  background: #ffffff;
   cursor: pointer;
-  padding: 2px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
   outline: none;
   flex-shrink: 0;
+  user-select: none;
 }
 
 .theme-pill-toggle:hover {
   transform: scale(1.05);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .theme-pill-toggle.is-dark {
-  background: #1c2a3e;
-  border-color: rgba(56, 189, 248, 0.3);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(56, 189, 248, 0.25);
+  background: #2b3e5a;
+  border-color: #141c28;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .pill-track {
@@ -1387,7 +1401,7 @@ td small {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 5px;
+  padding: 0 6px;
 }
 
 .pill-icon {
@@ -1400,21 +1414,34 @@ td small {
 }
 
 .pill-icon.sun-icon {
-  color: #fbbf24;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-pill-toggle.is-dark .pill-icon.sun-icon {
+  color: #94a3b8;
+  opacity: 0.4;
 }
 
 .pill-icon.moon-icon {
-  color: #e2e8f0;
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: 2px;
-  filter: drop-shadow(0 0 4px rgba(226, 232, 240, 0.5));
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
+.theme-pill-toggle:not(.is-dark) .pill-icon.moon-icon {
+  opacity: 0.25;
+  color: #64748b;
+  filter: none;
 }
 
 .pill-star {
-  font-size: 8px;
-  color: #38bdf8;
+  font-size: 7px;
+  color: #93c5fd;
   position: absolute;
   top: -3px;
   right: -5px;
@@ -1428,21 +1455,21 @@ td small {
 
 .pill-knob {
   position: absolute;
-  top: 2px;
+  top: 1.5px;
   left: 2px;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+  background: #1e293b;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
   z-index: 2;
 }
 
 .theme-pill-toggle.is-dark .pill-knob {
-  transform: translateX(28px);
+  transform: translateX(29px);
   background: #ffffff;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* ==========================================================================
