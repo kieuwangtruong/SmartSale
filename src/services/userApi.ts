@@ -2,11 +2,12 @@ import {
   apiRequest,
   getRoleApiValue,
   normalizeRole,
+  ApiError,
   type AuthSession,
   type AuthUser,
   type UserRole,
 } from './apiClient'
-import { API_URLS } from './config'
+import { API_URLS, ENABLE_MOCK_FALLBACK } from './config'
 
 export type UserDto = AuthUser
 
@@ -168,6 +169,27 @@ function toApiPayload<T extends Partial<CreateUserPayload>>(payload: T) {
   }
 }
 
+export async function checkEmailExists(email: string): Promise<{ exists: boolean; email: string; role?: string; fullName?: string }> {
+  const emailClean = email.trim().toLowerCase()
+  if (API_URLS.user) {
+    try {
+      return await apiRequest<{ exists: boolean; email: string; role?: string; fullName?: string }>(
+        API_URLS.user,
+        '/api/User/check-email',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email: emailClean }),
+        },
+      )
+    } catch {
+      // ignore and fallback
+    }
+  }
+  const knownEmails = ['admin@smartsale.vn', 'nv.thuan@smartsale.vn', 'tk.khanh@smartsale.vn', 'viet.diamond@gmail.com', 'mai.gold@gmail.com', 'huong.silver@gmail.com', 'dang.bronze@gmail.com', 'minhquan.customer@gmail.com']
+  const exists = knownEmails.includes(emailClean)
+  return { exists, email: emailClean }
+}
+
 export async function loginUser(payload: { email: string; password: string }): Promise<AuthSession> {
   if (API_URLS.user) {
     try {
@@ -175,55 +197,64 @@ export async function loginUser(payload: { email: string; password: string }): P
         method: 'POST',
         body: JSON.stringify(payload),
       })
-    } catch (err) {
-      console.warn('[UserApi] Remote login failed, using local demo authentication fallback:', err)
+    } catch (err: any) {
+      // If server responded with a business error (401 wrong password, 404 email not found, 400 bad request),
+      // re-throw it so the UI can display exact and helpful messages!
+      if (err instanceof ApiError && err.status) {
+        throw err
+      }
+      if (!ENABLE_MOCK_FALLBACK) {
+        throw err
+      }
+      console.warn('[UserApi] Remote server unreachable, using local demo authentication fallback:', err)
     }
   }
 
   // Standalone / Vercel demo fallback authentication
   const emailLower = payload.email.toLowerCase().trim()
-  let role: UserRole = 'Customer'
-  let fullName = 'Khách hàng Thành viên'
-  let customerTier: string | undefined = undefined
-  let customerTierLabel: string | undefined = undefined
-  let totalSpent: number | undefined = undefined
+  const knownDemoEmails: Record<string, { role: UserRole; fullName: string; tier?: string; tierLabel?: string; totalSpent?: number }> = {
+    'admin@smartsale.vn': { role: 'Admin', fullName: 'Quản trị viên (Demo Admin)' },
+    'quantri@smartsale.vn': { role: 'Admin', fullName: 'Quản trị viên' },
+    'tk.khanh@smartsale.vn': { role: 'WarehouseKeeper', fullName: 'Khánh (Thủ kho)' },
+    'nv.thuan@smartsale.vn': { role: 'SalesStaff', fullName: 'Thuận (Nhân viên Sales)' },
+    'viet.diamond@gmail.com': { role: 'Customer', fullName: 'Phạm Quốc Việt (VIP Kim Cương)', tier: 'Platinum', tierLabel: 'Kim Cương', totalSpent: 27520000 },
+    'mai.gold@gmail.com': { role: 'Customer', fullName: 'Nguyễn Thị Tuyết Mai (VIP Vàng)', tier: 'Gold', tierLabel: 'Vàng', totalSpent: 12930000 },
+    'huong.silver@gmail.com': { role: 'Customer', fullName: 'Lê Thu Hương (VIP Bạc)', tier: 'Silver', tierLabel: 'Bạc', totalSpent: 4230000 },
+    'dang.bronze@gmail.com': { role: 'Customer', fullName: 'Lê Hải Đăng (VIP Đồng)', tier: 'Bronze', tierLabel: 'Đồng', totalSpent: 1500000 },
+    'minhquan.customer@gmail.com': { role: 'Customer', fullName: 'Minh Quân (Khách hàng)' },
+  }
 
-  if (emailLower.includes('admin') || emailLower.includes('quantri') || emailLower.startsWith('string@') || emailLower.includes('manager')) {
-    role = 'Admin'
-    fullName = 'Quản trị viên (Demo Admin)'
-  } else if (emailLower.includes('thukho') || emailLower.includes('khanh') || emailLower.includes('warehouse')) {
-    role = 'WarehouseKeeper'
-    fullName = 'Khánh (Thủ kho)'
-  } else if (emailLower.includes('nv') || emailLower.includes('thuan') || emailLower.includes('staff') || emailLower.includes('sale')) {
-    role = 'SalesStaff'
-    fullName = 'Thuận (Nhân viên Sales)'
-  } else if (emailLower.includes('diamond')) {
-    role = 'Customer'
-    fullName = 'Phạm Quốc Việt (VIP Kim Cương)'
-    customerTier = 'Platinum'
-    customerTierLabel = 'Kim Cương'
-    totalSpent = 27520000
-  } else if (emailLower.includes('gold')) {
-    role = 'Customer'
-    fullName = 'Nguyễn Thị Tuyết Mai (VIP Vàng)'
-    customerTier = 'Gold'
-    customerTierLabel = 'Vàng'
-    totalSpent = 12930000
-  } else if (emailLower.includes('silver')) {
-    role = 'Customer'
-    fullName = 'Lê Thu Hương (VIP Bạc)'
-    customerTier = 'Silver'
-    customerTierLabel = 'Bạc'
-    totalSpent = 4230000
-  } else if (emailLower.includes('bronze')) {
-    role = 'Customer'
-    fullName = 'Lê Hải Đăng (VIP Đồng)'
-    customerTier = 'Bronze'
-    customerTierLabel = 'Đồng'
-    totalSpent = 1500000
-  } else if (emailLower.includes('minhquan')) {
-    role = 'Customer'
-    fullName = 'Minh Quân (Khách hàng)'
+  // Check demo known accounts
+  const match = knownDemoEmails[emailLower]
+  if (!match) {
+    // If not matching any keyword in mock either, raise EMAIL_NOT_FOUND
+    const isKeywordMatch = emailLower.includes('admin') || emailLower.includes('staff') || emailLower.includes('thukho') || emailLower.includes('diamond') || emailLower.includes('gold') || emailLower.includes('silver') || emailLower.includes('bronze') || emailLower.includes('minhquan')
+    if (!isKeywordMatch) {
+      throw new ApiError(
+        'Email này chưa được đăng ký tài khoản trong hệ thống. Vui lòng đăng ký tài khoản mới.',
+        404,
+        'EMAIL_NOT_FOUND',
+      )
+    }
+  }
+
+  let role: UserRole = match?.role || 'Customer'
+  let fullName = match?.fullName || 'Khách hàng Thành viên'
+  let customerTier = match?.tier
+  let customerTierLabel = match?.tierLabel
+  let totalSpent = match?.totalSpent
+
+  if (!match) {
+    if (emailLower.includes('admin')) {
+      role = 'Admin'
+      fullName = 'Quản trị viên (Demo Admin)'
+    } else if (emailLower.includes('thukho')) {
+      role = 'WarehouseKeeper'
+      fullName = 'Khánh (Thủ kho)'
+    } else if (emailLower.includes('staff') || emailLower.includes('thuan')) {
+      role = 'SalesStaff'
+      fullName = 'Thuận (Nhân viên Sales)'
+    }
   }
 
   const mockUser: AuthUser = {

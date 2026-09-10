@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { registerCustomer } from '../services/userApi'
+import { ApiError } from '../services/apiClient'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
 import CustomerTierBadge from '../components/CustomerTierBadge.vue'
@@ -12,6 +13,8 @@ const auth = useAuthStore()
 const mode = ref<'login' | 'register'>('login')
 const loading = ref(false)
 const error = ref('')
+const unregisteredEmail = ref('')
+const showRegisterPrompt = ref(false)
 const { t } = useLanguage()
 
 const form = reactive({
@@ -24,9 +27,32 @@ const form = reactive({
   address: '',
 })
 
+function switchToRegisterWithEmail() {
+  mode.value = 'register'
+  if (unregisteredEmail.value) {
+    form.email = unregisteredEmail.value
+    if (!form.userName) {
+      form.userName = unregisteredEmail.value.split('@')[0] || 'customer'
+    }
+  }
+  showRegisterPrompt.value = false
+  error.value = ''
+  nextTick(() => {
+    const fullNameInput = document.getElementById('fullName')
+    if (fullNameInput) fullNameInput.focus()
+  })
+}
+
+function switchMode(newMode: 'login' | 'register') {
+  mode.value = newMode
+  error.value = ''
+  showRegisterPrompt.value = false
+}
+
 async function submit() {
   loading.value = true
   error.value = ''
+  showRegisterPrompt.value = false
   try {
     if (mode.value === 'register') {
       await registerCustomer(form)
@@ -39,8 +65,19 @@ async function submit() {
     }
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     await router.replace(redirect)
-  } catch (exception) {
-    error.value = exception instanceof Error ? exception.message : t('Không thể xử lý tài khoản.', 'Failed to process account.')
+  } catch (exception: any) {
+    if (exception instanceof ApiError && (exception.code === 'EMAIL_NOT_FOUND' || exception.status === 404)) {
+      unregisteredEmail.value = form.email
+      showRegisterPrompt.value = true
+      error.value = t(
+        `Email "${form.email}" chưa được đăng ký trong hệ thống SmartSale.`,
+        `Email "${form.email}" is not registered in the SmartSale system.`
+      )
+    } else if (exception instanceof ApiError && (exception.code === 'INVALID_PASSWORD' || exception.status === 401)) {
+      error.value = t('Mật khẩu không chính xác. Vui lòng kiểm tra lại.', 'Incorrect password. Please try again.')
+    } else {
+      error.value = exception instanceof Error ? exception.message : t('Không thể xử lý tài khoản.', 'Failed to process account.')
+    }
   } finally {
     loading.value = false
   }
@@ -80,6 +117,22 @@ async function submit() {
 
           <h2>{{ mode === 'login' ? t('Đăng nhập khách hàng', 'Customer Login') : t('Đăng ký thành viên', 'Member Registration') }}</h2>
           <p class="subtitle">{{ t('Xem tích lũy điểm và theo dõi đơn hàng của bạn', 'Track points, tiers, and manage your orders') }}</p>
+
+          <!-- Unregistered Email Suggestion Callout -->
+          <div v-if="showRegisterPrompt && mode === 'login'" class="unregistered-prompt-card">
+            <div class="prompt-header">
+              <i class="pi pi-info-circle prompt-icon" />
+              <div>
+                <strong>{{ t('Tài khoản chưa tồn tại', 'Account Not Found') }}</strong>
+                <p>{{ t('Email này chưa được đăng ký trong hệ thống khách hàng.', 'This email is not registered yet.') }}</p>
+              </div>
+            </div>
+            <button type="button" class="prompt-action-btn" @click="switchToRegisterWithEmail">
+              <i class="pi pi-user-plus" />
+              <span>{{ t('Đăng ký ngay với email này', 'Register now with this email') }}</span>
+              <i class="pi pi-arrow-right" />
+            </button>
+          </div>
 
           <form @submit.prevent="submit">
             <div v-if="mode === 'register'" class="input-group">
@@ -121,7 +174,7 @@ async function submit() {
               <input id="address" v-model="form.address" :placeholder="t('Nhập địa chỉ', 'Enter address')" class="custom-input" />
             </div>
 
-            <p v-if="error" class="error-msg"><i class="pi pi-exclamation-circle" /> {{ error }}</p>
+            <p v-if="error && !showRegisterPrompt" class="error-msg"><i class="pi pi-exclamation-circle" /> {{ error }}</p>
             
             <button :disabled="loading" type="submit" class="submit-btn">
               <i v-if="loading" class="pi pi-spin pi-spinner" />
@@ -130,7 +183,7 @@ async function submit() {
             </button>
           </form>
 
-          <button class="link-button" type="button" @click="mode = mode === 'login' ? 'register' : 'login'">
+          <button class="link-button" type="button" @click="switchMode(mode === 'login' ? 'register' : 'login')">
             {{ mode === 'login' ? t('Chưa có tài khoản? Đăng ký ngay', 'No account yet? Register here') : t('Đã có tài khoản? Đăng nhập', 'Already have an account? Log in') }}
           </button>
           
@@ -394,6 +447,82 @@ button.submit-btn:disabled {
 .link-button:hover {
   color: #164e3f;
   text-decoration: underline;
+}
+
+.unregistered-prompt-card {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fde68a;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: promptSlideIn 0.3s ease-out;
+}
+
+@keyframes promptSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.prompt-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.prompt-icon {
+  font-size: 20px;
+  color: #d97706;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.prompt-header strong {
+  display: block;
+  font-size: 14px;
+  color: #92400e;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.prompt-header p {
+  margin: 2px 0 0 0;
+  font-size: 12.5px;
+  color: #b45309;
+  line-height: 1.4;
+}
+
+.prompt-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: #1b5e4a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(27, 94, 74, 0.25);
+}
+
+.prompt-action-btn:hover {
+  background: #134636;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(27, 94, 74, 0.35);
 }
 
 .store-link {

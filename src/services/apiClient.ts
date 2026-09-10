@@ -96,24 +96,38 @@ export function clearSession() {
   window.dispatchEvent(new Event('auth-changed'))
 }
 
+export class ApiError extends Error {
+  status: number
+  code?: string
+  data?: any
+  constructor(message: string, status: number, code?: string, data?: any) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+    this.data = data
+  }
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const text = await response.text()
-  let payload: ApiEnvelope<T> | T | null = null
+  let payload: (ApiEnvelope<T> & { code?: string }) | T | null = null
 
   if (text) {
     try {
-      payload = JSON.parse(text) as ApiEnvelope<T> | T
+      payload = JSON.parse(text)
     } catch {
-      throw new Error(translateApiMessage(text))
+      throw new ApiError(translateApiMessage(text), response.status)
     }
   }
 
   if (!response.ok) {
-    const message =
+    const rawMessage =
       payload && typeof payload === 'object' && 'message' in payload
-        ? String((payload as ApiEnvelope<T>).message || response.statusText)
+        ? String((payload as any).message || response.statusText)
         : response.statusText
-    throw new Error(translateApiMessage(message || `HTTP ${response.status}`))
+    const code = payload && typeof payload === 'object' && 'code' in payload ? String((payload as any).code) : undefined
+    throw new ApiError(translateApiMessage(rawMessage || `HTTP ${response.status}`), response.status, code, payload)
   }
 
   if (payload && typeof payload === 'object' && 'data' in payload) {

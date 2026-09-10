@@ -519,9 +519,32 @@ app.post('/api/User/login', asyncRoute(async (req, res) => {
             date_of_birth AS "dateOfBirth", sex, address, created_at AS "createdAt", last_modified_at AS "lastModifiedAt"
      FROM users WHERE email = $1`, [email],
   )
-  if (!row || !(await bcrypt.compare(password, row.passwordHash))) throw apiError(401, 'Email hoặc mật khẩu không đúng.')
+  if (!row) {
+    return res.status(404).json({
+      code: 'EMAIL_NOT_FOUND',
+      message: 'Email này chưa được đăng ký tài khoản trong hệ thống. Vui lòng đăng ký tài khoản mới.',
+      email,
+    })
+  }
+  if (!(await bcrypt.compare(password, row.passwordHash))) {
+    return res.status(401).json({
+      code: 'INVALID_PASSWORD',
+      message: 'Mật khẩu không chính xác. Vui lòng kiểm tra lại.',
+    })
+  }
   const user = await findUser(Number(row.id))
   return res.json({ ...signTokens(user), user })
+}))
+
+app.post('/api/User/check-email', asyncRoute(async (req, res) => {
+  const email = requireValue(req.body.email, 'Email').toLowerCase()
+  const [row] = await query('SELECT id, role, full_name AS "fullName" FROM users WHERE email = $1', [email])
+  return res.json({
+    exists: Boolean(row),
+    email,
+    role: row ? row.role : null,
+    fullName: row ? row.fullName : null,
+  })
 }))
 
 app.post('/api/User/refresh', asyncRoute(async (req, res) => {
