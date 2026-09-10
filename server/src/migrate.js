@@ -38,5 +38,12 @@ if (ADMIN_EMAIL && ADMIN_PASSWORD) {
   )
 }
 
-console.log('Neon schema is ready.')
+// Add performance composite indexes for high concurrency & 1M+ orders scale
+await query(`CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders (status, created_at DESC)`)
+await query(`CREATE INDEX IF NOT EXISTS idx_orders_customer_created ON orders (customer_id, created_at DESC)`)
+await query(`CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders (user_id, created_at DESC)`)
+await query(`CREATE INDEX IF NOT EXISTS idx_coupons_code_active ON coupons (code, is_active)`)
+await query(`CREATE INDEX IF NOT EXISTS idx_order_items_order_prod ON order_items (order_id, product_id)`)
+
+console.log('Neon schema and high-performance indexes are ready.')
 
