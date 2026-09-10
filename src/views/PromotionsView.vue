@@ -136,18 +136,18 @@ const appliesToOptions = [
 async function loadData() {
   loading.value = true
   try {
-    const [pList, cList, catList, prodList, tiers] = await Promise.all([
+    const [pRes, cRes, catRes, prodRes, tierRes] = await Promise.allSettled([
       getPromotions(),
       getCoupons(),
       getCategories(),
       getProducts(),
       getTierBenefits(),
     ])
-    promotions.value = pList
-    coupons.value = cList
-    categories.value = catList
-    products.value = prodList
-    tierBenefits.value = tiers
+    if (pRes.status === 'fulfilled') promotions.value = pRes.value || []
+    if (cRes.status === 'fulfilled') coupons.value = cRes.value || []
+    if (catRes.status === 'fulfilled') categories.value = catRes.value || []
+    if (prodRes.status === 'fulfilled') products.value = prodRes.value || []
+    if (tierRes.status === 'fulfilled') tierBenefits.value = tierRes.value || []
   } catch (err: any) {
     toast.add({ severity: 'error', summary: t('Lỗi', 'Error'), detail: err.message, life: 4000 })
   } finally {

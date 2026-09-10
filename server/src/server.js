@@ -1680,6 +1680,566 @@ app.post('/api/chatbot/session/end', authenticate, asyncRoute(async (req, res) =
   res.status(204).end()
 }))
 
+// ============================================================================
+// PROMOTIONS & COUPONS & TIER BENEFITS ENDPOINTS
+// ============================================================================
+
+async function ensurePromotionsSchema() {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS promotions (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+        discount_value NUMERIC(14,2) NOT NULL CHECK (discount_value > 0),
+        min_order_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        max_discount_amount NUMERIC(14,2),
+        applies_to TEXT NOT NULL DEFAULT 'all' CHECK (applies_to IN ('all', 'category', 'product')),
+        start_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+        end_date TIMESTAMPTZ,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        last_modified_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS promotion_items (
+        id BIGSERIAL PRIMARY KEY,
+        promotion_id BIGINT NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+        product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+        category_id BIGINT REFERENCES categories(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS coupons (
+        id BIGSERIAL PRIMARY KEY,
+        promotion_id BIGINT REFERENCES promotions(id) ON DELETE SET NULL,
+        code TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        description TEXT,
+        discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+        discount_value NUMERIC(14,2) NOT NULL CHECK (discount_value > 0),
+        min_order_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        max_discount_amount NUMERIC(14,2),
+        max_uses INTEGER,
+        used_count INTEGER NOT NULL DEFAULT 0,
+        max_uses_per_customer INTEGER DEFAULT 1,
+        applies_to TEXT NOT NULL DEFAULT 'all' CHECK (applies_to IN ('all', 'category', 'product')),
+        start_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+        end_date TIMESTAMPTZ,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        last_modified_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS coupon_items (
+        id BIGSERIAL PRIMARY KEY,
+        coupon_id BIGINT NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+        product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+        category_id BIGINT REFERENCES categories(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS coupon_usages (
+        id BIGSERIAL PRIMARY KEY,
+        coupon_id BIGINT NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+        order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        customer_id BIGINT REFERENCES customers(id) ON DELETE SET NULL,
+        user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+        discount_applied NUMERIC(14,2) NOT NULL DEFAULT 0,
+        used_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `)
+
+    const existing = await query('SELECT count(*) as count FROM promotions')
+    if (parseInt(existing[0]?.count || '0', 10) === 0) {
+      const [p1] = await query(`
+        INSERT INTO promotions (name, description, discount_type, discount_value, min_order_amount, max_discount_amount, applies_to, start_date, end_date, is_active)
+        VALUES ('Đại Tiệc Mùa Hè 2026', 'Giảm 10% cho toàn bộ đơn hàng từ 500k', 'percent', 10, 500000, 500000, 'all', now() - interval '2 days', now() + interval '30 days', true)
+        RETURNING id
+      `)
+      await query(`
+        INSERT INTO coupons (promotion_id, code, name, description, discount_type, discount_value, min_order_amount, max_discount_amount, max_uses, applies_to, start_date, end_date, is_active)
+        VALUES ($1, 'SUMMER10', 'Mã Giảm 10% Hè', 'Giảm 10% tối đa 500k cho đơn từ 500k', 'percent', 10, 500000, 500000, 200, 'all', now() - interval '2 days', now() + interval '30 days', true)
+      `, [p1?.id])
+      await query(`
+        INSERT INTO coupons (promotion_id, code, name, description, discount_type, discount_value, min_order_amount, max_discount_amount, max_uses, applies_to, start_date, end_date, is_active)
+        VALUES (NULL, 'WELCOME50K', 'Mã Chào Mừng Thành Viên Mới', 'Giảm ngay 50.000₫ cho đơn từ 300k', 'fixed', 50000, 300000, NULL, 500, 'all', now() - interval '10 days', now() + interval '60 days', true)
+      `)
+      await query(`
+        INSERT INTO coupons (promotion_id, code, name, description, discount_type, discount_value, min_order_amount, max_discount_amount, max_uses, applies_to, start_date, end_date, is_active)
+        VALUES (NULL, 'VIP15', 'Mã Đặc Quyền Siêu Sale 15%', 'Giảm 15% tối đa 1 triệu cho đơn từ 1.5 triệu', 'percent', 15, 1500000, 1000000, 50, 'all', now(), now() + interval '14 days', true)
+      `)
+    }
+  } catch (err) {
+    console.warn('[Promotions] Schema ensure/seed notice:', err.message)
+  }
+}
+
+// Ensure schema on startup
+ensurePromotionsSchema()
+
+app.get('/api/tier-benefits', (_req, res) => {
+  res.json([
+    {
+      tier: 'Platinum',
+      label: 'Kim Cương',
+      discountPercent: 10,
+      minSpent: 20000000,
+      description: 'Chi tiêu từ 20.000.000 ₫ — Hạng thành viên tối cao, đặc quyền VIP cao nhất',
+    },
+    {
+      tier: 'Gold',
+      label: 'Vàng',
+      discountPercent: 5,
+      minSpent: 8000000,
+      description: 'Chi tiêu từ 8.000.000 ₫ — Khách hàng VIP thân thiết, ưu đãi 5% trên mọi đơn',
+    },
+    {
+      tier: 'Silver',
+      label: 'Bạc',
+      discountPercent: 2,
+      minSpent: 3000000,
+      description: 'Chi tiêu từ 3.000.000 ₫ — Khách hàng Bạc VIP, ưu đãi 2% trên mọi đơn',
+    },
+    {
+      tier: 'Standard',
+      label: 'Đồng',
+      discountPercent: 0,
+      minSpent: 0,
+      description: 'Hạng khởi đầu dành cho khách hàng mới',
+    },
+  ])
+})
+
+app.get('/api/promotions', authenticate, asyncRoute(async (_req, res) => {
+  await ensurePromotionsSchema()
+  const rows = await query(`
+    SELECT p.id, p.name, p.description, p.discount_type as "discountType", 
+           p.discount_value as "discountValue", p.min_order_amount as "minOrderAmount",
+           p.max_discount_amount as "maxDiscountAmount", p.applies_to as "appliesTo",
+           p.start_date as "startDate", p.end_date as "endDate", p.is_active as "isActive",
+           p.created_by_user_id as "createdById", p.created_at as "createdAt", p.last_modified_at as "lastModifiedAt",
+           COUNT(DISTINCT c.id) as "couponCount",
+           COALESCE(SUM(c.used_count), 0) as "totalCouponsUsed"
+    FROM promotions p
+    LEFT JOIN coupons c ON c.promotion_id = p.id
+    GROUP BY p.id
+    ORDER BY p.id DESC
+  `)
+
+  const items = await query(`
+    SELECT pi.id, pi.promotion_id as "promotionId", pi.product_id as "productId", pi.category_id as "categoryId",
+           pr.name as "productName", cat.name as "categoryName"
+    FROM promotion_items pi
+    LEFT JOIN products pr ON pr.id = pi.product_id
+    LEFT JOIN categories cat ON cat.id = pi.category_id
+  `)
+
+  const itemsByPromo = {}
+  for (const item of items) {
+    if (!itemsByPromo[item.promotionId]) itemsByPromo[item.promotionId] = []
+    itemsByPromo[item.promotionId].push({
+      id: Number(item.id),
+      productId: item.productId ? Number(item.productId) : null,
+      productName: item.productName || null,
+      categoryId: item.categoryId ? Number(item.categoryId) : null,
+      categoryName: item.categoryName || null,
+    })
+  }
+
+  const result = rows.map((r) => ({
+    id: Number(r.id),
+    name: r.name,
+    description: r.description,
+    discountType: r.discountType,
+    discountValue: Number(r.discountValue),
+    minOrderAmount: Number(r.minOrderAmount || 0),
+    maxDiscountAmount: r.maxDiscountAmount != null ? Number(r.maxDiscountAmount) : null,
+    appliesTo: r.appliesTo,
+    startDate: toIso(r.startDate),
+    endDate: r.endDate ? toIso(r.endDate) : null,
+    isActive: Boolean(r.isActive),
+    createdById: r.createdById ? Number(r.createdById) : null,
+    createdAt: toIso(r.createdAt),
+    lastModifiedAt: r.lastModifiedAt ? toIso(r.lastModifiedAt) : null,
+    items: itemsByPromo[r.id] || [],
+    couponCount: Number(r.couponCount || 0),
+    totalCouponsUsed: Number(r.totalCouponsUsed || 0),
+  }))
+
+  res.json(result)
+}))
+
+app.get('/api/promotions/:id', authenticate, asyncRoute(async (req, res) => {
+  const [promo] = await query(`
+    SELECT p.id, p.name, p.description, p.discount_type as "discountType", 
+           p.discount_value as "discountValue", p.min_order_amount as "minOrderAmount",
+           p.max_discount_amount as "maxDiscountAmount", p.applies_to as "appliesTo",
+           p.start_date as "startDate", p.end_date as "endDate", p.is_active as "isActive",
+           p.created_by_user_id as "createdById", p.created_at as "createdAt", p.last_modified_at as "lastModifiedAt"
+    FROM promotions p WHERE p.id = $1
+  `, [req.params.id])
+
+  if (!promo) throw apiError(404, 'Không tìm thấy chương trình khuyến mãi.')
+
+  const items = await query(`
+    SELECT pi.id, pi.product_id as "productId", pi.category_id as "categoryId",
+           pr.name as "productName", cat.name as "categoryName"
+    FROM promotion_items pi
+    LEFT JOIN products pr ON pr.id = pi.product_id
+    LEFT JOIN categories cat ON cat.id = pi.category_id
+    WHERE pi.promotion_id = $1
+  `, [promo.id])
+
+  res.json({
+    id: Number(promo.id),
+    name: promo.name,
+    description: promo.description,
+    discountType: promo.discountType,
+    discountValue: Number(promo.discountValue),
+    minOrderAmount: Number(promo.minOrderAmount || 0),
+    maxDiscountAmount: promo.maxDiscountAmount != null ? Number(promo.maxDiscountAmount) : null,
+    appliesTo: promo.appliesTo,
+    startDate: toIso(promo.startDate),
+    endDate: promo.endDate ? toIso(promo.endDate) : null,
+    isActive: Boolean(promo.isActive),
+    createdById: promo.createdById ? Number(promo.createdById) : null,
+    createdAt: toIso(promo.createdAt),
+    lastModifiedAt: promo.lastModifiedAt ? toIso(promo.lastModifiedAt) : null,
+    items: items.map((it) => ({
+      id: Number(it.id),
+      productId: it.productId ? Number(it.productId) : null,
+      productName: it.productName || null,
+      categoryId: it.categoryId ? Number(it.categoryId) : null,
+      categoryName: it.categoryName || null,
+    })),
+    couponCount: 0,
+    totalCouponsUsed: 0,
+  })
+}))
+
+app.post('/api/promotions', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
+  const { name, description, discountType, discountValue, minOrderAmount, maxDiscountAmount, appliesTo, startDate, endDate, isActive, productIds, categoryIds } = req.body
+  if (!name) throw apiError(400, 'Tên chương trình khuyến mãi là bắt buộc.')
+  if (!discountValue || Number(discountValue) <= 0) throw apiError(400, 'Giá trị giảm giá không hợp lệ.')
+
+  const [created] = await query(`
+    INSERT INTO promotions (name, description, discount_type, discount_value, min_order_amount, max_discount_amount, applies_to, start_date, end_date, is_active, created_by_user_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING id
+  `, [
+    name, description || null, discountType || 'percent', Number(discountValue),
+    Number(minOrderAmount || 0), maxDiscountAmount != null ? Number(maxDiscountAmount) : null,
+    appliesTo || 'all', startDate ? new Date(startDate) : new Date(),
+    endDate ? new Date(endDate) : null, isActive !== false, req.user.id
+  ])
+
+  if (Array.isArray(productIds) && productIds.length > 0) {
+    for (const pid of productIds) {
+      await query('INSERT INTO promotion_items (promotion_id, product_id) VALUES ($1, $2)', [created.id, pid])
+    }
+  }
+  if (Array.isArray(categoryIds) && categoryIds.length > 0) {
+    for (const cid of categoryIds) {
+      await query('INSERT INTO promotion_items (promotion_id, category_id) VALUES ($1, $2)', [created.id, cid])
+    }
+  }
+
+  res.status(201).json({ id: Number(created.id), message: 'Tạo chương trình khuyến mãi thành công.' })
+}))
+
+app.put('/api/promotions/:id', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
+  const { name, description, discountType, discountValue, minOrderAmount, maxDiscountAmount, appliesTo, startDate, endDate, isActive, productIds, categoryIds } = req.body
+  const promoId = req.params.id
+
+  await query(`
+    UPDATE promotions
+    SET name=$1, description=$2, discount_type=$3, discount_value=$4, min_order_amount=$5,
+        max_discount_amount=$6, applies_to=$7, start_date=$8, end_date=$9, is_active=$10,
+        last_modified_at=now()
+    WHERE id=$11
+  `, [
+    name, description || null, discountType || 'percent', Number(discountValue),
+    Number(minOrderAmount || 0), maxDiscountAmount != null ? Number(maxDiscountAmount) : null,
+    appliesTo || 'all', startDate ? new Date(startDate) : new Date(),
+    endDate ? new Date(endDate) : null, isActive !== false, promoId
+  ])
+
+  await query('DELETE FROM promotion_items WHERE promotion_id=$1', [promoId])
+  if (Array.isArray(productIds) && productIds.length > 0) {
+    for (const pid of productIds) {
+      await query('INSERT INTO promotion_items (promotion_id, product_id) VALUES ($1, $2)', [promoId, pid])
+    }
+  }
+  if (Array.isArray(categoryIds) && categoryIds.length > 0) {
+    for (const cid of categoryIds) {
+      await query('INSERT INTO promotion_items (promotion_id, category_id) VALUES ($1, $2)', [promoId, cid])
+    }
+  }
+
+  res.json({ id: Number(promoId), message: 'Cập nhật chương trình khuyến mãi thành công.' })
+}))
+
+app.delete('/api/promotions/:id', authenticate, requireRoles('Admin'), asyncRoute(async (req, res) => {
+  await query('DELETE FROM promotions WHERE id=$1', [req.params.id])
+  res.status(204).end()
+}))
+
+app.get('/api/coupons', authenticate, asyncRoute(async (_req, res) => {
+  await ensurePromotionsSchema()
+  const rows = await query(`
+    SELECT c.id, c.promotion_id as "promotionId", p.name as "promotionName",
+           c.code, c.name, c.description, c.discount_type as "discountType",
+           c.discount_value as "discountValue", c.min_order_amount as "minOrderAmount",
+           c.max_discount_amount as "maxDiscountAmount", c.max_uses as "maxUses",
+           c.used_count as "usedCount", c.max_uses_per_customer as "maxUsesPerCustomer",
+           c.applies_to as "appliesTo", c.start_date as "startDate", c.end_date as "endDate",
+           c.is_active as "isActive", c.created_at as "createdAt", c.last_modified_at as "lastModifiedAt"
+    FROM coupons c
+    LEFT JOIN promotions p ON p.id = c.promotion_id
+    ORDER BY c.id DESC
+  `)
+
+  const items = await query(`
+    SELECT ci.id, ci.coupon_id as "couponId", ci.product_id as "productId", ci.category_id as "categoryId",
+           pr.name as "productName", cat.name as "categoryName"
+    FROM coupon_items ci
+    LEFT JOIN products pr ON pr.id = ci.product_id
+    LEFT JOIN categories cat ON cat.id = ci.category_id
+  `)
+
+  const itemsByCoupon = {}
+  for (const item of items) {
+    if (!itemsByCoupon[item.couponId]) itemsByCoupon[item.couponId] = []
+    itemsByCoupon[item.couponId].push({
+      id: Number(item.id),
+      productId: item.productId ? Number(item.productId) : null,
+      productName: item.productName || null,
+      categoryId: item.categoryId ? Number(item.categoryId) : null,
+      categoryName: item.categoryName || null,
+    })
+  }
+
+  const result = rows.map((r) => ({
+    id: Number(r.id),
+    promotionId: r.promotionId ? Number(r.promotionId) : null,
+    promotionName: r.promotionName || null,
+    code: r.code,
+    name: r.name,
+    description: r.description,
+    discountType: r.discountType,
+    discountValue: Number(r.discountValue),
+    minOrderAmount: Number(r.minOrderAmount || 0),
+    maxDiscountAmount: r.maxDiscountAmount != null ? Number(r.maxDiscountAmount) : null,
+    maxUses: r.maxUses != null ? Number(r.maxUses) : null,
+    usedCount: Number(r.usedCount || 0),
+    maxUsesPerCustomer: Number(r.maxUsesPerCustomer || 1),
+    appliesTo: r.appliesTo,
+    startDate: toIso(r.startDate),
+    endDate: r.endDate ? toIso(r.endDate) : null,
+    isActive: Boolean(r.isActive),
+    createdAt: toIso(r.createdAt),
+    lastModifiedAt: r.lastModifiedAt ? toIso(r.lastModifiedAt) : null,
+    items: itemsByCoupon[r.id] || [],
+  }))
+
+  res.json(result)
+}))
+
+app.get('/api/coupons/:id', authenticate, asyncRoute(async (req, res) => {
+  const [coupon] = await query(`
+    SELECT c.id, c.promotion_id as "promotionId", p.name as "promotionName",
+           c.code, c.name, c.description, c.discount_type as "discountType",
+           c.discount_value as "discountValue", c.min_order_amount as "minOrderAmount",
+           c.max_discount_amount as "maxDiscountAmount", c.max_uses as "maxUses",
+           c.used_count as "usedCount", c.max_uses_per_customer as "maxUsesPerCustomer",
+           c.applies_to as "appliesTo", c.start_date as "startDate", c.end_date as "endDate",
+           c.is_active as "isActive", c.created_at as "createdAt", c.last_modified_at as "lastModifiedAt"
+    FROM coupons c
+    LEFT JOIN promotions p ON p.id = c.promotion_id
+    WHERE c.id = $1
+  `, [req.params.id])
+
+  if (!coupon) throw apiError(404, 'Không tìm thấy mã giảm giá.')
+
+  const items = await query(`
+    SELECT ci.id, ci.product_id as "productId", ci.category_id as "categoryId",
+           pr.name as "productName", cat.name as "categoryName"
+    FROM coupon_items ci
+    LEFT JOIN products pr ON pr.id = ci.product_id
+    LEFT JOIN categories cat ON cat.id = ci.category_id
+    WHERE ci.coupon_id = $1
+  `, [coupon.id])
+
+  res.json({
+    id: Number(coupon.id),
+    promotionId: coupon.promotionId ? Number(coupon.promotionId) : null,
+    promotionName: coupon.promotionName || null,
+    code: coupon.code,
+    name: coupon.name,
+    description: coupon.description,
+    discountType: coupon.discountType,
+    discountValue: Number(coupon.discountValue),
+    minOrderAmount: Number(coupon.minOrderAmount || 0),
+    maxDiscountAmount: coupon.maxDiscountAmount != null ? Number(coupon.maxDiscountAmount) : null,
+    maxUses: coupon.maxUses != null ? Number(coupon.maxUses) : null,
+    usedCount: Number(coupon.usedCount || 0),
+    maxUsesPerCustomer: Number(coupon.maxUsesPerCustomer || 1),
+    appliesTo: coupon.appliesTo,
+    startDate: toIso(coupon.startDate),
+    endDate: coupon.endDate ? toIso(coupon.endDate) : null,
+    isActive: Boolean(coupon.isActive),
+    createdAt: toIso(coupon.createdAt),
+    lastModifiedAt: coupon.lastModifiedAt ? toIso(coupon.lastModifiedAt) : null,
+    items: items.map((it) => ({
+      id: Number(it.id),
+      productId: it.productId ? Number(it.productId) : null,
+      productName: it.productName || null,
+      categoryId: it.categoryId ? Number(it.categoryId) : null,
+      categoryName: it.categoryName || null,
+    })),
+  })
+}))
+
+app.post('/api/coupons', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
+  const { promotionId, code, name, description, discountType, discountValue, minOrderAmount, maxDiscountAmount, maxUses, maxUsesPerCustomer, appliesTo, startDate, endDate, isActive, productIds, categoryIds } = req.body
+  if (!code) throw apiError(400, 'Mã voucher là bắt buộc.')
+  if (!name) throw apiError(400, 'Tên voucher là bắt buộc.')
+  if (!discountValue || Number(discountValue) <= 0) throw apiError(400, 'Giá trị giảm giá không hợp lệ.')
+
+  const codeClean = String(code).trim().toUpperCase()
+
+  const [created] = await query(`
+    INSERT INTO coupons (promotion_id, code, name, description, discount_type, discount_value, min_order_amount, max_discount_amount, max_uses, max_uses_per_customer, applies_to, start_date, end_date, is_active, created_by_user_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    RETURNING id
+  `, [
+    promotionId ? Number(promotionId) : null, codeClean, name, description || null,
+    discountType || 'percent', Number(discountValue), Number(minOrderAmount || 0),
+    maxDiscountAmount != null ? Number(maxDiscountAmount) : null,
+    maxUses != null ? Number(maxUses) : null, Number(maxUsesPerCustomer || 1),
+    appliesTo || 'all', startDate ? new Date(startDate) : new Date(),
+    endDate ? new Date(endDate) : null, isActive !== false, req.user.id
+  ])
+
+  if (Array.isArray(productIds) && productIds.length > 0) {
+    for (const pid of productIds) {
+      await query('INSERT INTO coupon_items (coupon_id, product_id) VALUES ($1, $2)', [created.id, pid])
+    }
+  }
+  if (Array.isArray(categoryIds) && categoryIds.length > 0) {
+    for (const cid of categoryIds) {
+      await query('INSERT INTO coupon_items (coupon_id, category_id) VALUES ($1, $2)', [created.id, cid])
+    }
+  }
+
+  res.status(201).json({ id: Number(created.id), message: 'Tạo mã voucher thành công.' })
+}))
+
+app.put('/api/coupons/:id', authenticate, requireRoles('Admin', 'SalesStaff'), asyncRoute(async (req, res) => {
+  const { promotionId, code, name, description, discountType, discountValue, minOrderAmount, maxDiscountAmount, maxUses, maxUsesPerCustomer, appliesTo, startDate, endDate, isActive, productIds, categoryIds } = req.body
+  const couponId = req.params.id
+
+  await query(`
+    UPDATE coupons
+    SET promotion_id=$1, code=$2, name=$3, description=$4, discount_type=$5, discount_value=$6,
+        min_order_amount=$7, max_discount_amount=$8, max_uses=$9, max_uses_per_customer=$10,
+        applies_to=$11, start_date=$12, end_date=$13, is_active=$14, last_modified_at=now()
+    WHERE id=$15
+  `, [
+    promotionId ? Number(promotionId) : null, String(code).trim().toUpperCase(), name, description || null,
+    discountType || 'percent', Number(discountValue), Number(minOrderAmount || 0),
+    maxDiscountAmount != null ? Number(maxDiscountAmount) : null,
+    maxUses != null ? Number(maxUses) : null, Number(maxUsesPerCustomer || 1),
+    appliesTo || 'all', startDate ? new Date(startDate) : new Date(),
+    endDate ? new Date(endDate) : null, isActive !== false, couponId
+  ])
+
+  await query('DELETE FROM coupon_items WHERE coupon_id=$1', [couponId])
+  if (Array.isArray(productIds) && productIds.length > 0) {
+    for (const pid of productIds) {
+      await query('INSERT INTO coupon_items (coupon_id, product_id) VALUES ($1, $2)', [couponId, pid])
+    }
+  }
+  if (Array.isArray(categoryIds) && categoryIds.length > 0) {
+    for (const cid of categoryIds) {
+      await query('INSERT INTO coupon_items (coupon_id, category_id) VALUES ($1, $2)', [couponId, cid])
+    }
+  }
+
+  res.json({ id: Number(couponId), message: 'Cập nhật mã voucher thành công.' })
+}))
+
+app.delete('/api/coupons/:id', authenticate, requireRoles('Admin'), asyncRoute(async (req, res) => {
+  await query('DELETE FROM coupons WHERE id=$1', [req.params.id])
+  res.status(204).end()
+}))
+
+app.post('/api/coupons/validate', asyncRoute(async (req, res) => {
+  const { code, items = [], customerId, userId } = req.body
+  if (!code) throw apiError(400, 'Vui lòng nhập mã giảm giá.')
+
+  const [coupon] = await query(`
+    SELECT * FROM coupons WHERE LOWER(code) = LOWER($1) AND is_active = true LIMIT 1
+  `, [String(code).trim()])
+
+  if (!coupon) {
+    return res.status(404).json({ valid: false, message: 'Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa.' })
+  }
+
+  const now = new Date()
+  if (coupon.start_date && new Date(coupon.start_date) > now) {
+    return res.status(400).json({ valid: false, message: 'Chương trình khuyến mãi này chưa đến ngày áp dụng.' })
+  }
+  if (coupon.end_date && new Date(coupon.end_date) < now) {
+    return res.status(400).json({ valid: false, message: 'Mã giảm giá đã hết hạn sử dụng.' })
+  }
+  if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+    return res.status(400).json({ valid: false, message: 'Mã giảm giá đã đạt giới hạn lượt sử dụng.' })
+  }
+
+  // Calculate subtotal
+  let subtotal = 0
+  for (const item of items) {
+    const [p] = await query('SELECT price FROM products WHERE id=$1', [item.productId])
+    if (p) subtotal += Number(p.price) * Number(item.quantity)
+  }
+
+  if (subtotal < Number(coupon.min_order_amount || 0)) {
+    return res.status(400).json({
+      valid: false,
+      message: `Đơn hàng tối thiểu phải từ ${Number(coupon.min_order_amount).toLocaleString('vi-VN')}₫ để áp dụng mã này.`
+    })
+  }
+
+  let discountAmount = 0
+  if (coupon.discount_type === 'percent') {
+    discountAmount = Math.round((subtotal * Number(coupon.discount_value)) / 100)
+    if (coupon.max_discount_amount && discountAmount > Number(coupon.max_discount_amount)) {
+      discountAmount = Number(coupon.max_discount_amount)
+    }
+  } else {
+    discountAmount = Math.min(Number(coupon.discount_value), subtotal)
+  }
+
+  res.json({
+    valid: true,
+    coupon: {
+      couponId: Number(coupon.id),
+      code: coupon.code,
+      name: coupon.name,
+      discountType: coupon.discount_type,
+      discountValue: Number(coupon.discount_value),
+      discountAmount,
+      appliesTo: coupon.applies_to,
+    },
+    tier: 'Standard',
+    tierPercent: 0,
+    tierDiscountAmount: 0,
+    subtotal,
+    totalDiscount: discountAmount,
+    finalTotal: Math.max(0, subtotal - discountAmount),
+  })
+}))
+
+
 app.use((error, _req, res, _next) => {
   const status = error.statusCode || (error.name === 'JsonWebTokenError' ? 401 : 500)
   if (status >= 500) console.error(error)
