@@ -2,6 +2,7 @@ import {
   apiRequest,
   getRoleApiValue,
   normalizeRole,
+  getSession,
   ApiError,
   type AuthSession,
   type AuthUser,
@@ -319,11 +320,32 @@ export async function getMyProfile(): Promise<UserDto> {
       const user = await apiRequest<UserDto>(API_URLS.user, '/api/User/me', { auth: true })
       return normalizeUser(user)
     } catch (err) {
-      console.warn('[UserApi] Remote getMyProfile failed, using fallback:', err)
+      console.warn('[UserApi] Remote getMyProfile failed, using session/local fallback:', err)
     }
   }
 
-  return DEFAULT_MOCK_USERS[0]!
+  const currentSession = getSession()
+  if (currentSession?.user) {
+    return normalizeUser({
+      id: currentSession.user.id,
+      userName: currentSession.user.userName,
+      fullName: currentSession.user.fullName,
+      email: currentSession.user.email,
+      role: currentSession.user.role,
+      dateOfBirth: currentSession.user.dateOfBirth,
+      sex: currentSession.user.sex,
+      address: currentSession.user.address,
+      workStatus: currentSession.user.workStatus,
+      paidOrderCount: currentSession.user.paidOrderCount,
+      totalSpent: currentSession.user.totalSpent,
+      customerTier: currentSession.user.customerTier,
+      customerTierLabel: currentSession.user.customerTierLabel,
+      createdAt: currentSession.user.createdAt,
+      lastModified: currentSession.user.lastModified,
+    })
+  }
+
+  return normalizeUser(DEFAULT_MOCK_USERS[0]!)
 }
 
 export async function logoutUser(payload: { refreshToken: string }): Promise<unknown> {
