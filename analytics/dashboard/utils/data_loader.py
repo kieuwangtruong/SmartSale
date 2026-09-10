@@ -18,7 +18,7 @@ def get_database_url():
     return os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_vcmrfZz48eCJ@ep-noisy-forest-ayjyhd0d-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require")
 
 def load_orders_data():
-    """Returns cleaned orders dataset with revenue, customer tiers, and payment channels."""
+    """Returns cleaned orders dataset with revenue, customer tiers, coupons, and payment channels."""
     np.random.seed(42)
     n = 650
     now = dt.datetime(2026, 8, 30, 22, 0, 0, tzinfo=pytz.timezone('Asia/Ho_Chi_Minh'))
@@ -46,11 +46,32 @@ def load_orders_data():
             subtotals.append(np.random.choice([250000, 380000, 520000, 890000, 990000], p=[0.35, 0.30, 0.20, 0.10, 0.05]))
             
     subtotals = np.array(subtotals)
-    discount_rates = np.where(np.array(assigned_tiers) == 'Diamond', 0.10,
-                     np.where(np.array(assigned_tiers) == 'Gold', 0.05,
-                     np.where(np.array(assigned_tiers) == 'Silver', 0.02, 0.0)))
-    discounts = subtotals * discount_rates
-    net_revenue = subtotals - discounts
+    tier_discount_rates = np.where(np.array(assigned_tiers) == 'Diamond', 0.10,
+                          np.where(np.array(assigned_tiers) == 'Gold', 0.05,
+                          np.where(np.array(assigned_tiers) == 'Silver', 0.02, 0.0)))
+    tier_discounts = subtotals * tier_discount_rates
+
+    # Coupon distribution
+    coupon_choices = ['NONE', 'SUMMER10', 'TECH200K', 'WELCOME50K', 'VIP15']
+    coupon_probs = [0.45, 0.22, 0.12, 0.14, 0.07]
+    assigned_coupons = np.random.choice(coupon_choices, size=n, p=coupon_probs)
+    
+    coupon_discounts = []
+    for code, sub in zip(assigned_coupons, subtotals):
+        if code == 'SUMMER10':
+            coupon_discounts.append(min(sub * 0.10, 500000))
+        elif code == 'TECH200K':
+            coupon_discounts.append(200000 if sub >= 2000000 else 0)
+        elif code == 'WELCOME50K':
+            coupon_discounts.append(50000 if sub >= 300000 else 0)
+        elif code == 'VIP15':
+            coupon_discounts.append(min(sub * 0.15, 1000000) if sub >= 1500000 else 0)
+        else:
+            coupon_discounts.append(0)
+            
+    coupon_discounts = np.array(coupon_discounts)
+    total_discounts = tier_discounts + coupon_discounts
+    net_revenue = np.maximum(0, subtotals - total_discounts)
     
     statuses = np.random.choice(['Completed', 'Shipped', 'Paid', 'Pending', 'Cancelled'], size=n, p=[0.60, 0.18, 0.12, 0.06, 0.04])
     payment_methods = np.random.choice(['PayOS', 'Cash'], size=n, p=[0.68, 0.32])
@@ -64,14 +85,114 @@ def load_orders_data():
         'status': statuses,
         'payment_method': payment_methods,
         'subtotal': subtotals,
-        'discount_amount': discounts,
+        'tier_discount_amount': tier_discounts,
+        'coupon_code': assigned_coupons,
+        'coupon_discount_amount': coupon_discounts,
+        'discount_amount': total_discounts,
         'net_revenue': net_revenue,
         'is_ai_assisted': ai_assisted
     })
     
     df['order_date'] = df['created_at'].apply(lambda x: x.date())
     df['month_year'] = df['created_at'].apply(lambda x: x.strftime('%Y-%m'))
+    df['has_coupon'] = df['coupon_code'] != 'NONE'
     return df
+
+def load_promotions_data():
+    """Returns campaigns and vouchers performance dataset."""
+    promotions = [
+        {
+            'promo_id': 1,
+            'campaign_name': 'Đại Tiệc Mùa Hè 2026',
+            'discount_type': 'Phần trăm (10%)',
+            'discount_val': '10%',
+            'min_order': 500000,
+            'max_discount': 500000,
+            'scope': 'Toàn bộ cửa hàng',
+            'status': 'Đang diễn ra',
+            'budget_allocated': 20000000,
+            'budget_burned': 12450000,
+            'orders_generated': 143,
+            'revenue_generated': 142800000,
+        },
+        {
+            'promo_id': 2,
+            'campaign_name': 'Flash Sale Đồ Công Nghệ',
+            'discount_type': 'Cố định (200.000₫)',
+            'discount_val': '200.000 ₫',
+            'min_order': 2000000,
+            'max_discount': 200000,
+            'scope': 'Danh mục Điện tử',
+            'status': 'Đang diễn ra',
+            'budget_allocated': 20000000,
+            'budget_burned': 15600000,
+            'orders_generated': 78,
+            'revenue_generated': 195400000,
+        },
+        {
+            'promo_id': 3,
+            'campaign_name': 'Tuần Lễ Gia Dụng Thông Minh',
+            'discount_type': 'Phần trăm (15%)',
+            'discount_val': '15%',
+            'min_order': 1000000,
+            'max_discount': 1000000,
+            'scope': 'Sản phẩm Robot & AirPure',
+            'status': 'Đang diễn ra',
+            'budget_allocated': 15000000,
+            'budget_burned': 8750000,
+            'orders_generated': 42,
+            'revenue_generated': 88200000,
+        },
+    ]
+
+    coupons = [
+        {
+            'code': 'SUMMER10',
+            'name': 'Mã Giảm 10% Hè',
+            'campaign': 'Đại Tiệc Mùa Hè 2026',
+            'type': 'Percent (10%)',
+            'max_uses': 200,
+            'used_count': 143,
+            'discount_total': 12450000,
+            'gmv_driven': 142800000,
+            'roi': 11.47,
+        },
+        {
+            'code': 'TECH200K',
+            'name': 'Voucher Công Nghệ 200k',
+            'campaign': 'Flash Sale Đồ Công Nghệ',
+            'type': 'Fixed (200k)',
+            'max_uses': 100,
+            'used_count': 78,
+            'discount_total': 15600000,
+            'gmv_driven': 195400000,
+            'roi': 12.52,
+        },
+        {
+            'code': 'WELCOME50K',
+            'name': 'Chào Mừng Khách Hàng Mới',
+            'campaign': 'Chương trình Tân Thủ',
+            'type': 'Fixed (50k)',
+            'max_uses': 500,
+            'used_count': 91,
+            'discount_total': 4550000,
+            'gmv_driven': 48900000,
+            'roi': 10.75,
+        },
+        {
+            'code': 'VIP15',
+            'name': 'Đặc Quyền Siêu Sale 15%',
+            'campaign': 'Đặc Quyền VIP',
+            'type': 'Percent (15%)',
+            'max_uses': 50,
+            'used_count': 45,
+            'discount_total': 18900000,
+            'gmv_driven': 146500000,
+            'roi': 7.75,
+        },
+    ]
+
+    return pd.DataFrame(promotions), pd.DataFrame(coupons)
 
 def load_inventory_data():
     """Returns SKU inventory health and velocity dataset."""

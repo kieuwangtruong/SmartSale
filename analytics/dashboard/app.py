@@ -58,7 +58,8 @@ with st.sidebar:
     - **1. Executive Overview:** Doanh thu & Pareto VIP (45% GMV)
     - **2. Customer RFM & Cohorts:** Giữ chân & Phân khúc khách hàng
     - **3. Inventory & Supply Chain:** Tồn kho & Cảnh báo SKU
-    - **4. AI Commerce & A/B Testing:** Gemini Funnel & Kiểm định Voucher
+    - **4. AI Commerce & A/B Testing:** Gemini Funnel & Đo lường tác động AI
+    - **5. Promotions & Vouchers ROI:** Hiệu quả Khuyến mãi, Voucher & Hạng VIP
     """)
     
     st.divider()
