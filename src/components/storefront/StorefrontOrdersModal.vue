@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { formatCurrency, getOrderStatusLabel, getPaymentMethodLabel, type Order } from '../../services/orderApi'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import {
+  formatCurrency,
+  getOrderStatusLabel,
+  getPaymentMethodLabel,
+  resumePayOSPayment,
+  type Order,
+} from '../../services/orderApi'
 import { useLanguage } from '../../services/i18n'
 import type { OrderTab, TimelineStep } from '../../composables/useCustomerPortal'
 
@@ -35,10 +41,66 @@ const emit = defineEmits<{
 
 const { t } = useLanguage()
 
+const resumingPaymentId = ref<number | null>(null)
+const resumePaymentError = ref('')
+const currentTime = ref(Date.now())
+let timerInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  timerInterval = setInterval(() => {
+    currentTime.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval)
+})
+
+function isPayOSPending(order: Order | null): boolean {
+  if (!order) return false
+  const pm = String(order.paymentMethod || '').toLowerCase()
+  return pm === 'payos' && ['PendingPayment', 'Pending', 'PaymentFailed', 'PaymentCancelled', 'PaymentExpired'].includes(order.status)
+}
+
+function getPayOSExpiryRemaining(order: Order): { isExpired: boolean; text: string } {
+  const created = new Date(order.lastModifiedAt || order.createdAt).getTime()
+  const expiry = created + 15 * 60 * 1000 // 15 minutes window
+  const diff = expiry - currentTime.value
+
+  if (diff <= 0) {
+    return {
+      isExpired: true,
+      text: t('Hết thời hạn phiên hiện tại (Nhấn để tạo mã thanh toán mới)', 'Session expired (Click to create new payment QR)'),
+    }
+  }
+
+  const mins = Math.floor(diff / 60000)
+  const secs = Math.floor((diff % 60000) / 1000)
+  return {
+    isExpired: false,
+    text: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+  }
+}
+
+async function handlePayOSResume(order: Order) {
+  resumingPaymentId.value = order.id
+  resumePaymentError.value = ''
+  try {
+    const res = await resumePayOSPayment(order.id)
+    if (res.checkoutUrl) {
+      window.location.href = res.checkoutUrl
+    }
+  } catch (err: any) {
+    resumePaymentError.value = err instanceof Error ? err.message : t('Không thể mở liên kết PayOS. Vui lòng thử lại.', 'Failed to open PayOS link. Please try again.')
+  } finally {
+    resumingPaymentId.value = null
+  }
+}
+
 function canCancel(order: Order) {
   const pm = (order.paymentMethod || 'Cash').toLowerCase()
   if (pm === 'payos') {
-    return ['Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status)
+    return ['PendingPayment', 'Pending', 'Paid', 'Processing', 'Shipped', 'Completed'].includes(order.status)
   }
   return ['Pending', 'Processing'].includes(order.status)
 }
@@ -69,7 +131,7 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
   const rank = statusRank(order.status)
   const cashConfirmed = !isPayOs && rank >= 2 && !cancelled
 
-  if (cancelled) {
+  if (cancelled && !['PaymentCancelled', 'PaymentExpired', 'PaymentFailed'].includes(order.status)) {
     return [{
       key: 'cancelled',
       label: getOrderStatusLabel(order.status),
@@ -90,17 +152,17 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
     {
       key: 'confirmed',
       label: isPayOs
-        ? t('Đã thanh toán', 'Paid')
+        ? (order.status === 'Paid' ? t('Đã thanh toán PayOS', 'PayOS Payment Confirmed') : t('Chờ thanh toán PayOS', 'Waiting for PayOS Payment'))
         : cashConfirmed
           ? t('Đã xác nhận tiền mặt', 'Cash confirmed')
           : t('Chờ nhân viên xác nhận', 'Waiting for staff confirmation'),
       description: isPayOs
-        ? t('Đơn chuyển khoản đã thanh toán, không cần xác nhận tiền mặt.', 'Online payment is completed; no cash confirmation is needed.')
+        ? (order.status === 'Paid' ? t('Đã thanh toán thành công qua PayOS.', 'Paid successfully via PayOS.') : t('Đơn hàng chưa thanh toán. Vui lòng quét mã QR PayOS.', 'Order is unpaid. Please scan PayOS QR code.'))
         : cashConfirmed
           ? t('Nhân viên bán hàng đã xác nhận khách thanh toán tiền mặt.', 'Sales staff confirmed the cash payment.')
           : t('Nhân viên bán hàng sẽ gọi xác nhận đơn tiền mặt.', 'Sales staff will confirm the cash order.'),
       done: rank >= 2,
-      active: rank === 2 && !cancelled,
+      active: (rank === 1 || rank === 2) && !cancelled,
     },
     {
       key: 'processing',
@@ -154,7 +216,7 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
             :class="{ active: activeOrderTab === 'pending' }" 
             @click="emit('update:activeOrderTab', 'pending')"
           >
-            {{ t('Chờ xử lý', 'Pending') }}
+            {{ t('Chờ xử lý / Thanh toán', 'Pending / Payment') }}
           </button>
           <button 
             type="button" 
@@ -207,13 +269,19 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
               v-for="order in filteredCustomerOrders" 
               :key="order.id" 
               class="order-card-item"
-              :class="{ active: selectedCustomerOrder?.id === order.id }"
+              :class="{ 
+                active: selectedCustomerOrder?.id === order.id,
+                'is-pending-payos': isPayOSPending(order)
+              }"
               @click="emit('update:selectedOrderId', order.id)"
             >
               <div class="order-card-header">
                 <strong>#{{ order.id }}</strong>
-                <span :class="['status-badge', order.status.toLowerCase()]">
-                  {{ getOrderStatusLabel(order.status) }}
+                <span 
+                  class="status-badge"
+                  :class="isPayOSPending(order) ? 'pending-payment' : order.status.toLowerCase()"
+                >
+                  {{ isPayOSPending(order) ? t('Chưa thanh toán (PayOS)', 'Unpaid (PayOS)') : getOrderStatusLabel(order.status) }}
                 </span>
               </div>
               <div class="order-payment-line">
@@ -230,6 +298,18 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
                 <span class="text-muted">{{ new Date(order.createdAt).toLocaleDateString('vi-VN') }}</span>
                 <strong class="order-total-price">{{ formatCurrency(order.total) }}</strong>
               </div>
+              <div v-if="isPayOSPending(order)" class="order-card-quick-pay">
+                <button 
+                  type="button" 
+                  class="quick-payos-btn"
+                  :disabled="resumingPaymentId === order.id"
+                  @click.stop="handlePayOSResume(order)"
+                >
+                  <i v-if="resumingPaymentId === order.id" class="pi pi-spin pi-spinner" />
+                  <i v-else class="pi pi-qrcode" />
+                  <span>{{ t('Thanh toán ngay', 'Pay Now') }}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -237,12 +317,51 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
         <!-- Right: Order detailed journey timeline -->
         <div class="orders-timeline-column">
           <div v-if="selectedCustomerOrder" class="order-timeline-card">
+            <!-- PayOS Resume Callout Card -->
+            <div v-if="isPayOSPending(selectedCustomerOrder)" class="payos-pending-callout">
+              <div class="payos-callout-header">
+                <div class="payos-callout-icon">
+                  <i class="pi pi-qrcode" />
+                </div>
+                <div>
+                  <strong>{{ t('Đơn hàng chưa thanh toán qua PayOS', 'Order is pending PayOS payment') }}</strong>
+                  <p>{{ t('Bạn đã đóng cửa sổ trước khi thanh toán? Bạn có thể quét mã QR ngay để hoàn tất đơn hàng.', 'Closed the window before paying? You can resume payment right now.') }}</p>
+                </div>
+              </div>
+              
+              <div class="payos-callout-timer">
+                <i class="pi pi-clock" />
+                <span>{{ t('Thời hạn phiên:', 'Time remaining:') }} <strong>{{ getPayOSExpiryRemaining(selectedCustomerOrder).text }}</strong></span>
+              </div>
+
+              <div v-if="resumePaymentError" class="payos-callout-error">
+                <i class="pi pi-exclamation-circle" /> {{ resumePaymentError }}
+              </div>
+
+              <div class="payos-callout-actions">
+                <button 
+                  type="button" 
+                  class="payos-resume-main-btn"
+                  :disabled="resumingPaymentId === selectedCustomerOrder.id"
+                  @click="handlePayOSResume(selectedCustomerOrder)"
+                >
+                  <i v-if="resumingPaymentId === selectedCustomerOrder.id" class="pi pi-spin pi-spinner" />
+                  <i v-else class="pi pi-wallet" />
+                  <span>{{ t('Tiếp tục thanh toán PayOS ngay', 'Resume PayOS Payment Now') }}</span>
+                  <i class="pi pi-arrow-right" />
+                </button>
+              </div>
+            </div>
+
             <div class="timeline-header-block">
               <span class="timeline-eyebrow">{{ t('Lộ trình đơn hàng', 'Order Journey') }}</span>
               <strong class="timeline-order-id">#{{ selectedCustomerOrder.id }}</strong>
               <div class="timeline-status">
-                <span :class="['status-badge', selectedCustomerOrder.status.toLowerCase()]">
-                  {{ getOrderStatusLabel(selectedCustomerOrder.status) }}
+                <span 
+                  class="status-badge"
+                  :class="isPayOSPending(selectedCustomerOrder) ? 'pending-payment' : selectedCustomerOrder.status.toLowerCase()"
+                >
+                  {{ isPayOSPending(selectedCustomerOrder) ? t('Chờ thanh toán qua PayOS', 'Waiting for PayOS Payment') : getOrderStatusLabel(selectedCustomerOrder.status) }}
                 </span>
               </div>
               <div class="order-payment-line timeline-payment-line">
@@ -263,7 +382,9 @@ function computeOrderTimeline(order: Order): TimelineStep[] {
                 class="order-cancel-request-btn"
                 @click="emit('open-cancel-modal', selectedCustomerOrder)"
               >
-                {{ (selectedCustomerOrder.paymentMethod || '').toLowerCase() === 'payos' ? t('Yêu cầu hủy & hoàn tiền', 'Request cancellation & refund') : t('Hủy đơn hàng', 'Cancel order') }}
+                {{ (selectedCustomerOrder.paymentMethod || '').toLowerCase() === 'payos' && selectedCustomerOrder.status === 'Paid'
+                  ? t('Yêu cầu hủy & hoàn tiền', 'Request cancellation & refund')
+                  : t('Hủy đơn hàng này', 'Cancel this order') }}
               </button>
             </div>
             <div class="timeline-stepper">

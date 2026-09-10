@@ -1181,6 +1181,60 @@ app.post('/api/payments/links', authenticate, requireRoles('Customer'), asyncRou
   })
 }))
 
+app.post('/api/payments/resume/:orderId', authenticate, asyncRoute(async (req, res) => {
+  const orderId = Number(req.params.orderId)
+  const [row] = await query(`${orderSelect} WHERE o.id = $1`, [orderId])
+  if (!row) throw apiError(404, 'Không tìm thấy đơn hàng.')
+  if (row.userId && row.userId !== req.user.id && req.user.role === 'Customer') {
+    throw apiError(403, 'Không có quyền thực hiện thao tác trên đơn hàng này.')
+  }
+  if (row.paymentMethod !== 'PayOS') {
+    throw apiError(400, 'Đơn hàng này không sử dụng phương thức thanh toán PayOS.')
+  }
+  if (['Paid', 'Completed', 'Shipped'].includes(row.status)) {
+    throw apiError(400, 'Đơn hàng đã được thanh toán.')
+  }
+
+  const items = await query(
+    `SELECT oi.id, oi.product_id AS "productId", oi.product_name AS "productName",
+            oi.quantity, oi.price, oi.sub_total AS "subTotal"
+     FROM order_items oi WHERE oi.order_id = $1`,
+    [orderId]
+  )
+
+  const orderCode = Date.now()
+  const publicWebUrl = (process.env.PUBLIC_WEB_URL || 'http://localhost:5173').replace(/\/$/, '')
+  const totalAmount = Math.round(Number(row.total))
+
+  let payosItems = items.map((item) => ({
+    name: String(item.productName || 'Sản phẩm').slice(0, 100),
+    quantity: Number(item.quantity) || 1,
+    price: Math.round(Number(item.price)),
+  }))
+
+  const link = await payos().paymentRequests.create({
+    orderCode,
+    amount: totalAmount,
+    description: `Thanh toan #${orderCode}`.slice(0, 25),
+    items: payosItems,
+    returnUrl: `${publicWebUrl}/#/payment/success?orderCode=${orderCode}`,
+    cancelUrl: `${publicWebUrl}/#/payment/cancelled?orderCode=${orderCode}`,
+  })
+
+  await query('UPDATE orders SET payment_order_code=$1, status=$2, last_modified_at=now() WHERE id=$3', [
+    orderCode,
+    'PendingPayment',
+    orderId,
+  ])
+
+  res.json({
+    orderId,
+    orderCode,
+    checkoutUrl: link.checkoutUrl,
+    expiresAt: link.expiredAt ? new Date(link.expiredAt * 1000).toISOString() : new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  })
+}))
+
 app.get('/api/payments/:orderCode', asyncRoute(async (req, res) => {
   const code = Number(req.params.orderCode)
   const [row] = await query(`${orderSelect} WHERE o.payment_order_code=$1`, [code])

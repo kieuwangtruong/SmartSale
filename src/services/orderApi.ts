@@ -685,6 +685,13 @@ export function createPaymentLink(payload: CustomerCheckoutPayload) {
   })
 }
 
+export function resumePayOSPayment(orderId: number) {
+  return apiRequest<PaymentLink>(API_URLS.order, `/api/payments/resume/${orderId}`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
 export function getPaymentStatus(orderCode: string | number) {
   return apiRequest<PaymentStatus>(API_URLS.order, `/api/payments/${orderCode}`)
 }
