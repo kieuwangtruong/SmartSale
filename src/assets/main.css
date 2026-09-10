@@ -1349,53 +1349,373 @@ td small {
   box-shadow: 0 0 6px #ef4444;
 }
 
-.topbar-profile-pill {
+/* ==========================================================================
+   Animated Sun/Moon Pill Theme Switch (Matching Reference Design)
+   ========================================================================== */
+.theme-pill-toggle {
+  position: relative;
+  width: 58px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  background: #232b35;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.08);
+  outline: none;
+  flex-shrink: 0;
+}
+
+.theme-pill-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.theme-pill-toggle.is-dark {
+  background: #1c2a3e;
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.pill-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5px;
+}
+
+.pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.25s ease, transform 0.3s ease;
+}
+
+.pill-icon.sun-icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
+}
+
+.pill-icon.moon-icon {
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  filter: drop-shadow(0 0 4px rgba(226, 232, 240, 0.5));
+}
+
+.pill-star {
+  font-size: 8px;
+  color: #38bdf8;
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  animation: twinkle 1.5s infinite ease-in-out alternate;
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+
+.pill-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+  z-index: 2;
+}
+
+.theme-pill-toggle.is-dark .pill-knob {
+  transform: translateX(28px);
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Top Bar Avatar & Floating Dropdown Menu
+   ========================================================================== */
+.topbar-avatar-wrapper {
+  position: relative;
+}
+
+.topbar-avatar-btn {
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar-avatar-btn:hover {
+  transform: scale(1.08);
+}
+
+.topbar-avatar-btn .profile-avatar-sm {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+  border: 2px solid var(--surface-card, #ffffff);
+}
+
+.app-dark .topbar-avatar-btn .profile-avatar-sm {
+  border-color: #1e293b;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.5);
+}
+
+.avatar-status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid var(--surface-card, #ffffff);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+}
+
+.app-dark .avatar-status-dot {
+  border-color: #1e293b;
+}
+
+/* Floating Dropdown Card */
+.admin-user-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  z-index: 10000;
+  text-align: left;
+  animation: dropdownPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-dark .admin-user-dropdown {
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+@keyframes dropdownPop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dropdown-avatar-large {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.dropdown-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dropdown-user-info strong {
+  font-size: 14px;
+  font-weight: 750;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-dark .dropdown-user-info strong {
+  color: #f8fafc;
+}
+
+.dropdown-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropdown-role-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.app-dark .dropdown-role-tag {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.dropdown-status-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #0284c7;
+}
+
+.dropdown-email {
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-dark .dropdown-email {
+  color: #94a3b8;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 12px 0;
+}
+
+.app-dark .dropdown-divider {
+  background: #1e293b;
+}
+
+.dropdown-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 12px 4px 4px;
-  border-radius: 99px;
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.dropdown-item i {
+  font-size: 15px;
+  color: #64748b;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+  color: #0f766e;
+}
+
+.dropdown-item:hover i {
+  color: #0f766e;
+}
+
+.app-dark .dropdown-item {
+  color: #cbd5e1;
+}
+
+.app-dark .dropdown-item i {
+  color: #94a3b8;
+}
+
+.app-dark .dropdown-item:hover {
+  background: #1e293b;
+  color: #38bdf8;
+}
+
+.app-dark .dropdown-item:hover i {
+  color: #38bdf8;
+}
+
+.dropdown-footer {
+  margin-top: 2px;
+}
+
+.dropdown-logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  user-select: none;
 }
 
-.topbar-profile-pill:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: var(--surface-hover);
-}
-
-.profile-avatar-sm {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #10b981, #059669);
+.dropdown-logout-btn:hover {
+  background: #dc2626;
   color: #ffffff;
-  font-weight: 800;
-  font-size: 13px;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
 }
 
-.profile-info-sm {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.profile-info-sm strong {
-  font-size: 13px;
-  font-weight: 750;
-  color: var(--text-main);
-}
-
-.profile-info-sm small {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
 }
 
 /* ==========================================================================

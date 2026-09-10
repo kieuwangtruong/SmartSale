@@ -166,9 +166,32 @@ function translateCategory(cat: string): string {
             </button>
           </aside>
         </div>
-        <button class="theme-toggle" type="button" @click="emit('toggle-dark-mode')" :aria-label="t('Đổi giao diện', 'Switch theme')">
-          <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" />
+        <!-- Animated Sun/Moon Pill Theme Switch -->
+        <button
+          type="button"
+          class="theme-pill-toggle"
+          :class="{ 'is-dark': isDark }"
+          :title="isDark ? t('Chuyển sang Giao diện Sáng', 'Switch to Light Mode') : t('Chuyển sang Giao diện Tối', 'Switch to Dark Mode')"
+          @click="emit('toggle-dark-mode')"
+          :aria-label="t('Đổi giao diện', 'Switch theme')"
+        >
+          <div class="pill-track">
+            <span class="pill-icon moon-icon">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                <path d="M12.3 2a10 10 0 0 0-.19 20 10 10 0 0 0 8.7-5.12 1 1 0 0 0-1.12-1.46A7 7 0 1 1 10.6 3.3a1 1 0 0 0-.6-1.12 1 1 0 0 0-1.7-.18Z" />
+              </svg>
+              <span class="pill-star star-1">✦</span>
+            </span>
+            <span class="pill-icon sun-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="4" fill="currentColor" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+              </svg>
+            </span>
+            <span class="pill-knob" />
+          </div>
         </button>
+
         <button class="cart-button" :class="{ 'cart-pop': animateCart, 'has-items': cartCount > 0 }" type="button" @click="emit('open-cart')">
           <i class="pi pi-shopping-bag" />
           <span>{{ t('Giỏ hàng', 'Cart') }}</span>
