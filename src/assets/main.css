@@ -304,15 +304,16 @@ button {
 .admin-profile strong {
   overflow: hidden;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #f8fafc;
+  color: var(--text-main, #0f172a);
 }
 
 .admin-profile small {
-  color: #94a3b8;
+  color: var(--text-muted, #64748b);
   font-size: 11px;
+  font-weight: 600;
 }
 
 /* ==========================================================================
@@ -1367,17 +1368,17 @@ td small {
    ========================================================================== */
 .theme-pill-toggle {
   position: relative;
-  width: 66px;
+  width: 64px;
   height: 32px;
   border-radius: 999px;
-  border: 2.5px solid #1e293b;
-  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  background: #f1f5f9;
   cursor: pointer;
   padding: 0;
   display: inline-flex;
   align-items: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
   outline: none;
   flex-shrink: 0;
   user-select: none;
@@ -1386,13 +1387,19 @@ td small {
 
 .theme-pill-toggle:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #94a3b8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .theme-pill-toggle.is-dark {
-  background: #2b3e5a;
-  border-color: #141c28;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 12px rgba(56, 189, 248, 0.25);
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.theme-pill-toggle.is-dark:hover {
+  border-color: #64748b;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.4);
 }
 
 .pill-track {
@@ -1411,12 +1418,13 @@ td small {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Light Mode: Sun icon placed on the far right */
+/* Light Mode: Golden Sun icon placed on the far right */
 .pill-icon.sun-icon {
-  right: 8px;
+  right: 9px;
   transform: translateY(-50%) scale(1);
-  color: #1e293b;
+  color: #f59e0b;
   opacity: 1;
+  filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.5));
 }
 
 /* Dark Mode: Sun icon disappears cleanly */
@@ -1428,15 +1436,15 @@ td small {
 
 /* Dark Mode: Moon icon placed on the far left */
 .pill-icon.moon-icon {
-  left: 8px;
+  left: 9px;
   transform: translateY(-50%) scale(0.5);
-  color: #ffffff;
+  color: #38bdf8;
   display: flex;
   align-items: center;
   gap: 2px;
   opacity: 0;
   pointer-events: none;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.8));
 }
 
 .theme-pill-toggle.is-dark .pill-icon.moon-icon {
@@ -1461,21 +1469,21 @@ td small {
 
 .pill-knob {
   position: absolute;
-  top: 2.5px;
-  left: 3px;
+  top: 3.5px;
+  left: 4px;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #1e293b;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16), 0 1px 2px rgba(0, 0, 0, 0.1);
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
   z-index: 2;
 }
 
 .theme-pill-toggle.is-dark .pill-knob {
-  transform: translateX(33px);
-  background: #ffffff;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transform: translateX(31px);
+  background: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.9), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* ==========================================================================
