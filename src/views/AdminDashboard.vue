@@ -242,7 +242,7 @@ const doughnutChartData = computed(() => ({
 
 const doughnutChartOptions = computed(() => ({
   maintainAspectRatio: false,
-  cutout: '74%',
+  cutout: '70%',
   plugins: {
     legend: { display: false },
     tooltip: {
@@ -1287,7 +1287,7 @@ onUnmounted(() => {
 
 .donut-chart-wrap {
   position: relative;
-  height: 190px;
+  height: 215px;
   width: 100%;
 }
 
@@ -1298,20 +1298,25 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
   text-align: center;
   pointer-events: none;
+  max-width: 110px;
 }
 
 .donut-center-metric small {
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--text-muted);
   display: block;
+  margin-bottom: 2px;
 }
 
 .donut-center-metric strong {
-  font-size: 18px;
+  font-size: 14.5px;
   font-weight: 800;
   color: var(--text-main);
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .revenue-progress-list {

@@ -22,6 +22,7 @@ import StorefrontCartDrawer from '../components/storefront/StorefrontCartDrawer.
 import StorefrontOrdersModal from '../components/storefront/StorefrontOrdersModal.vue'
 import StorefrontProfileModal from '../components/storefront/StorefrontProfileModal.vue'
 import StorefrontChatbotWidget from '../components/storefront/StorefrontChatbotWidget.vue'
+import StorefrontVoucherCarousel from '../components/storefront/StorefrontVoucherCarousel.vue'
 import StorefrontFooter from '../components/storefront/StorefrontFooter.vue'
 
 // Import consolidated storefront stylesheet
@@ -333,6 +334,9 @@ onMounted(() => {
         @open-product-detail="openProductDetail"
         @select-search-result="handleSearchResultSelect"
       />
+
+      <!-- New Promotional Voucher Codes Sliding Banner -->
+      <StorefrontVoucherCarousel />
 
       <!-- Products Catalog Section -->
       <section id="products" class="catalog">
