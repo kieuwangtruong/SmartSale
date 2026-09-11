@@ -514,17 +514,28 @@ onMounted(() => {
   display: grid;
   gap: 8px;
   color: #334155;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 13.5px;
 }
 
 .checkout-form input,
 .checkout-form textarea {
   width: 100%;
-  border: 1px solid #dbe3ef;
-  border-radius: 14px;
-  padding: 13px 14px;
-  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
   color: #0f172a;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.checkout-form input:focus,
+.checkout-form textarea:focus {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
 }
 
 .payment-methods {
@@ -537,8 +548,8 @@ onMounted(() => {
 .submit-order,
 .empty-checkout a {
   border: 0;
-  border-radius: 16px;
-  font-weight: 850;
+  border-radius: 14px;
+  font-weight: 800;
   cursor: pointer;
 }
 
@@ -547,22 +558,31 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 15px;
+  padding: 14px;
   background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
   color: #334155;
+  transition: all 0.2s;
 }
 
 .payment-methods button.active {
-  background: #ccfbf1;
+  background: #f0fdfa;
+  border-color: #0f766e;
   color: #0f766e;
-  box-shadow: inset 0 0 0 2px #0f766e;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.12);
 }
 
 .submit-order {
-  min-height: 54px;
+  min-height: 52px;
   color: white;
   background: #0f766e;
   font-size: 15px;
+  transition: all 0.2s;
+}
+
+.submit-order:hover:not(:disabled) {
+  background: #115e59;
+  transform: translateY(-1px);
 }
 
 .submit-order:disabled {
@@ -745,10 +765,10 @@ onMounted(() => {
 
 .coupon-section {
   margin-top: 1.25rem;
-  padding: 1rem;
+  padding: 1.1rem;
   background: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
 }
 
 .coupon-label {
@@ -767,8 +787,10 @@ onMounted(() => {
 .coupon-input {
   flex: 1;
   padding: 0.65rem 0.85rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
   font-family: monospace;
   font-weight: 700;
   text-transform: uppercase;
@@ -777,23 +799,23 @@ onMounted(() => {
 
 .coupon-input:focus {
   outline: none;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
 }
 
 .coupon-btn {
-  padding: 0.65rem 1rem;
-  background: #8b5cf6;
+  padding: 0.65rem 1.1rem;
+  background: #0f766e;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .coupon-btn:hover {
-  background: #7c3aed;
+  background: #115e59;
 }
 
 .applied-coupon-pill {
@@ -801,9 +823,9 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0.65rem 0.85rem;
-  background: #f3e8ff;
-  border: 1px solid #d8b4fe;
-  border-radius: 8px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
 }
 
 .applied-coupon-info {
@@ -815,19 +837,19 @@ onMounted(() => {
 .coupon-code-badge {
   font-family: monospace;
   font-weight: 800;
-  color: #7e22ce;
+  color: #0f766e;
   margin-right: 0.4rem;
 }
 
 .coupon-name-text {
   font-size: 0.8rem;
-  color: #6b21a8;
+  color: #115e59;
 }
 
 .remove-coupon-btn {
   background: none;
   border: none;
-  color: #9333ea;
+  color: #0f766e;
   cursor: pointer;
   font-size: 0.9rem;
   padding: 4px;
@@ -848,31 +870,42 @@ onMounted(() => {
 
 .pricing-breakdown {
   margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 1rem;
+  gap: 0.6rem;
 }
 
-.breakdown-row {
+.price-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.9rem;
-  color: #475569;
+  color: #64748b;
 }
 
-.discount-row {
+.price-row.discount-row {
+  color: #10b981;
   font-weight: 600;
 }
 
-.tier-discount .discount-value {
+.price-row.tier-discount-row {
   color: #d97706;
+  font-weight: 700;
 }
 
-.coupon-discount .discount-value {
-  color: #9333ea;
+.price-row.grand-total {
+  padding-top: 0.75rem;
+  border-top: 1.5px solid #e2e8f0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.price-row.grand-total .total-amount {
+  font-size: 1.35rem;
+  color: #0f766e;
 }
 
 .vip-benefit-banner {
@@ -880,8 +913,8 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
   border-radius: 14px;
   color: #92400e;
   margin-top: 4px;
@@ -904,6 +937,7 @@ onMounted(() => {
   display: block;
   font-size: 0.9rem;
   color: #78350f;
+  font-weight: 800;
 }
 
 .vip-benefit-text p {

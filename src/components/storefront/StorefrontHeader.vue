@@ -48,14 +48,15 @@ const displayedCustomerTier = computed(() => {
 })
 
 const customerInitials = computed(() => {
-  const name = (props.customerProfile?.fullName || auth.user?.fullName || 'Khách hàng').trim()
-  const parts = name.split(/\s+/)
+  const rawName = (props.customerProfile?.fullName || auth.user?.fullName || 'Khách hàng')
+  const cleanName = rawName.replace(/\([^)]*\)/g, '').trim()
+  const parts = cleanName.split(/\s+/).filter(Boolean)
   const first = parts[0]
   const last = parts[parts.length - 1]
   if (parts.length >= 2 && first && last) {
     return ((first[0] || '') + (last[0] || '')).toUpperCase()
   }
-  return name.slice(0, 2).toUpperCase()
+  return cleanName.slice(0, 2).toUpperCase()
 })
 
 function translateCategory(cat: string): string {

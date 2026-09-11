@@ -239,8 +239,10 @@ const discountText = computed(() => {
 
     <!-- Tier Text Label & Discount Pill -->
     <div v-if="showLabel && variant !== 'logo-only'" class="tier-text-content">
-      <span class="tier-name">{{ tierName }}</span>
-      <span v-if="showDiscount && discountText" class="tier-discount-pill">{{ discountText }}</span>
+      <div class="tier-name-row">
+        <span class="tier-name">{{ tierName }}</span>
+        <span v-if="showDiscount && discountText" class="tier-discount-pill">{{ discountText }}</span>
+      </div>
       <small v-if="showTagline" class="tier-tagline">{{ t(tierConfig.taglineVi, tierConfig.taglineEn) }}</small>
     </div>
   </div>
@@ -298,28 +300,40 @@ const discountText = computed(() => {
 .tier-text-content {
   display: inline-flex;
   flex-direction: column;
-  line-height: 1.15;
+  line-height: 1.2;
+}
+
+.tier-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .tier-name {
   font-weight: 800;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .tier-discount-pill {
-  font-size: 0.75em;
+  font-size: 0.72em;
   font-weight: 800;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
-  margin-left: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .tier-tagline {
   font-size: 0.75em;
-  opacity: 0.85;
+  opacity: 0.88;
   font-weight: 500;
-  margin-top: 2px;
+  margin-top: 3px;
+  line-height: 1.25;
 }
 
 /* ==========================================================================

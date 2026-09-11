@@ -119,14 +119,15 @@ const showUserDropdown = ref(false)
 const userDropdownRef = ref<HTMLElement | null>(null)
 
 const userInitials = computed(() => {
-  const name = (auth.user?.fullName || 'Quản trị viên').trim()
-  const parts = name.split(/\s+/)
+  const rawName = auth.user?.fullName || 'Quản trị viên'
+  const cleanName = rawName.replace(/\([^)]*\)/g, '').trim()
+  const parts = cleanName.split(/\s+/).filter(Boolean)
   const first = parts[0]
   const last = parts[parts.length - 1]
   if (parts.length >= 2 && first && last) {
     return ((first[0] || '') + (last[0] || '')).toUpperCase()
   }
-  return name.slice(0, 2).toUpperCase()
+  return cleanName.slice(0, 2).toUpperCase()
 })
 
 function handleUserDropdownClickOutside(event: MouseEvent) {

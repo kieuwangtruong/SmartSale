@@ -22,7 +22,7 @@ import { exportToExcel } from '../utils/excelUtils'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage, currentLanguage } from '../services/i18n'
 import { useToast } from 'primevue/usetoast'
-import { getTierByTotalSpent, getTierConfig, getTierLabel } from '../services/customerTier'
+import { getTierByTotalSpent, getTierConfig, getTierLabel, normalizeTierKey } from '../services/customerTier'
 import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 const auth = useAuthStore()
@@ -350,17 +350,19 @@ async function load() {
     }
 
     customers.value = merged.map((c) => {
-      if (c.id > 0) {
-        const decoded = decodeAddressWithExtras(c.address)
-        return {
-          ...c,
-          tier: decoded.extras.tier || 'Standard',
-          gender: c.gender ?? decoded.extras.gender ?? 0,
-          cccd: c.cccd ?? decoded.extras.cccd ?? null,
-          age: c.age ?? decoded.extras.age ?? null,
-        }
+      const decoded = decodeAddressWithExtras(c.address)
+      const calculatedTier = getTierByTotalSpent(c.totalSpent || 0)
+      const explicitTier = (decoded.extras.tier && decoded.extras.tier !== 'Standard')
+        ? normalizeTierKey(decoded.extras.tier)
+        : (c.tier && c.tier !== 'Standard' ? normalizeTierKey(c.tier) : calculatedTier)
+      return {
+        ...c,
+        address: decoded.plainAddress || c.address || '—',
+        tier: explicitTier,
+        gender: c.gender ?? decoded.extras.gender ?? 0,
+        cccd: c.cccd ?? decoded.extras.cccd ?? null,
+        age: c.age ?? decoded.extras.age ?? null,
       }
-      return c
     })
   } catch (e) {
     showError(e instanceof Error ? e.message : t('Không thể tải khách hàng.', 'Failed to load customers.'))
@@ -526,16 +528,16 @@ onMounted(load)
                 :title="t('Chọn tất cả', 'Select all')"
               />
             </th>
-            <th>{{ t('Khách hàng', 'Customer') }}</th>
-            <th>{{ t('Liên hệ', 'Contact') }}</th>
-            <th>{{ t('Hạng', 'Tier') }}</th>
-            <th>{{ t('Giới tính', 'Gender') }}</th>
-            <th>{{ t('CCCD', 'CCCD') }}</th>
-            <th>{{ t('Tuổi', 'Age') }}</th>
-            <th>{{ t('Đơn hàng', 'Orders') }}</th>
-            <th>{{ t('Đã mua', 'Total Spent') }}</th>
-            <th>{{ t('Công nợ', 'Debt') }}</th>
-            <th>{{ t('Hành động', 'Actions') }}</th>
+            <th style="min-width: 190px;">{{ t('Khách hàng', 'Customer') }}</th>
+            <th style="min-width: 150px;">{{ t('Liên hệ', 'Contact') }}</th>
+            <th style="min-width: 130px;">{{ t('Hạng thành viên', 'VIP Tier') }}</th>
+            <th style="min-width: 80px;">{{ t('Giới tính', 'Gender') }}</th>
+            <th style="min-width: 110px;">{{ t('CCCD', 'CCCD') }}</th>
+            <th style="min-width: 60px; text-align: center;">{{ t('Tuổi', 'Age') }}</th>
+            <th style="min-width: 80px; text-align: center;">{{ t('Đơn hàng', 'Orders') }}</th>
+            <th style="min-width: 120px; text-align: right;">{{ t('Đã mua', 'Total Spent') }}</th>
+            <th style="min-width: 100px; text-align: right;">{{ t('Công nợ', 'Debt') }}</th>
+            <th style="min-width: 110px; text-align: center;">{{ t('Hành động', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -557,20 +559,29 @@ onMounted(load)
                 <CustomerTierBadge :tier="item.tier" size="xs" variant="logo-only" />
                 <strong>{{ item.fullName }}</strong>
               </div>
-              <small>{{ item.address }}</small>
+              <small class="customer-address-sub">{{ item.address }}</small>
             </td>
-            <td>{{ item.phone }}<small>{{ item.email }}</small></td>
+            <td>
+              <strong>{{ item.phone }}</strong>
+              <small>{{ item.email || '—' }}</small>
+            </td>
             <td>
               <CustomerTierBadge :tier="item.tier" size="sm" variant="badge" :show-discount="true" />
             </td>
             <td>{{ translateGender(item.gender) }}</td>
-            <td>{{ item.cccd || '—' }}</td>
-            <td>{{ item.age && item.age > 0 ? item.age : '—' }}</td>
-            <td>{{ item.orderCount }}</td>
-            <td>{{ formatCurrency(item.totalSpent) }}</td>
-            <td>{{ formatCurrency(item.currentDebt) }}</td>
-            <td class="actions">
-              <button @click="edit(item)">{{ t('Sửa', 'Edit') }}</button>
+            <td><code>{{ item.cccd || '—' }}</code></td>
+            <td style="text-align: center;">{{ item.age && item.age > 0 ? item.age : '—' }}</td>
+            <td style="text-align: center;">
+              <span class="order-count-chip">{{ item.orderCount || 0 }}</span>
+            </td>
+            <td style="text-align: right;">
+              <strong class="total-spent-val">{{ formatCurrency(item.totalSpent) }}</strong>
+            </td>
+            <td style="text-align: right;">
+              <span :class="{ 'debt-alert': (item.currentDebt || 0) > 0 }">{{ formatCurrency(item.currentDebt) }}</span>
+            </td>
+            <td class="actions" style="text-align: center;">
+              <button class="edit-btn" @click="edit(item)">{{ t('Sửa', 'Edit') }}</button>
               <button v-if="auth.role === 'Admin'" class="danger" @click="remove(item)">{{ t('Xóa', 'Delete') }}</button>
             </td>
           </tr>
@@ -598,8 +609,61 @@ onMounted(load)
 .customer-name-wrapper {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-size: 13.5px;
 }
+
+.customer-address-sub {
+  display: block;
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 3px;
+  max-width: 240px;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.order-count-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.total-spent-val {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.debt-alert {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.actions .edit-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.actions .edit-btn:hover {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+}
+
 .tier-label {
   display: inline-flex;
   padding: 4px 10px;

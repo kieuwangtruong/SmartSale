@@ -2954,6 +2954,91 @@ footer {
 .customer-panel-error {
   color: #dc2626;
 }
+
+.customer-tier-card-wrapper {
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tier-orders-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f766e;
+  padding: 8px 12px;
+  background: #f0fdfa;
+  border-radius: 10px;
+  border: 1px solid #ccfbf1;
+}
+
+.app-dark .tier-orders-stat {
+  background: rgba(15, 118, 110, 0.15);
+  border-color: rgba(15, 118, 110, 0.35);
+  color: #2dd4bf;
+}
+
+.customer-panel-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.panel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.panel-btn:hover {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+}
+
+.app-dark .panel-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.app-dark .panel-btn:hover {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.app-dark .customer-panel {
+  background: #151d30;
+  border-color: #23304c;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+.app-dark .customer-panel-head {
+  border-bottom-color: #23304c;
+}
+
+.app-dark .customer-panel-head strong {
+  color: #f8fafc;
+}
+
+.app-dark .customer-panel-head small {
+  color: #94a3b8;
+}
+
 .logout-customer {
   width: 100%;
   margin-top: 14px;
@@ -2962,8 +3047,17 @@ footer {
   padding: 12px;
   background: #ef4444;
   color: white;
-  font-weight: 900;
+  font-weight: 800;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s ease;
+}
+
+.logout-customer:hover {
+  background: #dc2626;
 }
 .theme-toggle {
   width: 40px;

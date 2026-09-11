@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { TooltipItem } from 'chart.js'
 import Chart from 'primevue/chart'
 import Column from 'primevue/column'
@@ -218,6 +218,12 @@ const trendChartOptions = computed(() => ({
   },
 }))
 
+const isDark = ref(false)
+
+function checkDark() {
+  isDark.value = document.documentElement.classList.contains('app-dark')
+}
+
 // Doughnut Chart Data
 const doughnutChartData = computed(() => ({
   labels: revenueSegments.value.map((item) => item.label),
@@ -227,25 +233,25 @@ const doughnutChartData = computed(() => ({
       backgroundColor: revenueSegments.value.map(
         (_, index) => chartColors[index % chartColors.length],
       ),
-      borderColor: '#ffffff',
+      borderColor: isDark.value ? '#151d30' : '#ffffff',
       borderWidth: 3,
       hoverOffset: 6,
     },
   ],
 }))
 
-const doughnutChartOptions = {
+const doughnutChartOptions = computed(() => ({
   maintainAspectRatio: false,
   cutout: '74%',
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#0f172a',
+      backgroundColor: isDark.value ? '#1e293b' : '#0f172a',
       titleColor: '#f8fafc',
       bodyColor: '#34d399',
       padding: 12,
       cornerRadius: 10,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderColor: isDark.value ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)',
       borderWidth: 1,
       callbacks: {
         label: (context: TooltipItem<'doughnut'>) =>
@@ -253,7 +259,7 @@ const doughnutChartOptions = {
       },
     },
   },
-}
+}))
 
 // Stats helper
 function calculateImportStats(receipts: StockReceipt[]) {
@@ -546,7 +552,25 @@ const customerGradients = [
   'linear-gradient(135deg, #ec4899, #db2777)',
 ]
 
-onMounted(load)
+let themeObserver: MutationObserver | null = null
+
+onMounted(() => {
+  checkDark()
+  load()
+  themeObserver = new MutationObserver(() => {
+    checkDark()
+  })
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  })
+})
+
+onUnmounted(() => {
+  if (themeObserver) {
+    themeObserver.disconnect()
+  }
+})
 </script>
 
 <template>
