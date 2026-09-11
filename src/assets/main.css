@@ -1364,137 +1364,61 @@ td small {
 }
 
 /* ==========================================================================
-   Animated Sun/Moon Pill Theme Switch (Matching Reference Design)
+   Storefront & Admin Unified Theme Toggle Button
    ========================================================================== */
-.theme-pill-toggle {
-  position: relative;
-  width: 64px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1.5px solid #cbd5e1;
-  background: #f1f5f9;
-  cursor: pointer;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
-  outline: none;
-  flex-shrink: 0;
-  user-select: none;
-  overflow: hidden;
-}
-
-.theme-pill-toggle:hover {
-  transform: scale(1.05);
-  border-color: #94a3b8;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.theme-pill-toggle.is-dark {
-  background: #0f172a;
-  border-color: #334155;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.25);
-}
-
-.theme-pill-toggle.is-dark:hover {
-  border-color: #64748b;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.4);
-}
-
-.pill-track {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.pill-icon {
+.theme-toggle,
+.topbar-theme-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--surface-border, #d9d9d2);
+  background: var(--surface-card, #ffffff);
+  color: var(--text-main, #334155);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  top: 50%;
-  z-index: 1;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
 }
 
-/* Light Mode: Golden Sun icon placed on the far right */
-.pill-icon.sun-icon {
-  right: 8px;
-  transform: translateY(-50%) scale(1);
-  color: #d97706;
-  opacity: 1;
-  filter: drop-shadow(0 1px 2px rgba(217, 119, 6, 0.4));
+.theme-toggle:hover,
+.topbar-theme-toggle:hover {
+  background: var(--surface-hover, #f1f5f9);
+  color: var(--primary, #10b981);
+  transform: rotate(15deg) scale(1.08);
+  border-color: var(--primary, #10b981);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
-.pill-icon.sun-icon svg {
-  width: 15px;
-  height: 15px;
-  stroke: #d97706;
+.theme-toggle i,
+.topbar-theme-toggle i {
+  transition: transform 0.3s ease;
 }
 
-/* Dark Mode: Sun icon disappears cleanly */
-.theme-pill-toggle.is-dark .pill-icon.sun-icon {
-  opacity: 0;
-  transform: translateY(-50%) scale(0.5);
-  pointer-events: none;
+.app-dark .theme-toggle,
+.app-dark .topbar-theme-toggle {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Dark Mode: Moon icon placed on the far left */
-.pill-icon.moon-icon {
-  left: 8px;
-  transform: translateY(-50%) scale(0.5);
-  color: #38bdf8;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  opacity: 0;
-  pointer-events: none;
-  filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.9));
+.app-dark .theme-toggle:hover,
+.app-dark .topbar-theme-toggle:hover {
+  background: #27354f;
+  color: #fbbf24;
+  border-color: #fbbf24;
+  box-shadow: 0 4px 14px rgba(251, 191, 36, 0.3);
 }
 
-.pill-icon.moon-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.theme-pill-toggle.is-dark .pill-icon.moon-icon {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-  pointer-events: auto;
-}
-
-.pill-star {
-  font-size: 7px;
-  color: #93c5fd;
-  position: absolute;
-  top: -3px;
-  right: -5px;
-  animation: twinkle 1.5s infinite ease-in-out alternate;
-}
-
-@keyframes twinkle {
-  0% { opacity: 0.3; transform: scale(0.8); }
-  100% { opacity: 1; transform: scale(1.2); }
-}
-
-.pill-knob {
-  position: absolute;
-  top: 3px;
-  left: 4px;
-  width: 23px;
-  height: 23px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
-  z-index: 2;
-}
-
-.theme-pill-toggle.is-dark .pill-knob {
-  transform: translateX(30px);
-  background: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.9), 0 2px 6px rgba(0, 0, 0, 0.4);
+.app-dark .theme-toggle i.pi-sun,
+.app-dark .topbar-theme-toggle i.pi-sun {
+  color: #fbbf24;
 }
 
 /* ==========================================================================
