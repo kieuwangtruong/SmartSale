@@ -208,7 +208,7 @@ const recipientName = computed(() => {
 })
 
 const recipientPhone = computed(() => {
-  return props.selectedCustomerOrder?.customerPhone || auth.user?.phone || '0347490811'
+  return props.selectedCustomerOrder?.customerPhone || (auth.user as any)?.phone || localStorage.getItem('customer-phone') || '0347490811'
 })
 
 const recipientAddress = computed(() => {
@@ -504,21 +504,21 @@ const recipientAddress = computed(() => {
                   <span>{{ t('Tổng tiền hàng', 'Subtotal') }}</span>
                   <span>{{ formatCurrency(selectedCustomerOrder.subtotal) }}</span>
                 </div>
-                <div v-if="selectedCustomerOrder.tierDiscountAmount > 0" class="breakdown-row discount-row">
+                <div v-if="Boolean(selectedCustomerOrder.tierDiscountAmount && selectedCustomerOrder.tierDiscountAmount > 0)" class="breakdown-row discount-row">
                   <span>
                     <i class="pi pi-crown text-purple-500" />
                     {{ t('Ưu đãi hội viên Kim Cương', 'Diamond VIP Member Discount') }}
                     <small v-if="selectedCustomerOrder.tierDiscountPercent">(-{{ selectedCustomerOrder.tierDiscountPercent }}%)</small>
                   </span>
-                  <strong class="text-purple-600">-{{ formatCurrency(selectedCustomerOrder.tierDiscountAmount) }}</strong>
+                  <strong class="text-purple-600">-{{ formatCurrency(selectedCustomerOrder.tierDiscountAmount || 0) }}</strong>
                 </div>
-                <div v-if="selectedCustomerOrder.couponDiscountAmount > 0" class="breakdown-row discount-row">
+                <div v-if="Boolean(selectedCustomerOrder.couponDiscountAmount && selectedCustomerOrder.couponDiscountAmount > 0)" class="breakdown-row discount-row">
                   <span>
                     <i class="pi pi-ticket text-emerald-500" />
                     {{ t('Voucher giảm giá', 'Coupon Discount') }}
                     <span v-if="selectedCustomerOrder.couponCode" class="voucher-code-pill">{{ selectedCustomerOrder.couponCode }}</span>
                   </span>
-                  <strong class="text-emerald-600">-{{ formatCurrency(selectedCustomerOrder.couponDiscountAmount) }}</strong>
+                  <strong class="text-emerald-600">-{{ formatCurrency(selectedCustomerOrder.couponDiscountAmount || 0) }}</strong>
                 </div>
                 <div class="breakdown-row">
                   <span>{{ t('Phí vận chuyển', 'Shipping Fee') }}</span>
