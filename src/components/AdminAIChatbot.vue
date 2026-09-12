@@ -10,6 +10,7 @@ const auth = useAuthStore()
 const { t } = useLanguage()
 
 const isOpen = ref(false)
+const isExpanded = ref(false)
 const isLoaded = ref(false)
 const isLoading = ref(false)
 const isSending = ref(false)
@@ -194,6 +195,7 @@ async function resetSession() {
       <div
         v-if="isOpen"
         class="ai-chat-window"
+        :class="{ 'is-expanded': isExpanded }"
       >
         <!-- Header -->
         <div
@@ -217,6 +219,14 @@ async function resetSession() {
             </div>
           </div>
           <div class="ai-header-actions" @mousedown.stop @touchstart.stop>
+            <button
+              type="button"
+              class="ai-action-btn"
+              :title="isExpanded ? t('Thu nhỏ cửa sổ', 'Collapse window') : t('Mở rộng toàn màn hình', 'Expand window')"
+              @click="isExpanded = !isExpanded"
+            >
+              {{ isExpanded ? '❐' : '⛶' }}
+            </button>
             <button
               v-if="isCustomPositioned"
               type="button"
@@ -382,10 +392,10 @@ async function resetSession() {
   position: absolute;
   bottom: 68px;
   right: 0;
-  width: 440px;
+  width: 480px;
   max-width: calc(100vw - 32px);
-  height: 600px;
-  max-height: calc(100vh - 110px);
+  height: 620px;
+  max-height: calc(100vh - 100px);
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -394,7 +404,24 @@ async function resetSession() {
   overflow: hidden;
   border: 1px solid rgba(226, 232, 240, 0.9);
   z-index: 10000;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ai-chat-window.is-expanded {
+  width: 780px;
+  max-width: calc(100vw - 36px);
+  height: 82vh;
+  max-height: 860px;
+}
+
+@media (max-width: 640px) {
+  .ai-chat-window,
+  .ai-chat-window.is-expanded {
+    width: calc(100vw - 20px);
+    height: calc(100vh - 90px);
+    right: -10px;
+    bottom: 62px;
+  }
 }
 
 :global(.app-dark) .ai-chat-window {

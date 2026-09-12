@@ -369,10 +369,9 @@ const parsedData = computed(() => {
         </div>
       </div>
 
-      <!-- 6. General Formatted Markdown Content (if not fully replaced or for introductory notes) -->
+      <!-- 6. General Formatted Markdown Content (Always rendered in full to prevent any content loss) -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div
-        v-if="!parsedData.products.length && !parsedData.customers.length && !parsedData.inventoryAlerts.length && !parsedData.suppliers.length"
         class="chat-markdown-body"
         v-html="renderChatMarkdown(content)"
       />
@@ -901,5 +900,138 @@ const parsedData = computed(() => {
   color: #f3f4f6;
   border-color: #334155;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Table in Chat */
+:deep(.chat-table-wrapper) {
+  width: 100%;
+  overflow-x: auto;
+  margin: 8px 0;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+:global(.app-dark) :deep(.chat-table-wrapper) {
+  border-color: #334155;
+}
+
+:deep(.chat-md-table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+:deep(.chat-md-table th) {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1.5px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+:global(.app-dark) :deep(.chat-md-table th) {
+  background: #0f172a;
+  color: #f8fafc;
+  border-bottom-color: #475569;
+}
+
+:deep(.chat-md-table td) {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+:global(.app-dark) :deep(.chat-md-table td) {
+  border-bottom-color: #334155;
+  color: #cbd5e1;
+}
+
+:deep(.chat-md-table tr:last-child td) {
+  border-bottom: none;
+}
+
+:deep(.chat-md-table tr:hover td) {
+  background: rgba(13, 148, 136, 0.05);
+}
+
+:global(.app-dark) :deep(.chat-md-table tr:hover td) {
+  background: rgba(20, 184, 166, 0.1);
+}
+
+/* Code block in Chat */
+:deep(.chat-code-block) {
+  background: #0f172a;
+  color: #38bdf8;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  margin: 6px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Quote in Chat */
+:deep(.chat-md-quote) {
+  margin: 6px 0;
+  padding: 6px 12px;
+  border-left: 3px solid #0d9488;
+  background: rgba(13, 148, 136, 0.08);
+  border-radius: 0 8px 8px 0;
+  color: #0f766e;
+  font-style: italic;
+  font-size: 0.84rem;
+}
+
+:global(.app-dark) :deep(.chat-md-quote) {
+  background: rgba(20, 184, 166, 0.15);
+  color: #5eead4;
+  border-left-color: #14b8a6;
+}
+
+/* Lists and paragraphs in Markdown */
+:deep(.chat-list-item) {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 3px 0;
+  line-height: 1.45;
+}
+
+:deep(.chat-list-item .item-bullet) {
+  color: #0d9488;
+  font-weight: bold;
+}
+
+:deep(.chat-list-item .item-num) {
+  color: #0d9488;
+  font-weight: 700;
+  min-width: 16px;
+}
+
+:deep(.chat-paragraph-gap) {
+  height: 8px;
+}
+
+:deep(.chat-callout-badge) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #d97706;
+  font-weight: 700;
+}
+
+:deep(.chat-price-highlight) {
+  font-weight: 750;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+:global(.app-dark) :deep(.chat-price-highlight) {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.2);
 }
 </style>

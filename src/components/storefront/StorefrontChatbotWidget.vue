@@ -24,6 +24,7 @@ const emit = defineEmits<{
 const { t } = useLanguage()
 
 const showChatbot = ref(false)
+const isChatExpanded = ref(false)
 const storefrontChatWidgetRef = ref<HTMLElement | null>(null)
 
 const {
@@ -158,6 +159,7 @@ function handleChatAction(action: ChatAction) {
       <aside
         v-if="showChatbot"
         class="chatbot-panel"
+        :class="{ 'is-expanded': isChatExpanded }"
       >
         <header
           class="chatbot-head"
@@ -185,6 +187,14 @@ function handleChatAction(action: ChatAction) {
             </div>
           </div>
           <div class="chatbot-head-actions" @mousedown.stop @touchstart.stop>
+            <button
+              class="chatbot-action-btn"
+              type="button"
+              :title="isChatExpanded ? t('Thu nhỏ cửa sổ', 'Collapse window') : t('Mở rộng cửa sổ', 'Expand window')"
+              @click="isChatExpanded = !isChatExpanded"
+            >
+              {{ isChatExpanded ? '❐' : '⛶' }}
+            </button>
             <button
               v-if="isChatCustomPositioned"
               class="chatbot-action-btn"

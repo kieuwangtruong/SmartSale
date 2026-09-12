@@ -4643,9 +4643,9 @@ footer {
   position: absolute !important;
   bottom: 68px !important;
   right: 0 !important;
-  width: 440px !important;
-  height: 600px !important;
-  max-height: calc(100vh - 110px) !important;
+  width: 480px !important;
+  height: 620px !important;
+  max-height: calc(100vh - 100px) !important;
   max-width: calc(100vw - 32px) !important;
   background: #ffffff;
   color: #111827;
@@ -4656,7 +4656,24 @@ footer {
   flex-direction: column;
   overflow: hidden;
   z-index: 100000;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.chatbot-panel.is-expanded {
+  width: 780px !important;
+  max-width: calc(100vw - 36px) !important;
+  height: 82vh !important;
+  max-height: 860px !important;
+}
+
+@media (max-width: 640px) {
+  .chatbot-panel,
+  .chatbot-panel.is-expanded {
+    width: calc(100vw - 20px) !important;
+    height: calc(100vh - 90px) !important;
+    right: -10px !important;
+    bottom: 62px !important;
+  }
 }
 
 .app-dark .chatbot-panel {
