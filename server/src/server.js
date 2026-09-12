@@ -227,10 +227,21 @@ function payos() {
 
 async function listOrderItems(orderId) {
   const rows = await query(
-    `SELECT id, product_id AS "productId", product_name AS "productName", quantity, price, sub_total AS "subTotal"
-     FROM order_items WHERE order_id = $1 ORDER BY id`, [orderId],
+    `SELECT oi.id, oi.product_id AS "productId", oi.product_name AS "productName",
+            oi.quantity, oi.price, oi.sub_total AS "subTotal", p.image_url AS "imageUrl"
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1 ORDER BY oi.id`, [orderId],
   )
-  return rows.map((row) => ({ ...row, id: Number(row.id), productId: Number(row.productId), quantity: integer(row.quantity), price: number(row.price), subTotal: number(row.subTotal) }))
+  return rows.map((row) => ({
+    ...row,
+    id: Number(row.id),
+    productId: Number(row.productId),
+    quantity: integer(row.quantity),
+    price: number(row.price),
+    subTotal: number(row.subTotal),
+    imageUrl: row.imageUrl || null,
+  }))
 }
 
 function getTierDiscountPercent(tier) {
@@ -245,7 +256,10 @@ function getTierDiscountPercent(tier) {
 async function orderDto(row) {
   return {
     id: Number(row.id), userId: row.userId === null ? 0 : Number(row.userId),
-    customerId: row.customerId === null ? null : Number(row.customerId), customerName: row.customerName,
+    customerId: row.customerId === null ? null : Number(row.customerId),
+    customerName: row.customerName,
+    customerPhone: row.customerPhone || null,
+    customerAddress: row.customerAddress || null,
     salesStaffId: row.salesStaffId === null ? null : Number(row.salesStaffId), salesStaffName: row.salesStaffName,
     status: row.status, paymentMethod: row.paymentMethod, subtotal: number(row.subtotal),
     discountAmount: number(row.discountAmount),
@@ -281,7 +295,7 @@ const orderSelect = `SELECT o.*, o.user_id AS "userId", o.customer_id AS "custom
   o.refund_requested_at AS "refundRequestedAt", o.refunded_at AS "refundedAt",
   o.refunded_by_user_id AS "refundedByUserId", o.refund_source_status AS "refundSourceStatus",
   o.created_at AS "createdAt", o.last_modified_at AS "lastModifiedAt",
-  c.full_name AS "customerName", s.full_name AS "salesStaffName"
+  c.full_name AS "customerName", c.phone AS "customerPhone", c.address AS "customerAddress", s.full_name AS "salesStaffName"
   FROM orders o
   LEFT JOIN customers c ON c.id = o.customer_id
   LEFT JOIN users s ON s.id = o.sales_staff_id`

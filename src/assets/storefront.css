@@ -3745,7 +3745,8 @@ footer {
 }
 
 .orders-modal {
-  width: min(900px, calc(100vw - 32px));
+  width: min(1080px, calc(100vw - 32px));
+  max-height: min(860px, calc(100vh - 40px));
 }
 
 .modal-close-btn {
@@ -4167,20 +4168,20 @@ footer {
 
 .orders-modal-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 360px 1fr;
   gap: 24px;
-  max-height: 520px;
+  max-height: calc(86vh - 160px);
   overflow: hidden;
-  padding: 24px 28px;
+  padding: 20px 24px;
 }
 .orders-list-column {
   overflow-y: auto;
-  max-height: 470px;
+  max-height: calc(86vh - 180px);
   padding-right: 8px;
 }
 .orders-timeline-column {
   overflow-y: auto;
-  max-height: 470px;
+  max-height: calc(86vh - 180px);
   border-left: 1px solid #e2e8f0;
   padding-left: 24px;
 }

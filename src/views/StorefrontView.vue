@@ -182,6 +182,7 @@ function openProductDetail(product: Product) {
 
 function closeProductDetail() {
   selectedProduct.value = null
+  closeLightbox()
 }
 
 function handleAddToCartFromDetail(payload: { product: Product; variantId: number; colorId: number; quantity: number }) {

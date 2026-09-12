@@ -202,6 +202,17 @@ function handleBuyNow() {
             </div>
 
             <button 
+              v-if="selectedDetailImages[selectedImageIndex]"
+              type="button"
+              class="zoom-hint-badge"
+              @click="emit('open-lightbox', product)"
+              :title="t('Click để phóng to ảnh', 'Click to zoom image')"
+            >
+              <i class="pi pi-search-plus" />
+              <span>{{ t('Phóng to', 'Zoom') }}</span>
+            </button>
+
+            <button 
               type="button" 
               class="carousel-nav-btn next-btn" 
               @click="nextImage"
@@ -430,3 +441,382 @@ function handleBuyNow() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Zoom Hint Badge on Main Image */
+.zoom-hint-badge {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  z-index: 6;
+}
+
+.zoom-hint-badge:hover {
+  background: #0f766e;
+  border-color: #0f766e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.35);
+}
+
+/* Quantity Picker */
+.quantity-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.quantity-picker label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #1e293b);
+  letter-spacing: 0.02em;
+}
+
+.qty-controls {
+  display: inline-grid;
+  grid-template-columns: 44px 70px 44px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+  width: fit-content;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.qty-controls button {
+  height: 42px;
+  border: none;
+  background: #f8fafc;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #334155;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.qty-controls button:first-child {
+  border-right: 1px solid #e2e8f0;
+}
+
+.qty-controls button:last-child {
+  border-left: 1px solid #e2e8f0;
+}
+
+.qty-controls button:hover:not(:disabled) {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.qty-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qty-controls input {
+  border: none;
+  background: #ffffff;
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+  outline: none;
+}
+
+/* Detail Action CTA Buttons */
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding-top: 14px;
+}
+
+.add-to-cart-btn {
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  border: 2px solid #0f766e;
+  background: #f0fdf4;
+  color: #0f766e;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.08);
+}
+
+.add-to-cart-btn:hover:not(:disabled) {
+  background: #0f766e;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.25);
+}
+
+.buy-now-btn {
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  color: #ffffff;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
+}
+
+.buy-now-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0b5f59 0%, #0f766e 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(15, 118, 110, 0.45);
+}
+
+.add-to-cart-btn:disabled,
+.buy-now-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Product Specification Accordion (Shopee / Lazada style) */
+.product-specs-accordion {
+  margin-top: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.accordion-item {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.accordion-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #ffffff;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.accordion-header:hover {
+  background: #f8fafc;
+}
+
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.accordion-title i {
+  color: #0f766e;
+  font-size: 16px;
+}
+
+.accordion-header > i {
+  color: #64748b;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+.accordion-body {
+  padding: 16px 20px 22px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+  animation: slideDown 0.2s ease-out;
+}
+
+.overview-text,
+.usage-text,
+.warranty-text {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #475569;
+  margin: 0;
+}
+
+/* Specifications Table */
+.specs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.specs-table tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.specs-table tr:last-child {
+  border-bottom: none;
+}
+
+.specs-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.specs-table th {
+  width: 36%;
+  text-align: left;
+  padding: 11px 16px;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.specs-table td {
+  padding: 11px 16px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Dark mode overrides */
+.app-dark .product-specs-accordion {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.app-dark .accordion-item {
+  border-bottom-color: #1e293b;
+}
+
+.app-dark .accordion-header {
+  background: #0f172a;
+}
+
+.app-dark .accordion-header:hover {
+  background: #1e293b;
+}
+
+.app-dark .accordion-title {
+  color: #f1f5f9;
+}
+
+.app-dark .accordion-body {
+  background: #0b1120;
+  border-top-color: #1e293b;
+}
+
+.app-dark .overview-text,
+.app-dark .usage-text,
+.app-dark .warranty-text {
+  color: #cbd5e1;
+}
+
+.app-dark .specs-table {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.app-dark .specs-table tr {
+  border-bottom-color: #1e293b;
+}
+
+.app-dark .specs-table tr:nth-child(even) {
+  background: #1e293b;
+}
+
+.app-dark .specs-table th {
+  color: #94a3b8;
+}
+
+.app-dark .specs-table td {
+  color: #f1f5f9;
+}
+
+.app-dark .qty-controls {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.app-dark .qty-controls button {
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+.app-dark .qty-controls button:first-child {
+  border-right-color: #334155;
+}
+
+.app-dark .qty-controls button:last-child {
+  border-left-color: #334155;
+}
+
+.app-dark .qty-controls input {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+.app-dark .add-to-cart-btn {
+  background: rgba(15, 118, 110, 0.15);
+  border-color: #14b8a6;
+  color: #2dd4bf;
+}
+
+.app-dark .add-to-cart-btn:hover:not(:disabled) {
+  background: #14b8a6;
+  color: #0f172a;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-actions {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+

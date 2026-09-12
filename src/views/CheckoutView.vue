@@ -11,7 +11,7 @@ import {
 import type { Product, ProductVariant, ProductVariantColor } from '../services/productApi'
 import { useAuthStore } from '../stores/authStore'
 import { useLanguage } from '../services/i18n'
-import { getTierByTotalSpent } from '../services/customerTier'
+import { getTierByTotalSpent, getTierConfig, normalizeTierKey } from '../services/customerTier'
 import CustomerTierBadge from '../components/CustomerTierBadge.vue'
 
 interface CartLine {
@@ -28,7 +28,7 @@ const CUSTOMER_PHONE_KEY = 'customer-phone'
 
 const router = useRouter()
 const auth = useAuthStore()
-const { t } = useLanguage()
+const { t, currentLanguage } = useLanguage()
 
 const cart = ref<CartLine[]>([])
 const loading = ref(false)
@@ -45,7 +45,21 @@ const form = reactive({
 })
 
 const customerTier = computed(() => {
+  if (auth.user?.customerTier) {
+    return normalizeTierKey(auth.user.customerTier)
+  }
+  if ((auth.user as any)?.tier) {
+    return normalizeTierKey((auth.user as any).tier)
+  }
   return getTierByTotalSpent(auth.user?.totalSpent || 0)
+})
+
+const customerTierConfig = computed(() => getTierConfig(customerTier.value))
+
+const customerTierLabel = computed(() => {
+  if (auth.user?.customerTierLabel) return auth.user.customerTierLabel
+  if ((auth.user as any)?.tierLabel) return (auth.user as any).tierLabel
+  return currentLanguage.value === 'en' ? customerTierConfig.value.labelEn : customerTierConfig.value.labelVi
 })
 
 const cartCount = computed(() =>
@@ -319,7 +333,7 @@ onMounted(() => {
             <i class="pi pi-crown" />
           </div>
           <div class="vip-benefit-text">
-            <strong>{{ t('Đặc quyền thành viên', 'VIP Member Privilege') }} {{ customerTier }}</strong>
+            <strong>{{ t('Đặc quyền thành viên', 'VIP Member Privilege') }} {{ customerTierLabel }}</strong>
             <p>{{ t('Bạn được tự động chiết khấu', 'You receive an automatic discount of') }} <b>{{ tierDiscountPercent }}%</b> (-{{ formatCurrency(tierDiscountAmount) }}) {{ t('trực tiếp vào số tiền thanh toán trước khi tạo mã QR.', 'directly on your checkout total before QR code creation.') }}</p>
           </div>
         </div>
@@ -399,7 +413,7 @@ onMounted(() => {
           <div v-if="tierDiscountAmount > 0" class="breakdown-row discount-row tier-discount">
             <span>
               <i class="pi pi-crown text-amber-500 mr-1" />
-              {{ t('Ưu đãi hạng', 'Loyalty Tier') }} ({{ customerTier }} -{{ tierDiscountPercent }}%)
+              {{ t('Ưu đãi hạng', 'Loyalty Tier') }} ({{ customerTierLabel }} -{{ tierDiscountPercent }}%)
             </span>
             <span class="discount-value">-{{ formatCurrency(tierDiscountAmount) }}</span>
           </div>

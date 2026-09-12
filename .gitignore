@@ -31,3 +31,6 @@ dist-ssr
 *.vue.js.map
 .vercel
 .env*
+__pycache__/
+*.py[cod]
+*$py.class

@@ -208,7 +208,7 @@ const DEFAULT_MOCK_COUPONS: Coupon[] = [
     maxUsesPerCustomer: 2,
     appliesTo: 'all',
     startDate: new Date(Date.now() - 86400000 * 2).toISOString(),
-    endDate: new Date(Date.now() + 86400000 * 30).toISOString(),
+    endDate: '2027-12-31T23:59:59.000Z',
     isActive: true,
     createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
     lastModifiedAt: null,
@@ -227,14 +227,14 @@ const DEFAULT_MOCK_COUPONS: Coupon[] = [
     maxDiscountAmount: null,
     maxUses: 100,
     usedCount: 7,
-    maxUsesPerCustomer: 1,
-    appliesTo: 'category',
+    maxUsesPerCustomer: 5,
+    appliesTo: 'all',
     startDate: new Date(Date.now() - 86400000).toISOString(),
-    endDate: new Date(Date.now() + 86400000 * 15).toISOString(),
+    endDate: '2027-12-31T23:59:59.000Z',
     isActive: true,
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     lastModifiedAt: null,
-    items: [{ id: 1, categoryId: 1, categoryName: 'Điện tử & Gia dụng' }],
+    items: [],
   },
   {
     id: 3,
@@ -249,10 +249,10 @@ const DEFAULT_MOCK_COUPONS: Coupon[] = [
     maxDiscountAmount: null,
     maxUses: 500,
     usedCount: 42,
-    maxUsesPerCustomer: 1,
+    maxUsesPerCustomer: 3,
     appliesTo: 'all',
     startDate: new Date(Date.now() - 86400000 * 10).toISOString(),
-    endDate: new Date(Date.now() + 86400000 * 60).toISOString(),
+    endDate: '2027-12-31T23:59:59.000Z',
     isActive: true,
     createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
     lastModifiedAt: null,
@@ -260,6 +260,50 @@ const DEFAULT_MOCK_COUPONS: Coupon[] = [
   },
   {
     id: 4,
+    promotionId: null,
+    promotionName: null,
+    code: 'SMARTSALE15',
+    name: 'Đại Tiệc Siêu Khuyến Mãi 15%',
+    description: 'Giảm 15% tối đa 1.000.000₫ cho đơn từ 1.000.000₫',
+    discountType: 'percent',
+    discountValue: 15,
+    minOrderAmount: 1000000,
+    maxDiscountAmount: 1000000,
+    maxUses: 1000,
+    usedCount: 12,
+    maxUsesPerCustomer: 5,
+    appliesTo: 'all',
+    startDate: new Date().toISOString(),
+    endDate: '2027-12-31T23:59:59.000Z',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    lastModifiedAt: null,
+    items: [],
+  },
+  {
+    id: 5,
+    promotionId: null,
+    promotionName: null,
+    code: 'FREESHIP',
+    name: 'Miễn Phí Vận Chuyển',
+    description: 'Giảm 30.000₫ phí ship toàn quốc cho đơn từ 199.000₫',
+    discountType: 'fixed',
+    discountValue: 30000,
+    minOrderAmount: 199000,
+    maxDiscountAmount: null,
+    maxUses: 1000,
+    usedCount: 25,
+    maxUsesPerCustomer: 10,
+    appliesTo: 'all',
+    startDate: new Date().toISOString(),
+    endDate: '2027-12-31T23:59:59.000Z',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    lastModifiedAt: null,
+    items: [],
+  },
+  {
+    id: 6,
     promotionId: null,
     promotionName: null,
     code: 'VIP15',
@@ -271,10 +315,10 @@ const DEFAULT_MOCK_COUPONS: Coupon[] = [
     maxDiscountAmount: 1000000,
     maxUses: 50,
     usedCount: 9,
-    maxUsesPerCustomer: 1,
+    maxUsesPerCustomer: 5,
     appliesTo: 'all',
     startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 86400000 * 14).toISOString(),
+    endDate: '2027-12-31T23:59:59.000Z',
     isActive: true,
     createdAt: new Date().toISOString(),
     lastModifiedAt: null,
@@ -607,6 +651,15 @@ export async function validateCoupon(params: {
     throw new Error('Mã giảm giá không tồn tại hoặc đã hết hạn.')
   }
 
+  let discountAmount = coupon.discountValue
+  if (coupon.discountType === 'percent') {
+    const estSubtotal = params.items.reduce((s, i) => s + (i.quantity * 500000), 0) || 1000000
+    discountAmount = Math.round(estSubtotal * (coupon.discountValue / 100))
+    if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
+      discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount)
+    }
+  }
+
   return {
     valid: true,
     coupon: {
@@ -615,15 +668,15 @@ export async function validateCoupon(params: {
       name: coupon.name,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
-      discountAmount: coupon.discountValue,
+      discountAmount,
       appliesTo: coupon.appliesTo,
     },
     tier: 'Standard',
     tierPercent: 0,
     tierDiscountAmount: 0,
     subtotal: 1000000,
-    totalDiscount: coupon.discountValue,
-    finalTotal: 1000000 - coupon.discountValue,
+    totalDiscount: discountAmount,
+    finalTotal: Math.max(0, 1000000 - discountAmount),
   }
 }
 

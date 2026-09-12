@@ -40,6 +40,7 @@ export interface OrderItem {
   quantity: number
   price: number
   subTotal: number
+  imageUrl?: string | null
 }
 
 export interface Order {
@@ -47,6 +48,8 @@ export interface Order {
   userId: number
   customerId?: number | null
   customerName?: string | null
+  customerPhone?: string | null
+  customerAddress?: string | null
   salesStaffId?: number | null
   salesStaffName?: string | null
   createdByUserId?: number | null
