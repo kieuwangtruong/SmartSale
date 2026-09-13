@@ -64,13 +64,12 @@ app.get('/api/openapi.json', (_req, res) => {
   res.json(openApiSpec)
 })
 
-app.get('/health', (_req, res) => {
+const handleHealthCheck = (_req, res) => {
   res.status(200).json({ status: 'alive', service: 'SmartSale.API', timestamp: new Date().toISOString() })
-})
+}
 
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'alive', service: 'SmartSale.API', timestamp: new Date().toISOString() })
-})
+app.route('/health').get(handleHealthCheck).head(handleHealthCheck)
+app.route('/api/health').get(handleHealthCheck).head(handleHealthCheck)
 
 function apiError(statusCode, message) {
   const error = new Error(message)
