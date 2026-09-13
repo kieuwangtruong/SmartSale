@@ -64,8 +64,12 @@ app.get('/api/openapi.json', (_req, res) => {
   res.json(openApiSpec)
 })
 
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'alive', service: 'SmartSale.API', timestamp: new Date().toISOString() })
+})
+
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() })
+  res.status(200).json({ status: 'alive', service: 'SmartSale.API', timestamp: new Date().toISOString() })
 })
 
 function apiError(statusCode, message) {
