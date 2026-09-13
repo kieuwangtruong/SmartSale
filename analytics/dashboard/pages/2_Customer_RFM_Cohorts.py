@@ -24,10 +24,17 @@ cust_rfm = valid.groupby('customer_id').agg(
 
 cust_rfm['avg_order_value'] = (cust_rfm['monetary_total'] / cust_rfm['frequency_orders']).round(0)
 
-# Scoring
-cust_rfm['r_score'] = pd.qcut(cust_rfm['recency_days'], q=4, labels=[4, 3, 2, 1])
-cust_rfm['f_score'] = pd.qcut(cust_rfm['frequency_orders'].rank(method='first'), q=4, labels=[1, 2, 3, 4])
-cust_rfm['m_score'] = pd.qcut(cust_rfm['monetary_total'].rank(method='first'), q=4, labels=[1, 2, 3, 4])
+# Scoring (using rank to safely prevent ValueError when quantiles have duplicate bin edges)
+if len(cust_rfm) >= 4:
+    cust_rfm['r_score'] = pd.qcut(cust_rfm['recency_days'].rank(method='first'), q=4, labels=[4, 3, 2, 1])
+    cust_rfm['f_score'] = pd.qcut(cust_rfm['frequency_orders'].rank(method='first'), q=4, labels=[1, 2, 3, 4])
+    cust_rfm['m_score'] = pd.qcut(cust_rfm['monetary_total'].rank(method='first'), q=4, labels=[1, 2, 3, 4])
+else:
+    cust_rfm['r_score'] = 4
+    cust_rfm['f_score'] = 4
+    cust_rfm['m_score'] = 4
+
+cust_rfm['rfm_segment'] = cust_rfm['r_score'].astype(str) + cust_rfm['f_score'].astype(str) + cust_rfm['m_score'].astype(str)
 
 # Metrics overview
 c1, c2, c3, c4 = st.columns(4)
