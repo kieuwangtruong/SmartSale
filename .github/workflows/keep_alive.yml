@@ -1,0 +1,31 @@
+name: SmartSale Keep-Alive Pinger
+
+on:
+  schedule:
+    # Run every 12 minutes to keep Render Free tier backend active
+    - cron: '*/12 * * * *'
+  workflow_dispatch: # Enable manual run from GitHub UI
+
+jobs:
+  keep-alive:
+    name: Ping Services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping SmartSale Backend API
+        run: |
+          echo "Pinging SmartSale Backend API..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://smartsale-api.onrender.com/health || echo "000")
+          echo "Backend Response Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ SmartSale Backend is awake & healthy (200 OK)."
+          else
+            echo "ℹ️ Backend responded with HTTP $HTTP_CODE (may be waking up)."
+          fi
+
+      - name: Ping Streamlit Analytics Dashboard
+        continue-on-error: true
+        run: |
+          echo "Pinging Streamlit Analytics..."
+          STREAMLIT_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://smartsale-analytics.streamlit.app/ || echo "000")
+          echo "Streamlit Response Status: $STREAMLIT_CODE"

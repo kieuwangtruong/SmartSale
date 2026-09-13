@@ -2269,5 +2269,23 @@ export default app
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)
 if (!isServerless && (process.env.NODE_ENV !== 'test')) {
   const port = Number(process.env.PORT || 10000)
-  app.listen(port, () => console.log(`SmartSale API listening on ${port}`))
+  app.listen(port, () => {
+    console.log(`SmartSale API listening on ${port}`)
+
+    // Keep-Alive self-pinger when running on Render or Cloud Hosting
+    const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_API_URL
+    if (externalUrl) {
+      const pingInterval = 13 * 60 * 1000 // 13 minutes (Render sleeps at 15 mins)
+      console.log(`[Keep-Alive] Auto-ping active for ${externalUrl}/health every 13 minutes`)
+      setInterval(async () => {
+        try {
+          const healthUrl = `${externalUrl.replace(/\/+$/, '')}/health`
+          const res = await fetch(healthUrl)
+          console.log(`[Keep-Alive] Pinged ${healthUrl} -> Status ${res.status}`)
+        } catch (err) {
+          console.warn('[Keep-Alive] Ping warning:', err.message)
+        }
+      }, pingInterval)
+    }
+  })
 }
