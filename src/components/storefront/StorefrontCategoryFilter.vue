@@ -39,6 +39,16 @@ function translateCategory(cat: string): string {
   }
   return cat
 }
+
+function getCategoryIcon(cat: string): string {
+  const c = (cat || '').toLowerCase()
+  if (c.includes('điện tử') || c.includes('electronic')) return 'pi pi-desktop'
+  if (c.includes('gia dụng') || c.includes('home')) return 'pi pi-home'
+  if (c.includes('phụ kiện') || c.includes('access')) return 'pi pi-tags'
+  if (c.includes('văn phòng') || c.includes('office')) return 'pi pi-briefcase'
+  if (c.includes('mỹ phẩm') || c.includes('chăm sóc') || c.includes('cosmetic')) return 'pi pi-heart'
+  return 'pi pi-box'
+}
 </script>
 
 <template>
@@ -51,7 +61,8 @@ function translateCategory(cat: string): string {
         @click="emit('update:category', ''); emit('update:showAllProducts', true);"
       >
         <i class="pi pi-th-large" />
-        <span>{{ t('Tất cả', 'All') }} ({{ totalCount }})</span>
+        <span>{{ t('Tất cả', 'All') }}</span>
+        <span class="category-badge-count">{{ totalCount }}</span>
       </button>
 
       <button 
@@ -62,6 +73,7 @@ function translateCategory(cat: string): string {
         :class="{ active: category === cat }"
         @click="emit('update:category', cat); emit('update:showAllProducts', false);"
       >
+        <i :class="getCategoryIcon(cat)" />
         <span>{{ translateCategory(cat) }}</span>
       </button>
 
@@ -71,8 +83,8 @@ function translateCategory(cat: string): string {
         :class="{ active: showOnlySales }"
         @click="emit('update:showOnlySales', !showOnlySales)"
       >
-        <i class="pi pi-bolt" />
-        <span>{{ t('Đang giảm giá', 'On Sale') }}</span>
+        <i class="pi pi-bolt text-amber-500" />
+        <span>{{ t('⚡ Đang giảm giá', '⚡ On Sale') }}</span>
       </button>
     </div>
 

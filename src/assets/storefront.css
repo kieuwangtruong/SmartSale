@@ -386,15 +386,28 @@
   text-decoration: none;
   font-weight: 700;
 }
-.store-header {
+.storefront-header-wrapper {
   position: sticky;
   top: 0;
+  z-index: 1000;
+  width: 100%;
+  background: rgba(248, 247, 242, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+.app-dark .storefront-header-wrapper {
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+.store-header {
+  position: relative;
   z-index: 20;
   height: 74px;
   padding: 0 max(20px, calc((100vw - 1280px) / 2));
   border-bottom: 1px solid rgb(20 33 61 / 8%);
-  background: rgb(248 247 242 / 94%);
-  backdrop-filter: blur(18px);
+  background: transparent;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -697,6 +710,24 @@ main {
   color: var(--muted);
   font-size: 12px;
 }
+.search-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.search-result-cat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+.search-result-price {
+  font-size: 13px;
+  font-weight: 750;
+  color: #0f766e;
+}
 .search-result-arrow {
   color: #0f766e;
   font-size: 12px;
@@ -713,6 +744,219 @@ main {
 .hero-search-empty i {
   font-size: 22px;
   color: #c5ccc9;
+}
+
+/* ==========================================================================
+   Storefront Category Filter Tabs Bar
+   ========================================================================== */
+.category-filter-root {
+  margin-bottom: 24px;
+}
+
+.category-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 0 16px;
+}
+
+.category-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.category-tab-btn:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+  background: #f0fdfa;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.12);
+}
+
+.category-tab-btn.active {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.28);
+}
+
+.category-tab-btn.active i {
+  color: #ffffff;
+}
+
+.category-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 750;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.category-tab-btn.active .category-badge-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.category-tab-btn.sales-filter-btn {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.category-tab-btn.sales-filter-btn:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
+.category-tab-btn.sales-filter-btn.active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+}
+
+.app-dark .category-tab-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.app-dark .category-tab-btn:hover {
+  background: #0f2e2b;
+  border-color: #2dd4bf;
+  color: #2dd4bf;
+}
+
+.app-dark .category-tab-btn.active {
+  background: #0f766e;
+  border-color: #14b8a6;
+  color: #ffffff;
+}
+
+.app-dark .category-badge-count {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.app-dark .category-tab-btn.sales-filter-btn {
+  background: rgba(190, 18, 60, 0.15);
+  border-color: rgba(251, 113, 133, 0.3);
+  color: #fda4af;
+}
+
+.app-dark .category-tab-btn.sales-filter-btn.active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   Storefront Customer Orders Modal Tabs Bar
+   ========================================================================== */
+.modal-order-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 0 14px;
+  border-bottom: 1px solid #f1f5f9;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-order-tabs .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-order-tabs .tab-btn:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+  background: #f0fdfa;
+  transform: translateY(-1px);
+}
+
+.modal-order-tabs .tab-btn.active {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+  box-shadow: 0 3px 10px rgba(15, 118, 110, 0.25);
+}
+
+.modal-order-tabs .tab-btn.active i {
+  color: #ffffff;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.modal-order-tabs .tab-btn.active .tab-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.app-dark .modal-order-tabs {
+  border-bottom-color: #1e293b;
+}
+
+.app-dark .modal-order-tabs .tab-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.app-dark .modal-order-tabs .tab-btn:hover {
+  background: #0f2e2b;
+  border-color: #2dd4bf;
+  color: #2dd4bf;
+}
+
+.app-dark .modal-order-tabs .tab-btn.active {
+  background: #0f766e;
+  border-color: #14b8a6;
+  color: #ffffff;
+}
+
+.app-dark .tab-badge {
+  background: #334155;
+  color: #94a3b8;
 }
 .hero-visual {
   position: relative;

@@ -10,7 +10,7 @@ const props = defineProps<{
   showAllProducts: boolean
   products: Product[]
   promoProducts: Product[]
-  searchSuggestions: Product[]
+  searchSuggestions?: Product[]
   availableProducts: number
 }>()
 
@@ -28,6 +28,49 @@ const searchInput = ref('')
 const showSearchDropdown = ref(false)
 const heroSearchRef = ref<HTMLElement | null>(null)
 
+function removeVietnameseTones(str: string): string {
+  if (!str) return ''
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim()
+}
+
+function getProductThumb(product: Product): string {
+  if (product.imageUrl && !product.imageUrl.includes('placeholder')) return product.imageUrl
+  if (product.imageUrls && product.imageUrls.length > 0) {
+    const valid = product.imageUrls.find((u) => u && !u.includes('placeholder'))
+    if (valid) return valid
+  }
+  return ''
+}
+
+const heroSuggestions = computed(() => {
+  const rawQ = searchInput.value.trim()
+  if (!rawQ) return []
+  const normQ = removeVietnameseTones(rawQ)
+  
+  return props.products
+    .filter((p) => {
+      const nameVi = removeVietnameseTones(p.name || '')
+      const nameEn = removeVietnameseTones(translateProductName(p) || '')
+      const cat = removeVietnameseTones(p.categoryName || '')
+      const desc = removeVietnameseTones(p.description || '')
+      const idStr = String(p.id)
+      return (
+        nameVi.includes(normQ) ||
+        nameEn.includes(normQ) ||
+        cat.includes(normQ) ||
+        desc.includes(normQ) ||
+        idStr === normQ
+      )
+    })
+    .slice(0, 6)
+})
+
 function handleHeroSearchClickOutside(event: MouseEvent) {
   if (heroSearchRef.value && !heroSearchRef.value.contains(event.target as Node)) {
     showSearchDropdown.value = false
@@ -37,11 +80,16 @@ function handleHeroSearchClickOutside(event: MouseEvent) {
 function triggerSearch() {
   emit('update:search', searchInput.value)
   showSearchDropdown.value = false
+  const el = document.getElementById('products')
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 
 function handleSelectSearchResult(product: Product) {
   searchInput.value = ''
   showSearchDropdown.value = false
+  emit('open-product-detail', product)
   emit('select-search-result', product)
 }
 
@@ -191,21 +239,30 @@ function promoDescriptionLabel(p: Product | null): string {
           
           <!-- Suggestions Dropdown -->
           <div v-if="showSearchDropdown && searchInput.trim()" class="hero-search-dropdown">
-            <template v-if="searchSuggestions.length">
+            <template v-if="heroSuggestions.length">
               <button
-                v-for="product in searchSuggestions"
+                v-for="product in heroSuggestions"
                 :key="product.id"
                 class="hero-search-result"
                 type="button"
                 @click="handleSelectSearchResult(product)"
               >
                 <div class="search-result-thumb">
-                  <img v-if="product.imageUrl" :src="product.imageUrl" :alt="translateProductName(product)" />
+                  <img 
+                    v-if="getProductThumb(product)" 
+                    :src="getProductThumb(product)" 
+                    :alt="translateProductName(product)" 
+                    loading="lazy"
+                    @error="($event.target as HTMLImageElement).style.display = 'none'"
+                  />
                   <i v-else class="pi pi-box" />
                 </div>
                 <div class="search-result-info">
                   <strong>{{ translateProductName(product) }}</strong>
-                  <small>{{ formatCurrency(product.sellingPrice) }}</small>
+                  <div class="search-result-meta">
+                    <span class="search-result-cat">{{ product.categoryName }}</span>
+                    <span class="search-result-price">{{ formatCurrency(product.salePrice && product.salePrice < (product.originalPrice || product.sellingPrice) ? product.salePrice : product.sellingPrice) }}</span>
+                  </div>
                 </div>
                 <i class="pi pi-chevron-right search-result-arrow" />
               </button>

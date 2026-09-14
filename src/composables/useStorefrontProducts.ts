@@ -29,19 +29,31 @@ export function useStorefrontProducts() {
     }
   }
 
+  function removeVietnameseTones(str: string): string {
+    if (!str) return ''
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase()
+      .trim()
+  }
+
   function productMatchesSearch(product: Product, query: string): boolean {
     if (!query || !query.trim()) return true
-    const q = query.toLowerCase().trim()
-    const nameVi = (product.name || '').toLowerCase()
-    const nameEn = translateProductName(product).toLowerCase()
-    const desc = (product.description || '').toLowerCase()
+    const normQ = removeVietnameseTones(query)
+    const nameVi = removeVietnameseTones(product.name || '')
+    const nameEn = removeVietnameseTones(translateProductName(product) || '')
+    const cat = removeVietnameseTones(product.categoryName || '')
+    const desc = removeVietnameseTones(product.description || '')
     const idStr = String(product.id)
-    return nameVi.includes(q) || nameEn.includes(q) || desc.includes(q) || idStr.includes(q)
+    return nameVi.includes(normQ) || nameEn.includes(normQ) || cat.includes(normQ) || desc.includes(normQ) || idStr === normQ
   }
 
   const searchSuggestions = computed(() => {
     const q = searchInput.value.trim()
-    if (!q || q.length < 2) return []
+    if (!q) return []
     return products.value
       .filter((p) => productMatchesSearch(p, q))
       .slice(0, 6)

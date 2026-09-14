@@ -58,10 +58,27 @@ onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
 })
 
+const tabCounts = computed(() => {
+  const orders = props.customerOrders || []
+  return {
+    pending: orders.filter((o) => ['Pending', 'PendingPayment', 'ProcessingPayment', 'Processing'].includes(o.status)).length,
+    paid: orders.filter((o) => o.status === 'Paid').length,
+    shipped: orders.filter((o) => o.status === 'Shipped').length,
+    completed: orders.filter((o) => o.status === 'Completed').length,
+    cancelled: orders.filter((o) => ['Cancelled', 'PaymentCancelled', 'PaymentExpired', 'PaymentFailed', 'RefundRequested', 'Refunded', 'RefundRejected'].includes(o.status)).length,
+  }
+})
+
 function isPayOSPending(order: Order | null): boolean {
   if (!order) return false
   const pm = String(order.paymentMethod || '').toLowerCase()
-  return pm === 'payos' && ['PendingPayment', 'Pending', 'PaymentFailed', 'PaymentCancelled', 'PaymentExpired'].includes(order.status)
+  return pm === 'payos' && ['PendingPayment', 'Pending', 'ProcessingPayment'].includes(order.status)
+}
+
+function isPayOSCancelledOrFailed(order: Order | null): boolean {
+  if (!order) return false
+  const pm = String(order.paymentMethod || '').toLowerCase()
+  return pm === 'payos' && ['PaymentCancelled', 'PaymentFailed', 'PaymentExpired'].includes(order.status)
 }
 
 function getPayOSExpiryRemaining(order: Order): { isExpired: boolean; text: string } {
@@ -254,7 +271,9 @@ const recipientAddress = computed(() => {
             :class="{ active: activeOrderTab === 'pending' }" 
             @click="emit('update:activeOrderTab', 'pending')"
           >
-            {{ t('Chờ xử lý / Thanh toán', 'Pending / Payment') }}
+            <i class="pi pi-clock" />
+            <span>{{ t('Chờ xử lý / Thanh toán', 'Pending / Payment') }}</span>
+            <span v-if="tabCounts.pending > 0" class="tab-badge">{{ tabCounts.pending }}</span>
           </button>
           <button 
             type="button" 
@@ -262,7 +281,9 @@ const recipientAddress = computed(() => {
             :class="{ active: activeOrderTab === 'paid' }" 
             @click="emit('update:activeOrderTab', 'paid')"
           >
-            {{ t('Đã thanh toán', 'Paid') }}
+            <i class="pi pi-check-circle" />
+            <span>{{ t('Đã thanh toán', 'Paid') }}</span>
+            <span v-if="tabCounts.paid > 0" class="tab-badge">{{ tabCounts.paid }}</span>
           </button>
           <button 
             type="button" 
@@ -270,7 +291,9 @@ const recipientAddress = computed(() => {
             :class="{ active: activeOrderTab === 'shipped' }" 
             @click="emit('update:activeOrderTab', 'shipped')"
           >
-            {{ t('Đang giao', 'Shipping') }}
+            <i class="pi pi-truck" />
+            <span>{{ t('Đang giao', 'Shipping') }}</span>
+            <span v-if="tabCounts.shipped > 0" class="tab-badge">{{ tabCounts.shipped }}</span>
           </button>
           <button 
             type="button" 
@@ -278,7 +301,9 @@ const recipientAddress = computed(() => {
             :class="{ active: activeOrderTab === 'completed' }" 
             @click="emit('update:activeOrderTab', 'completed')"
           >
-            {{ t('Hoàn thành', 'Completed') }}
+            <i class="pi pi-box" />
+            <span>{{ t('Hoàn thành', 'Completed') }}</span>
+            <span v-if="tabCounts.completed > 0" class="tab-badge">{{ tabCounts.completed }}</span>
           </button>
           <button 
             type="button" 
@@ -286,7 +311,9 @@ const recipientAddress = computed(() => {
             :class="{ active: activeOrderTab === 'cancelled' }" 
             @click="emit('update:activeOrderTab', 'cancelled')"
           >
-            {{ t('Đã hủy', 'Cancelled') }}
+            <i class="pi pi-times-circle" />
+            <span>{{ t('Đã hủy', 'Cancelled') }}</span>
+            <span v-if="tabCounts.cancelled > 0" class="tab-badge">{{ tabCounts.cancelled }}</span>
           </button>
         </div>
       </div>

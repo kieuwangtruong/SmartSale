@@ -78,7 +78,7 @@ function translateCategory(cat: string): string {
 </script>
 
 <template>
-  <div>
+  <div class="storefront-header-wrapper">
     <div class="announcement">
       <span><i class="pi pi-sparkles" /> {{ t('Giá bán và tồn kho được đồng bộ trực tiếp', 'Real-time stock and price synchronization active') }}</span>
       <RouterLink to="/login/staff">{{ t('Dành cho nhân viên', 'Staff Login') }} <i class="pi pi-arrow-up-right" /></RouterLink>
