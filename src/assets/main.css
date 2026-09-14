@@ -1804,3 +1804,233 @@ td small {
   border-radius: 4px;
 }
 
+/* ==========================================================================
+   Global Admin Modal & Dialog System (Sleek Modern Glassmorphism + Responsive)
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  z-index: 9990 !important;
+  animation: adminModalFadeIn 0.2s ease-out;
+}
+
+.admin-modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(580px, calc(100vw - 32px)) !important;
+  max-height: min(90vh, 760px) !important;
+  background: var(--surface-card, #ffffff) !important;
+  border-radius: 18px !important;
+  border: 1px solid var(--surface-border, #e2e8f0) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  z-index: 9995 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  animation: adminModalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes adminModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes adminModalPopIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.modal-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 18px 24px !important;
+  border-bottom: 1px solid var(--surface-border, #e2e8f0) !important;
+  background: var(--surface-card, #ffffff) !important;
+}
+
+.modal-head h2 {
+  margin: 0 !important;
+  font-size: 1.18rem !important;
+  font-weight: 800 !important;
+  color: var(--text-main, #0f172a) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.modal-head button {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--text-muted, #64748b) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  padding: 0 !important;
+}
+
+.modal-head button:hover {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #ef4444 !important;
+  transform: rotate(90deg) !important;
+}
+
+.admin-modal-body {
+  padding: 24px !important;
+  overflow-y: auto !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.admin-modal-body.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  text-align: left;
+}
+
+.admin-modal-body.form input,
+.admin-modal-body.form select,
+.admin-modal-body.form textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--surface-border, #cbd5e1);
+  background: var(--surface-card, #ffffff);
+  color: var(--text-main, #0f172a);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.admin-modal-body.form input:focus,
+.admin-modal-body.form select:focus,
+.admin-modal-body.form textarea:focus {
+  border-color: var(--primary, #1b5e4a);
+  box-shadow: 0 0 0 3px rgba(27, 94, 74, 0.15);
+}
+
+.admin-modal .actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  padding-top: 16px !important;
+  margin-top: 8px !important;
+  border-top: 1px solid var(--surface-border, #e2e8f0) !important;
+}
+
+.admin-modal .actions button {
+  min-height: 42px;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid var(--surface-border, #cbd5e1);
+  background: var(--surface-card, #ffffff);
+  color: var(--text-main, #0f172a);
+}
+
+.admin-modal .actions button:hover:not(:disabled) {
+  background: var(--surface-ground, #f1f5f9);
+}
+
+.admin-modal .actions button.primary,
+.admin-modal .actions button[type="submit"] {
+  background: linear-gradient(135deg, var(--primary, #1b5e4a), var(--primary-dark, #164e3f)) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(27, 94, 74, 0.25) !important;
+}
+
+.admin-modal .actions button.primary:hover:not(:disabled),
+.admin-modal .actions button[type="submit"]:hover:not(:disabled) {
+  opacity: 0.95 !important;
+  box-shadow: 0 6px 16px rgba(27, 94, 74, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+.admin-modal .actions button:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}
+
+/* Modal sizes for larger dialogs like Orders or Full-Product Form */
+.admin-modal.order-detail-modal,
+.admin-modal.modal-lg {
+  width: min(880px, calc(100vw - 32px)) !important;
+  max-height: min(92vh, 840px) !important;
+}
+
+/* Dark theme overrides for modals */
+.app-dark .admin-modal {
+  background: #151d30 !important;
+  border-color: #23304c !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.app-dark .modal-head {
+  background: #151d30 !important;
+  border-bottom-color: #23304c !important;
+}
+
+.app-dark .modal-head h2 {
+  color: #f8fafc !important;
+}
+
+.app-dark .modal-head button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.app-dark .admin-modal-body.form label {
+  color: #f8fafc !important;
+}
+
+.app-dark .admin-modal-body.form input,
+.app-dark .admin-modal-body.form select,
+.app-dark .admin-modal-body.form textarea {
+  border-color: #23304c !important;
+  background: #0b0f19 !important;
+  color: #f8fafc !important;
+}
+
+.app-dark .admin-modal .actions {
+  border-top-color: #23304c !important;
+}
+
+.app-dark .admin-modal .actions button {
+  border-color: #23304c !important;
+  background: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.app-dark .admin-modal .actions button:hover:not(:disabled) {
+  background: #334155 !important;
+}
+
+

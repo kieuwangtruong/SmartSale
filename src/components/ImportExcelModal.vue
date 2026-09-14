@@ -67,60 +67,79 @@ function close() {
 </script>
 
 <template>
-  <div v-if="show" class="modal-backdrop" @click="close" />
-  <aside v-if="show" class="admin-modal" :aria-label="title || t('Nhập dữ liệu Excel', 'Import Excel Data')">
-    <div class="modal-head">
-      <h2>{{ title || t('Nhập dữ liệu Excel', 'Import Excel Data') }}</h2>
-      <button type="button" @click="close" :disabled="loading"><i class="pi pi-times" /></button>
-    </div>
-    <div class="admin-modal-body form">
-      <p style="margin-bottom: 16px; color: var(--text-muted); font-size: 14px; line-height: 1.5;">
-        {{ t('Vui lòng tải file mẫu về, điền dữ liệu theo đúng cấu trúc cột và tải lên lại đây.', 'Please download the template file, fill in the data following the exact column structure, and upload it back here.') }}
-      </p>
-
-      <div style="margin-bottom: 20px;">
-        <button type="button" class="outline-btn" style="background: transparent; border: 1px solid var(--surface-border); color: var(--text-main);" @click="downloadTemplate" :disabled="loading">
-          <i class="pi pi-download" /> {{ t('Tải file mẫu (Template)', 'Download Template') }}
+  <Teleport to="body">
+    <div v-if="show" class="modal-backdrop" @click="close" />
+    <aside v-if="show" class="admin-modal" :aria-label="title || t('Nhập dữ liệu Excel', 'Import Excel Data')">
+      <div class="modal-head">
+        <h2>
+          <i class="pi pi-file-excel" style="color: #10b981; font-size: 1.3rem;" />
+          {{ title || t('Nhập dữ liệu Excel', 'Import Excel Data') }}
+        </h2>
+        <button type="button" @click="close" :disabled="loading" :aria-label="t('Đóng', 'Close')">
+          <i class="pi pi-times" />
         </button>
       </div>
-      
-      <div class="file-upload-wrapper">
-        <label class="file-upload-label">
-          <span v-if="!selectedFile">{{ t('Chọn file Excel (.xlsx, .xls)', 'Select Excel file (.xlsx, .xls)') }}</span>
-          <span v-else class="file-name"><i class="pi pi-file-excel" style="color: #10b981; margin-right: 8px;" />{{ selectedFile.name }}</span>
-          <input type="file" accept=".xlsx, .xls" @change="handleFileChange" :disabled="loading" />
-        </label>
-      </div>
+      <div class="admin-modal-body form">
+        <p style="margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.5;">
+          {{ t('Vui lòng tải file mẫu về, điền dữ liệu theo đúng cấu trúc cột và tải lên lại đây.', 'Please download the template file, fill in the data following the exact column structure, and upload it back here.') }}
+        </p>
 
-      <div v-if="errorMsg" class="alert error" style="margin-top: 16px;">
-        {{ errorMsg }}
-      </div>
+        <div>
+          <button
+            type="button"
+            class="outline-btn"
+            style="background: var(--surface-ground); border: 1.5px solid var(--surface-border); color: var(--text-main); font-weight: 700; padding: 9px 18px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s ease;"
+            @click="downloadTemplate"
+            :disabled="loading"
+          >
+            <i class="pi pi-download" style="color: var(--primary);" /> {{ t('Tải file mẫu (Template)', 'Download Template') }}
+          </button>
+        </div>
+        
+        <div class="file-upload-wrapper">
+          <label class="file-upload-label">
+            <span v-if="!selectedFile" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <i class="pi pi-cloud-upload" style="font-size: 2rem; color: var(--primary);" />
+              <span>{{ t('Nhấn để chọn file hoặc kéo thả file Excel (.xlsx, .xls)', 'Click to select or drop Excel file (.xlsx, .xls)') }}</span>
+            </span>
+            <span v-else class="file-name" style="display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700;">
+              <i class="pi pi-file-excel" style="color: #10b981; font-size: 1.5rem;" />
+              {{ selectedFile.name }}
+            </span>
+            <input type="file" accept=".xlsx, .xls" @change="handleFileChange" :disabled="loading" />
+          </label>
+        </div>
 
-      <div class="actions" style="margin-top: 24px;">
-        <button type="button" class="primary" @click="handleImport" :disabled="loading || !selectedFile">
-          <i class="pi pi-upload" v-if="!loading" />
-          <i class="pi pi-spin pi-spinner" v-else />
-          {{ loading ? t('Đang đọc file...', 'Reading file...') : t('Tiến hành Nhập', 'Proceed Import') }}
-        </button>
-        <button type="button" @click="close" :disabled="loading">
-          {{ t('Hủy', 'Cancel') }}
-        </button>
+        <div v-if="errorMsg" class="alert error" style="padding: 10px 14px; border-radius: 10px; background: #fee2e2; color: #dc2626; font-size: 13.5px; display: flex; align-items: center; gap: 8px; font-weight: 600;">
+          <i class="pi pi-exclamation-circle" /> {{ errorMsg }}
+        </div>
+
+        <div class="actions">
+          <button type="button" class="primary" @click="handleImport" :disabled="loading || !selectedFile">
+            <i class="pi pi-upload" v-if="!loading" style="margin-right: 6px;" />
+            <i class="pi pi-spin pi-spinner" v-else style="margin-right: 6px;" />
+            {{ loading ? t('Đang đọc file...', 'Reading file...') : t('Tiến hành Nhập', 'Proceed Import') }}
+          </button>
+          <button type="button" @click="close" :disabled="loading">
+            {{ t('Hủy', 'Cancel') }}
+          </button>
+        </div>
       </div>
-    </div>
-  </aside>
+    </aside>
+  </Teleport>
 </template>
 
 <style scoped>
 .file-upload-wrapper {
-  margin-top: 10px;
+  margin-top: 4px;
 }
 .file-upload-label {
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px dashed var(--surface-border);
-  border-radius: 12px;
-  padding: 30px 20px;
+  border-radius: 14px;
+  padding: 28px 20px;
   text-align: center;
   cursor: pointer;
   background: var(--surface-ground);
@@ -130,7 +149,7 @@ function close() {
 }
 .file-upload-label:hover {
   border-color: var(--primary);
-  background: rgb(99 102 241 / 5%);
+  background: rgba(27, 94, 74, 0.05);
   color: var(--primary);
 }
 .file-upload-label input[type="file"] {
@@ -140,9 +159,11 @@ function close() {
   color: var(--text-main);
 }
 .app-dark .file-upload-label {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  border-color: #23304c;
 }
 .app-dark .file-upload-label:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(27, 94, 74, 0.15);
+  border-color: var(--primary-light);
 }
 </style>
