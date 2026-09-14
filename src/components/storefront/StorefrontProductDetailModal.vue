@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { formatCurrency } from '../../services/orderApi'
 import { translateProductName } from '../../services/productTranslations'
 import { PRODUCT_MOCKS } from '../../services/productMocks'
@@ -29,6 +29,22 @@ const isDetailSpecsOpen = ref(false)
 const isDetailUsageOpen = ref(false)
 const isDetailWarrantyOpen = ref(false)
 
+function handleKeyDown(e: KeyboardEvent) {
+  if (!props.product) return
+  if (e.key === 'Escape') {
+    emit('close')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  document.body.style.overflow = ''
+})
+
 function getEnrichedProductImages(p: Product): string[] {
   const baseImages = [p.imageUrl, ...(p.imageUrls ?? [])]
     .map((url) => url?.trim())
@@ -46,6 +62,7 @@ watch(
   () => props.product,
   (newProduct) => {
     if (newProduct) {
+      document.body.style.overflow = 'hidden'
       selectedImageIndex.value = 0
       productDetailQuantity.value = 1
       const firstVariant =
@@ -53,6 +70,8 @@ watch(
         newProduct.variants.find((v) => v.isActive) ??
         newProduct.variants[0]
       selectedVariantId.value = firstVariant?.id ?? null
+    } else {
+      document.body.style.overflow = ''
     }
   },
   { immediate: true },
@@ -166,280 +185,284 @@ function handleBuyNow() {
 </script>
 
 <template>
-  <div v-if="product">
-    <div class="product-detail-overlay" @click.self="emit('close')" />
-    <div class="product-detail-modal" aria-modal="true" role="dialog">
-      <!-- Close button -->
-      <button type="button" class="detail-close-btn" :aria-label="t('Đóng', 'Close')" @click="emit('close')">
-        <i class="pi pi-times" />
-      </button>
+  <Teleport to="body">
+    <Transition name="product-modal-fade">
+      <div v-if="product" class="product-modal-teleport-root">
+        <div class="product-detail-overlay" @click.self="emit('close')" />
+        <div class="product-detail-modal" aria-modal="true" role="dialog">
+          <!-- Floating Prominent Close button -->
+          <button type="button" class="detail-close-btn" :aria-label="t('Đóng', 'Close')" @click="emit('close')">
+            <i class="pi pi-times" />
+          </button>
 
-      <!-- Two-column layout -->
-      <div class="detail-container">
-        <!-- Left column: Image Gallery -->
-        <div class="detail-gallery">
-          <div class="main-image">
-            <button 
-              type="button" 
-              class="carousel-nav-btn prev-btn" 
-              @click="prevImage"
-              :aria-label="t('Ảnh trước', 'Previous image')"
-            >
-              <i class="pi pi-chevron-left" />
-            </button>
-            
-            <img 
-              v-if="selectedDetailImages[selectedImageIndex]" 
-              :src="selectedDetailImages[selectedImageIndex]" 
-              :alt="translateProductName(product)"
-              class="main-image-img"
-              @click="emit('open-lightbox', product)"
-              style="cursor: zoom-in;"
-            />
-            <div v-else class="image-placeholder large">
-              <i class="pi pi-box" />
-              <small>ID #{{ product.id }}</small>
-            </div>
-
-            <button 
-              v-if="selectedDetailImages[selectedImageIndex]"
-              type="button"
-              class="zoom-hint-badge"
-              @click="emit('open-lightbox', product)"
-              :title="t('Click để phóng to ảnh', 'Click to zoom image')"
-            >
-              <i class="pi pi-search-plus" />
-              <span>{{ t('Phóng to', 'Zoom') }}</span>
-            </button>
-
-            <button 
-              type="button" 
-              class="carousel-nav-btn next-btn" 
-              @click="nextImage"
-              :aria-label="t('Ảnh sau', 'Next image')"
-            >
-              <i class="pi pi-chevron-right" />
-            </button>
-          </div>
-          
-          <!-- Thumbnails -->
-          <div class="thumbnails" v-if="selectedDetailImages.length > 1">
-            <button 
-              v-for="(image, idx) in selectedDetailImages" 
-              :key="idx"
-              type="button"
-              :class="{ active: idx === selectedImageIndex }"
-              @click="selectedImageIndex = idx"
-              :aria-label="`Image ${idx + 1}`"
-            >
-              <img :src="image" :alt="`Product thumbnail ${idx + 1}`" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Right column: Product Info & Actions -->
-        <div class="detail-info">
-          <div class="detail-header">
-            <span class="detail-category">
-              {{ product.categoryName || t('Sản phẩm', 'Product') }}
-            </span>
-
-            <div class="detail-title-row">
-              <h1 class="detail-title">
-                {{ translateProductName(product) }}
-              </h1>
-              <span v-if="selectedVariant" class="product-version-badge">
-                {{ selectedVariant.name }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Product ID and Stock Status -->
-          <div class="detail-meta">
-            <span class="product-id">{{ t('Mã ID:', 'Product ID:') }} <strong>#{{ product.id }}</strong></span>
-            <div v-if="selectedStock > 0" class="stock-status in-stock">
-              <i class="pi pi-check-circle" />
-              <span>{{ selectedStock <= (selectedVariant?.reserveStock ?? 5) ? t(`Sắp hết (Còn ${selectedStock})`, `Low stock (${selectedStock} left)`) : t(`Còn hàng (${selectedStock} sản phẩm)`, `In stock (${selectedStock} products)`) }}</span>
-            </div>
-            <div class="stock-status out-of-stock" v-else>
-              <i class="pi pi-times-circle" />
-              <span>{{ t('Hết hàng', 'Out of stock') }}</span>
-            </div>
-          </div>
-
-          <!-- Price -->
-          <div class="detail-price">
-            <span class="price-label">{{ t('Giá bán', 'Price') }}</span>
-            <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-              <del style="color: var(--muted); font-size: 16px;" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
-                {{ formatCurrency(selectedVariant.originalPrice) }}
-              </del>
-              <strong class="price-value" :style="{ color: selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice ? 'var(--teal)' : 'inherit' }">
-                {{ formatCurrency(selectedVariant?.sellingPrice ?? product.sellingPrice) }}
-              </strong>
-              <span class="detail-discount-percent-badge" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
-                {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedVariant.salePrice / selectedVariant.originalPrice) * 100) }}%
-              </span>
-            </div>
-          </div>
-
-          <!-- Variants & Colors -->
-          <div class="variant-picker" v-if="product.variants && product.variants.length">
-            <label>{{ t('Phiên bản', 'Version') }}</label>
-            <div class="variant-options">
-              <button 
-                v-for="variant in product.variants" 
-                :key="variant.id" 
-                type="button"
-                :class="{ active: variant.id === selectedVariantId }"
-                :disabled="!variant.isActive || variant.quantity <= 0"
-                @click="selectedVariantId = variant.id"
-              >
-                {{ variant.name }}
-              </button>
-            </div>
-            <template v-if="selectableColors.length">
-              <label>{{ t('Màu sắc', 'Color') }}</label>
-              <div class="variant-options">
+          <!-- Two-column layout -->
+          <div class="detail-container">
+            <!-- Left column: Image Gallery -->
+            <div class="detail-gallery">
+              <div class="main-image">
                 <button 
-                  v-for="color in selectableColors" 
-                  :key="color.id" 
-                  type="button"
-                  :class="{ active: color.id === selectedColorId }"
-                  :disabled="!color.isActive || color.quantity <= 0"
-                  @click="selectedColorId = color.id"
+                  type="button" 
+                  class="carousel-nav-btn prev-btn" 
+                  @click="prevImage"
+                  :aria-label="t('Ảnh trước', 'Previous image')"
                 >
-                  <span v-if="color.hexCode" class="color-dot" :style="{ backgroundColor: color.hexCode }" />
-                  {{ color.name }}
+                  <i class="pi pi-chevron-left" />
+                </button>
+                
+                <img 
+                  v-if="selectedDetailImages[selectedImageIndex]" 
+                  :src="selectedDetailImages[selectedImageIndex]" 
+                  :alt="translateProductName(product)"
+                  class="main-image-img"
+                  @click="emit('open-lightbox', product)"
+                  style="cursor: zoom-in;"
+                />
+                <div v-else class="image-placeholder large">
+                  <i class="pi pi-box" />
+                  <small>ID #{{ product.id }}</small>
+                </div>
+
+                <button 
+                  v-if="selectedDetailImages[selectedImageIndex]"
+                  type="button"
+                  class="zoom-hint-badge"
+                  @click="emit('open-lightbox', product)"
+                  :title="t('Click để phóng to ảnh', 'Click to zoom image')"
+                >
+                  <i class="pi pi-search-plus" />
+                  <span>{{ t('Phóng to', 'Zoom') }}</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  class="carousel-nav-btn next-btn" 
+                  @click="nextImage"
+                  :aria-label="t('Ảnh sau', 'Next image')"
+                >
+                  <i class="pi pi-chevron-right" />
                 </button>
               </div>
-            </template>
-          </div>
-
-          <!-- Quantity Picker -->
-          <div class="quantity-picker">
-            <label for="qty">{{ t('Số lượng', 'Quantity') }}</label>
-            <div class="qty-controls">
-              <button 
-                type="button" 
-                :aria-label="t('Giảm số lượng', 'Decrease quantity')"
-                @click="productDetailQuantity = Math.max(1, productDetailQuantity - 1)"
-              >
-                <i class="pi pi-minus" />
-              </button>
-              <input 
-                id="qty" 
-                v-model.number="productDetailQuantity" 
-                type="number" 
-                min="1" 
-                :max="selectedStock"
-              />
-              <button 
-                type="button" 
-                :aria-label="t('Tăng số lượng', 'Increase quantity')"
-                @click="productDetailQuantity = Math.min(selectedStock, productDetailQuantity + 1)"
-                :disabled="productDetailQuantity >= selectedStock"
-              >
-                <i class="pi pi-plus" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Action buttons -->
-          <div class="detail-actions">
-            <button 
-              type="button" 
-              class="add-to-cart-btn" 
-              :disabled="selectedStock <= 0"
-              @click="handleAddToCart"
-            >
-              <i class="pi pi-shopping-bag" />
-              <span>{{ t('Thêm vào giỏ hàng', 'Add to Cart') }}</span>
-            </button>
-            <button 
-              type="button" 
-              class="buy-now-btn" 
-              :disabled="selectedStock <= 0"
-              @click="handleBuyNow"
-            >
-              <i class="pi pi-bolt" />
-              <span>{{ t('Mua ngay', 'Buy Now') }}</span>
-            </button>
-          </div>
-
-          <!-- Product Specification Accordion Tabs -->
-          <div v-if="enrichedProductDetails" class="product-specs-accordion">
-            <!-- 1. Overview -->
-            <div class="accordion-item">
-              <button type="button" class="accordion-header" @click="isDetailOverviewOpen = !isDetailOverviewOpen">
-                <div class="accordion-title">
-                  <i class="pi pi-align-left" />
-                  <span>{{ t('Tổng quan sản phẩm', 'Product Overview') }}</span>
-                </div>
-                <i :class="['pi', isDetailOverviewOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
-              </button>
-              <div v-if="isDetailOverviewOpen" class="accordion-body">
-                <p class="overview-text">{{ enrichedProductDetails.overview }}</p>
+              
+              <!-- Thumbnails -->
+              <div class="thumbnails" v-if="selectedDetailImages.length > 1">
+                <button 
+                  v-for="(image, idx) in selectedDetailImages" 
+                  :key="idx"
+                  type="button"
+                  :class="{ active: idx === selectedImageIndex }"
+                  @click="selectedImageIndex = idx"
+                  :aria-label="`Image ${idx + 1}`"
+                >
+                  <img :src="image" :alt="`Product thumbnail ${idx + 1}`" />
+                </button>
               </div>
             </div>
 
-            <!-- 2. Specifications -->
-            <div class="accordion-item">
-              <button type="button" class="accordion-header" @click="isDetailSpecsOpen = !isDetailSpecsOpen">
-                <div class="accordion-title">
-                  <i class="pi pi-list" />
-                  <span>{{ t('Thông số kỹ thuật', 'Specifications') }}</span>
-                </div>
-                <i :class="['pi', isDetailSpecsOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
-              </button>
-              <div v-if="isDetailSpecsOpen" class="accordion-body">
-                <table class="specs-table">
-                  <tbody>
-                    <tr><th>{{ t('Mã sản phẩm', 'Product Code') }}</th><td>{{ enrichedProductDetails.specs.code }}</td></tr>
-                    <tr><th>{{ t('Danh mục', 'Category') }}</th><td>{{ enrichedProductDetails.specs.categoryName }}</td></tr>
-                    <tr><th>{{ t('Nhà cung cấp', 'Supplier') }}</th><td>{{ enrichedProductDetails.specs.supplierName }}</td></tr>
-                    <tr><th>{{ t('Kích thước', 'Dimensions') }}</th><td>{{ enrichedProductDetails.specs.dimensions }}</td></tr>
-                    <tr><th>{{ t('Chất liệu', 'Material') }}</th><td>{{ enrichedProductDetails.specs.material }}</td></tr>
-                    <tr><th>{{ t('Trọng lượng', 'Weight') }}</th><td>{{ enrichedProductDetails.specs.weight }}</td></tr>
-                    <tr><th>{{ t('Xuất xứ', 'Origin') }}</th><td>{{ enrichedProductDetails.specs.origin }}</td></tr>
-                    <tr><th>{{ t('Bảo hành', 'Warranty') }}</th><td>{{ enrichedProductDetails.specs.warranty }}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <!-- Right column: Product Info & Actions -->
+            <div class="detail-info">
+              <div class="detail-header">
+                <span class="detail-category">
+                  {{ product.categoryName || t('Sản phẩm', 'Product') }}
+                </span>
 
-            <!-- 3. Usage Guide -->
-            <div class="accordion-item">
-              <button type="button" class="accordion-header" @click="isDetailUsageOpen = !isDetailUsageOpen">
-                <div class="accordion-title">
-                  <i class="pi pi-book" />
-                  <span>{{ t('Hướng dẫn sử dụng', 'Usage Instructions') }}</span>
+                <div class="detail-title-row">
+                  <h1 class="detail-title">
+                    {{ translateProductName(product) }}
+                  </h1>
+                  <span v-if="selectedVariant" class="product-version-badge">
+                    {{ selectedVariant.name }}
+                  </span>
                 </div>
-                <i :class="['pi', isDetailUsageOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
-              </button>
-              <div v-if="isDetailUsageOpen" class="accordion-body">
-                <p class="usage-text">{{ enrichedProductDetails.usage }}</p>
               </div>
-            </div>
 
-            <!-- 4. Warranty & Support -->
-            <div class="accordion-item">
-              <button type="button" class="accordion-header" @click="isDetailWarrantyOpen = !isDetailWarrantyOpen">
-                <div class="accordion-title">
-                  <i class="pi pi-shield" />
-                  <span>{{ t('Chính sách bảo hành & Cam kết', 'Warranty & Support') }}</span>
+              <!-- Product ID and Stock Status -->
+              <div class="detail-meta">
+                <span class="product-id">{{ t('Mã ID:', 'Product ID:') }} <strong>#{{ product.id }}</strong></span>
+                <div v-if="selectedStock > 0" class="stock-status in-stock">
+                  <i class="pi pi-check-circle" />
+                  <span>{{ selectedStock <= (selectedVariant?.reserveStock ?? 5) ? t(`Sắp hết (Còn ${selectedStock})`, `Low stock (${selectedStock} left)`) : t(`Còn hàng (${selectedStock} sản phẩm)`, `In stock (${selectedStock} products)`) }}</span>
                 </div>
-                <i :class="['pi', isDetailWarrantyOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
-              </button>
-              <div v-if="isDetailWarrantyOpen" class="accordion-body">
-                <p class="warranty-text">{{ enrichedProductDetails.commitment }}</p>
+                <div class="stock-status out-of-stock" v-else>
+                  <i class="pi pi-times-circle" />
+                  <span>{{ t('Hết hàng', 'Out of stock') }}</span>
+                </div>
+              </div>
+
+              <!-- Price -->
+              <div class="detail-price">
+                <span class="price-label">{{ t('Giá bán', 'Price') }}</span>
+                <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+                  <del style="color: var(--muted); font-size: 16px;" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
+                    {{ formatCurrency(selectedVariant.originalPrice) }}
+                  </del>
+                  <strong class="price-value" :style="{ color: selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice ? 'var(--teal)' : 'inherit' }">
+                    {{ formatCurrency(selectedVariant?.sellingPrice ?? product.sellingPrice) }}
+                  </strong>
+                  <span class="detail-discount-percent-badge" v-if="selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.originalPrice">
+                    {{ t('Giảm', 'Save') }} {{ Math.round((1 - selectedVariant.salePrice / selectedVariant.originalPrice) * 100) }}%
+                  </span>
+                </div>
+              </div>
+
+              <!-- Variants & Colors -->
+              <div class="variant-picker" v-if="product.variants && product.variants.length">
+                <label>{{ t('Phiên bản', 'Version') }}</label>
+                <div class="variant-options">
+                  <button 
+                    v-for="variant in product.variants" 
+                    :key="variant.id" 
+                    type="button"
+                    :class="{ active: variant.id === selectedVariantId }"
+                    :disabled="!variant.isActive || variant.quantity <= 0"
+                    @click="selectedVariantId = variant.id"
+                  >
+                    {{ variant.name }}
+                  </button>
+                </div>
+                <template v-if="selectableColors.length">
+                  <label>{{ t('Màu sắc', 'Color') }}</label>
+                  <div class="variant-options">
+                    <button 
+                      v-for="color in selectableColors" 
+                      :key="color.id" 
+                      type="button"
+                      :class="{ active: color.id === selectedColorId }"
+                      :disabled="!color.isActive || color.quantity <= 0"
+                      @click="selectedColorId = color.id"
+                    >
+                      <span v-if="color.hexCode" class="color-dot" :style="{ backgroundColor: color.hexCode }" />
+                      {{ color.name }}
+                    </button>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Quantity Picker -->
+              <div class="quantity-picker">
+                <label for="qty">{{ t('Số lượng', 'Quantity') }}</label>
+                <div class="qty-controls">
+                  <button 
+                    type="button" 
+                    :aria-label="t('Giảm số lượng', 'Decrease quantity')"
+                    @click="productDetailQuantity = Math.max(1, productDetailQuantity - 1)"
+                  >
+                    <i class="pi pi-minus" />
+                  </button>
+                  <input 
+                    id="qty" 
+                    v-model.number="productDetailQuantity" 
+                    type="number" 
+                    min="1" 
+                    :max="selectedStock"
+                  />
+                  <button 
+                    type="button" 
+                    :aria-label="t('Tăng số lượng', 'Increase quantity')"
+                    @click="productDetailQuantity = Math.min(selectedStock, productDetailQuantity + 1)"
+                    :disabled="productDetailQuantity >= selectedStock"
+                  >
+                    <i class="pi pi-plus" />
+                  </button>
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="detail-actions">
+                <button 
+                  type="button" 
+                  class="add-to-cart-btn" 
+                  :disabled="selectedStock <= 0"
+                  @click="handleAddToCart"
+                >
+                  <i class="pi pi-shopping-bag" />
+                  <span>{{ t('Thêm vào giỏ hàng', 'Add to Cart') }}</span>
+                </button>
+                <button 
+                  type="button" 
+                  class="buy-now-btn" 
+                  :disabled="selectedStock <= 0"
+                  @click="handleBuyNow"
+                >
+                  <i class="pi pi-bolt" />
+                  <span>{{ t('Mua ngay', 'Buy Now') }}</span>
+                </button>
+              </div>
+
+              <!-- Product Specification Accordion Tabs -->
+              <div v-if="enrichedProductDetails" class="product-specs-accordion">
+                <!-- 1. Overview -->
+                <div class="accordion-item">
+                  <button type="button" class="accordion-header" @click="isDetailOverviewOpen = !isDetailOverviewOpen">
+                    <div class="accordion-title">
+                      <i class="pi pi-align-left" />
+                      <span>{{ t('Tổng quan sản phẩm', 'Product Overview') }}</span>
+                    </div>
+                    <i :class="['pi', isDetailOverviewOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
+                  </button>
+                  <div v-if="isDetailOverviewOpen" class="accordion-body">
+                    <p class="overview-text">{{ enrichedProductDetails.overview }}</p>
+                  </div>
+                </div>
+
+                <!-- 2. Specifications -->
+                <div class="accordion-item">
+                  <button type="button" class="accordion-header" @click="isDetailSpecsOpen = !isDetailSpecsOpen">
+                    <div class="accordion-title">
+                      <i class="pi pi-list" />
+                      <span>{{ t('Thông số kỹ thuật', 'Specifications') }}</span>
+                    </div>
+                    <i :class="['pi', isDetailSpecsOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
+                  </button>
+                  <div v-if="isDetailSpecsOpen" class="accordion-body">
+                    <table class="specs-table">
+                      <tbody>
+                        <tr><th>{{ t('Mã sản phẩm', 'Product Code') }}</th><td>{{ enrichedProductDetails.specs.code }}</td></tr>
+                        <tr><th>{{ t('Danh mục', 'Category') }}</th><td>{{ enrichedProductDetails.specs.categoryName }}</td></tr>
+                        <tr><th>{{ t('Nhà cung cấp', 'Supplier') }}</th><td>{{ enrichedProductDetails.specs.supplierName }}</td></tr>
+                        <tr><th>{{ t('Kích thước', 'Dimensions') }}</th><td>{{ enrichedProductDetails.specs.dimensions }}</td></tr>
+                        <tr><th>{{ t('Chất liệu', 'Material') }}</th><td>{{ enrichedProductDetails.specs.material }}</td></tr>
+                        <tr><th>{{ t('Trọng lượng', 'Weight') }}</th><td>{{ enrichedProductDetails.specs.weight }}</td></tr>
+                        <tr><th>{{ t('Xuất xứ', 'Origin') }}</th><td>{{ enrichedProductDetails.specs.origin }}</td></tr>
+                        <tr><th>{{ t('Bảo hành', 'Warranty') }}</th><td>{{ enrichedProductDetails.specs.warranty }}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 3. Usage Guide -->
+                <div class="accordion-item">
+                  <button type="button" class="accordion-header" @click="isDetailUsageOpen = !isDetailUsageOpen">
+                    <div class="accordion-title">
+                      <i class="pi pi-book" />
+                      <span>{{ t('Hướng dẫn sử dụng', 'Usage Instructions') }}</span>
+                    </div>
+                    <i :class="['pi', isDetailUsageOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
+                  </button>
+                  <div v-if="isDetailUsageOpen" class="accordion-body">
+                    <p class="usage-text">{{ enrichedProductDetails.usage }}</p>
+                  </div>
+                </div>
+
+                <!-- 4. Warranty & Support -->
+                <div class="accordion-item">
+                  <button type="button" class="accordion-header" @click="isDetailWarrantyOpen = !isDetailWarrantyOpen">
+                    <div class="accordion-title">
+                      <i class="pi pi-shield" />
+                      <span>{{ t('Chính sách bảo hành & Cam kết', 'Warranty & Support') }}</span>
+                    </div>
+                    <i :class="['pi', isDetailWarrantyOpen ? 'pi-chevron-up' : 'pi-chevron-down']" />
+                  </button>
+                  <div v-if="isDetailWarrantyOpen" class="accordion-body">
+                    <p class="warranty-text">{{ enrichedProductDetails.commitment }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>

@@ -1616,49 +1616,88 @@ main {
 /* =========================================================================
    PRODUCT DETAIL MODAL (FULL-SCREEN)
    ========================================================================= */
+.product-modal-teleport-root {
+  position: relative;
+  z-index: 1050;
+}
+
 .product-detail-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 60;
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.65);
+  z-index: 1050;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .product-detail-modal {
   position: fixed;
   inset: 0;
-  z-index: 61;
-  background: var(--cream);
+  z-index: 1060;
+  background: var(--cream, #f8f7f2);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 24px;
+  padding: 40px 24px 80px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .detail-close-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  width: 46px;
+  height: 46px;
   padding: 0;
-  border: 1px solid #e8e7e1;
+  border: 1.5px solid #cbd5e1;
   border-radius: 50%;
-  background: var(--cream);
-  color: var(--ink);
+  background: #ffffff;
+  color: #1e293b;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 19px;
   cursor: pointer;
-  transition: all 0.2s;
-  z-index: 10;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1070;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .detail-close-btn:hover {
-  background: var(--ink);
-  color: white;
-  border-color: var(--ink);
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  transform: scale(1.08) rotate(90deg);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+}
+
+.app-dark .product-detail-modal {
+  background: #0b1120;
+  color: #f8fafc;
+}
+
+.app-dark .detail-close-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.app-dark .detail-close-btn:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Modal Open/Close Animations */
+.product-modal-fade-enter-active,
+.product-modal-fade-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-modal-fade-enter-from,
+.product-modal-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
 }
 
 .detail-container {
@@ -2157,7 +2196,7 @@ main {
 .cart-panel {
   position: fixed;
   inset: 0 0 0 auto;
-  z-index: 50;
+  z-index: 1060;
   width: min(460px, 100vw);
   padding: 0;
   background: #fbfbf8;
@@ -3966,14 +4005,14 @@ footer {
 .orders-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 1050;
   background: rgb(15 23 42 / 45%);
   backdrop-filter: blur(8px);
 }
 .profile-modal,
 .orders-modal {
   position: fixed;
-  z-index: 101;
+  z-index: 1060;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
