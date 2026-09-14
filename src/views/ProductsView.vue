@@ -47,13 +47,26 @@ const showImportModal = ref(false)
 
 const productTemplateData = [
   {
-    'Tên sản phẩm': 'Sản phẩm mẫu A',
-    'Mô tả': 'Mô tả chi tiết',
-    'Giá nhập': 50000,
-    'Giá bán gốc': 100000,
-    'Giá bán khuyến mãi': 80000,
-    'Tồn kho': 10,
-    'Ngưỡng báo động': 5
+    'Tên sản phẩm': 'Đồng hồ thông minh Smart Watch Pro X1',
+    'Mô tả': 'Màn hình AMOLED 1.43 inch, pin 14 ngày, chống nước 5ATM',
+    'Danh mục': 'Điện tử',
+    'Nhà cung cấp': 'Công ty TNHH Phân Phối Công Nghệ Á Châu',
+    'Giá nhập': 1200000,
+    'Giá bán gốc': 2200000,
+    'Giá bán khuyến mãi': 1890000,
+    'Tồn kho': 85,
+    'Ngưỡng báo động': 10
+  },
+  {
+    'Tên sản phẩm': 'Balo chống nước Urban Traveler 20L',
+    'Mô tả': 'Vải chống thấm Oxford 900D cao cấp ngăn laptop 15.6 inch',
+    'Danh mục': 'Phụ kiện',
+    'Nhà cung cấp': 'Xưởng Sản Xuất Phụ Kiện Thời Trang Đông Dương',
+    'Giá nhập': 250000,
+    'Giá bán gốc': 480000,
+    'Giá bán khuyến mãi': 390000,
+    'Tồn kho': 95,
+    'Ngưỡng báo động': 15
   }
 ]
 
@@ -63,30 +76,50 @@ async function handleImportProducts(data: any[]) {
 
   for (const row of data) {
     try {
-      const name = row['Tên sản phẩm']
-      if (!name) {
+      const name = row['Tên sản phẩm'] || row['Tên'] || row['Product Name'] || row['name'] || row['Name'] || row['Ten san pham']
+      if (!name || !String(name).trim()) {
         errorCount++
         continue
       }
       
-      const firstCategory = categories.value[0]
-      const firstSupplier = suppliers.value[0]
-      const categoryId = firstCategory?.id ?? 0
-      const supplierId = firstSupplier?.id ?? 0
+      const catVal = row['Danh mục'] || row['Category'] || row['category'] || row['categoryId'] || row['Danh muc']
+      let categoryId = categories.value[0]?.id ?? 1
+      if (catVal) {
+        const foundCat = categories.value.find(c => 
+          c.name.toLowerCase() === String(catVal).trim().toLowerCase() ||
+          String(c.id) === String(catVal).trim()
+        )
+        if (foundCat) categoryId = foundCat.id
+      }
 
-      const original = Number(row['Giá bán gốc']) || 0
-      const sale = Number(row['Giá bán khuyến mãi']) || null
-      const hasSale = sale && sale < original
+      const supVal = row['Nhà cung cấp'] || row['Supplier'] || row['supplier'] || row['supplierId'] || row['Nha cung cap']
+      let supplierId = suppliers.value[0]?.id ?? 1
+      if (supVal) {
+        const foundSup = suppliers.value.find(s => 
+          s.name.toLowerCase() === String(supVal).trim().toLowerCase() ||
+          String(s.id) === String(supVal).trim()
+        )
+        if (foundSup) supplierId = foundSup.id
+      }
+
+      const desc = row['Mô tả'] || row['Description'] || row['description'] || row['Mo ta'] || ''
+      const importPrice = Number(String(row['Giá nhập'] || row['Import Price'] || row['importPrice'] || 0).replace(/[^0-9.-]+/g, '')) || 0
+      const originalPrice = Number(String(row['Giá bán gốc'] || row['Giá bán'] || row['Original Price'] || row['Selling Price'] || row['sellingPrice'] || row['Gia ban'] || importPrice).replace(/[^0-9.-]+/g, '')) || importPrice
+      const saleVal = row['Giá bán khuyến mãi'] || row['Sale Price'] || row['salePrice'] || row['Gia khuyen mai']
+      const salePrice = saleVal ? (Number(String(saleVal).replace(/[^0-9.-]+/g, '')) || null) : null
+      const hasSale = salePrice !== null && salePrice < originalPrice
+      const quantity = Number(String(row['Tồn kho'] || row['Số lượng'] || row['Stock'] || row['Quantity'] || row['quantity'] || 0).replace(/[^0-9.-]+/g, '')) || 0
+      const reserveStock = Number(String(row['Ngưỡng báo động'] || row['Tồn kho tối thiểu'] || row['Reserve Stock'] || row['reserveStock'] || 0).replace(/[^0-9.-]+/g, '')) || 0
 
       await createProduct({
-        name: String(name),
-        description: row['Mô tả'] ? String(row['Mô tả']) : '',
-        importPrice: Number(row['Giá nhập']) || 0,
-        sellingPrice: hasSale ? sale : original,
-        originalPrice: original || null,
-        salePrice: hasSale ? sale : null,
-        quantity: Number(row['Tồn kho']) || 0,
-        reserveStock: Number(row['Ngưỡng báo động']) || 0,
+        name: String(name).trim(),
+        description: String(desc).trim() || null,
+        importPrice,
+        sellingPrice: hasSale ? (salePrice as number) : originalPrice,
+        originalPrice: originalPrice || null,
+        salePrice: hasSale ? salePrice : null,
+        quantity,
+        reserveStock,
         categoryId,
         supplierId,
         imageUrl: '',
@@ -99,12 +132,21 @@ async function handleImportProducts(data: any[]) {
   }
 
   await load()
-  toast.add({
-    severity: 'info',
-    summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
-    detail: t(`Thành công: ${successCount}, Lỗi/Bỏ qua: ${errorCount}`, `Success: ${successCount}, Error/Skipped: ${errorCount}`),
-    life: 5000,
-  })
+  if (successCount > 0) {
+    toast.add({
+      severity: 'success',
+      summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
+      detail: t(`Đã nhập thành công ${successCount} sản phẩm${errorCount > 0 ? ` (bỏ qua ${errorCount} dòng lỗi)` : ''}`, `Successfully imported ${successCount} products${errorCount > 0 ? ` (skipped ${errorCount} error rows)` : ''}`),
+      life: 5000,
+    })
+  } else {
+    toast.add({
+      severity: 'warn',
+      summary: t('Không có sản phẩm nào được nhập', 'No products imported'),
+      detail: t(`Vui lòng kiểm tra lại cấu trúc file Excel (đã bỏ qua ${errorCount} dòng).`, `Please check Excel file structure (${errorCount} rows skipped).`),
+      life: 5000,
+    })
+  }
 }
 
 function handleExport() {

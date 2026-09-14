@@ -85,42 +85,54 @@ async function handleImportCustomers(data: any[]) {
 
   for (const row of data) {
     try {
-      const fullName = row['Họ tên']
-      const phone = row['Số điện thoại'] ? String(row['Số điện thoại']) : ''
+      const fullName = row['Họ tên'] || row['Họ và tên'] || row['Tên khách hàng'] || row['Tên'] || row['Full Name'] || row['fullName'] || row['name']
+      let phone = row['Số điện thoại'] || row['SĐT'] || row['SDT'] || row['Phone'] || row['phone'] ? String(row['Số điện thoại'] || row['SĐT'] || row['SDT'] || row['Phone'] || row['phone']).trim() : ''
+      
       if (!fullName || !phone) {
         errorCount++
         continue
       }
 
-      const genderStr = String(row['Giới tính'] || '').trim().toLowerCase()
+      // Chuẩn hóa số điện thoại nếu bị mất số 0 ở đầu (khi Excel parse thành số)
+      if (/^\d{9}$/.test(phone)) {
+        phone = '0' + phone
+      }
+
+      const genderStr = String(row['Giới tính'] || row['Gender'] || '').trim().toLowerCase()
       let gender = 2 // Khác
-      if (genderStr === 'nam') gender = 0
-      else if (genderStr === 'nữ' || genderStr === 'nu') gender = 1
+      if (genderStr === 'nam' || genderStr === 'male' || genderStr === '0') gender = 0
+      else if (genderStr === 'nữ' || genderStr === 'nu' || genderStr === 'female' || genderStr === '1') gender = 1
 
-      const tierStr = String(row['Hạng'] || row['Hạng thành viên'] || '').trim()
+      const tierStr = String(row['Hạng'] || row['Hạng thành viên'] || row['Tier'] || '').trim().toLowerCase()
       let tier = 'Standard'
-      if (tierStr.toLowerCase() === 'bạc' || tierStr.toLowerCase() === 'silver') tier = 'Silver'
-      else if (tierStr.toLowerCase() === 'vàng' || tierStr.toLowerCase() === 'gold') tier = 'Gold'
-      else if (tierStr.toLowerCase() === 'kim cương' || tierStr.toLowerCase() === 'platinum' || tierStr.toLowerCase() === 'diamond') tier = 'Platinum'
+      if (tierStr.includes('bạc') || tierStr.includes('silver')) tier = 'Silver'
+      else if (tierStr.includes('vàng') || tierStr.includes('gold')) tier = 'Gold'
+      else if (tierStr.includes('kim cương') || tierStr.includes('platinum') || tierStr.includes('diamond')) tier = 'Platinum'
 
+      const ageVal = row['Tuổi'] || row['Age']
       const extras = normalizeCustomerFormExtras({
         gender,
-        cccd: String(row['CCCD'] || ''),
-        age: row['Tuổi'] ? Number(row['Tuổi']) : null,
+        cccd: String(row['CCCD'] || row['CMND'] || ''),
+        age: ageVal ? Number(String(ageVal).replace(/[^0-9]/g, '')) : null,
         tier: tier,
       })
 
       const created = await createCustomer({
-        fullName: String(fullName),
+        fullName: String(fullName).trim(),
         phone: phone,
-        email: row['Email'] ? String(row['Email']) : '',
-        address: row['Địa chỉ'] ? String(row['Địa chỉ']) : '',
+        email: row['Email'] || row['email'] ? String(row['Email'] || row['email']).trim() : '',
+        address: row['Địa chỉ'] || row['Address'] || row['address'] ? String(row['Địa chỉ'] || row['Address'] || row['address']).trim() : '',
         ...extras
       })
 
-      const totalSpent = row['Tổng chi tiêu'] || row['Đã mua'] ? Number(row['Tổng chi tiêu'] || row['Đã mua']) : null
-      const currentDebt = row['Công nợ'] || row['Nợ'] ? Number(row['Công nợ'] || row['Nợ']) : null
-      const orderCount = row['Số đơn hàng'] || row['Đơn hàng'] ? Number(row['Số đơn hàng'] || row['Đơn hàng']) : null
+      const totalSpentVal = row['Tổng chi tiêu'] || row['Đã mua'] || row['Total Spent']
+      const totalSpent = totalSpentVal !== undefined && totalSpentVal !== '' ? Number(String(totalSpentVal).replace(/[^0-9.-]+/g, '')) : null
+      
+      const currentDebtVal = row['Công nợ'] || row['Nợ'] || row['Current Debt']
+      const currentDebt = currentDebtVal !== undefined && currentDebtVal !== '' ? Number(String(currentDebtVal).replace(/[^0-9.-]+/g, '')) : null
+      
+      const orderCountVal = row['Số đơn hàng'] || row['Đơn hàng'] || row['Orders']
+      const orderCount = orderCountVal !== undefined && orderCountVal !== '' ? Number(String(orderCountVal).replace(/[^0-9.-]+/g, '')) : null
 
       if (totalSpent !== null || currentDebt !== null || orderCount !== null) {
         await updateCustomer({
@@ -138,12 +150,21 @@ async function handleImportCustomers(data: any[]) {
   }
 
   await load()
-  toast.add({
-    severity: 'info',
-    summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
-    detail: t(`Thành công: ${successCount}, Lỗi/Bỏ qua: ${errorCount}`, `Success: ${successCount}, Error/Skipped: ${errorCount}`),
-    life: 5000,
-  })
+  if (successCount > 0) {
+    toast.add({
+      severity: 'success',
+      summary: t('Nhập Excel hoàn tất', 'Import Excel Completed'),
+      detail: t(`Đã nhập thành công ${successCount} khách hàng${errorCount > 0 ? ` (bỏ qua ${errorCount} dòng lỗi)` : ''}`, `Successfully imported ${successCount} customers${errorCount > 0 ? ` (skipped ${errorCount} error rows)` : ''}`),
+      life: 5000,
+    })
+  } else {
+    toast.add({
+      severity: 'warn',
+      summary: t('Không có khách hàng nào được nhập', 'No customers imported'),
+      detail: t(`Vui lòng kiểm tra lại cấu trúc file Excel (đã bỏ qua ${errorCount} dòng).`, `Please check Excel file structure (${errorCount} rows skipped).`),
+      life: 5000,
+    })
+  }
 }
 
 function handleExport(dates: { startDate: string; endDate: string }) {
