@@ -54,8 +54,8 @@ function toggleLang() {
 }
 
 async function logoutCustomer() {
+  await router.push('/')
   await auth.logout()
-  void router.push('/')
 }
 
 const paidOrders = computed(() =>

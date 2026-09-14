@@ -348,16 +348,7 @@ export async function getMyProfile(): Promise<UserDto> {
   return normalizeUser(DEFAULT_MOCK_USERS[0]!)
 }
 
-export async function logoutUser(payload: { refreshToken: string }): Promise<unknown> {
-  if (API_URLS.user) {
-    try {
-      return await apiRequest<unknown>(API_URLS.user, '/api/User/logout', {
-        method: 'POST',
-        auth: true,
-        body: JSON.stringify(payload),
-      })
-    } catch {}
-  }
+export async function logoutUser(_payload?: { refreshToken?: string }): Promise<unknown> {
   return { success: true }
 }
 

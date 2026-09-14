@@ -82,8 +82,8 @@ const roleLabel = computed(() => {
 })
 
 async function handleLogout() {
+  await router.replace('/login/admin')
   await auth.logout()
-  await router.replace('/admin')
 }
 
 function syncAuth() {

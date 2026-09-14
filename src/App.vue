@@ -25,6 +25,7 @@ onUnmounted(() => window.removeEventListener('auth-changed', handleAuthChange))
 </script>
 
 <template>
-  <RouterView v-if="isPublicPage || isCustomerPage || !auth.isAuthenticated" />
-  <AdminLayout v-else />
+  <AdminLayout v-if="auth.isAuthenticated && !isPublicPage && !isCustomerPage" />
+  <RouterView v-else-if="isPublicPage || isCustomerPage" />
+  <div v-else class="auth-redirecting-placeholder" />
 </template>
