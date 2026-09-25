@@ -17,6 +17,8 @@ dist-ssr
 .env.*
 !.env.example
 *.local
+.streamlit/secrets.toml
+
 
 # Editor directories and files
 .vscode/*
