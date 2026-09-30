@@ -1,5 +1,13 @@
 # 🛍️ SmartSale - Omnichannel Sales & Real-Time Inventory Management System
 
+[![Live Storefront](https://img.shields.io/badge/Live_Storefront-smartsale--dev.me-0284c7?logo=render&logoColor=white)](https://www.smartsale-dev.me)
+[![Render Live BI Dashboard](https://img.shields.io/badge/Render-Streamlit_BI_Dashboard-FF4B4B?logo=streamlit&logoColor=white)](https://smartsale-bi-dashboard-0tnm.onrender.com/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://github.com/kieuwangtruong/SmartSale)
+
+> 🌐 **Live Web Storefront:** [https://www.smartsale-dev.me](https://www.smartsale-dev.me)  
+> 📊 **Live Streamlit BI & Analytics Hub:** [https://smartsale-bi-dashboard-0tnm.onrender.com/](https://smartsale-bi-dashboard-0tnm.onrender.com/)
+
+
 **SmartSale** là nền tảng quản lý bán hàng đa kênh, kiểm soát tồn kho thông minh và tích hợp trợ lý ảo AI thế hệ mới. Hệ thống được xây dựng với kiến trúc hiện đại, hỗ trợ thanh toán tự động qua mã VietQR PayOS, hệ thống phân tích kinh doanh (BI Analytics), quản lý khuyến mãi linh hoạt và trợ lý AI phân quyền theo từng vai trò người dùng.
 
 ---
